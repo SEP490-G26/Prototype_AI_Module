@@ -1,17 +1,17 @@
 # AI Embedding + Auto Tagging Design
 
-## Muc tieu
+## Mục tiêu
 
-`AI Embedding + Auto Tagging` co vai tro:
+`AI Embedding + Auto Tagging` có vai trò:
 
-- nhan noi dung da duoc parser/extract
-- chia thanh cac chunk co cau truc
-- tao vector embedding cho tung chunk
-- gan topic tags cho tung chunk de phuc vu retrieval, generation va debug
+- nhận nội dung đã được parser/extract
+- chia thành các chunk có cấu trúc
+- tạo vector embedding cho từng chunk
+- gắn topic tags cho từng chunk để phục vụ retrieval, generation và debug
 
-## Contract chunk da chot
+## Contract chunk đã chốt
 
-`KnowledgeChunk` trong prototype da duoc doi theo dung schema DB-ready da chot truoc do:
+`KnowledgeChunk` trong prototype đã được đổi theo đúng schema DB-ready đã chốt trước đó:
 
 - `id`
 - `courseId`
@@ -47,20 +47,20 @@
 
 ## Policy runtime
 
-Policy hien tai duoc luu tai:
+Policy hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/embedding-tagging-policy.json`
 
-Policy chua:
+Policy chứa:
 
 - chunking defaults
 - retrieval/status defaults
 - tagging rules
 - subject taxonomy
 
-## Rubric va ground truth
+## Rubric và ground truth
 
-Rubric nhe:
+Rubric nhẹ:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/EMBEDDING_TAGGING.json`
 
@@ -70,18 +70,18 @@ Ground truth core:
 
 ## Prompt
 
-Auto tagging prompt hien tai duoc luu tai:
+Auto tagging prompt hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 
-Da nang cap de:
+Đã nâng cấp để:
 
-- nhan taxonomy json
-- chi duoc dung allowed tags
-- uu tien it tag nhung dung
-- khong invent tag
+- nhận taxonomy json
+- chỉ được dùng allowed tags
+- ưu tiên ít tag nhưng đúng
+- không invent tag
 
-## Route da co
+## Route đã có
 
 - `POST /api/ai-module/embedding-tagging`
 - `POST /api/ai-module/embedding-tagging/debug`
@@ -89,9 +89,9 @@ Da nang cap de:
 - `GET /api/ai-module/embedding-tagging/rubric`
 - `GET /api/ai-module/embedding-tagging/ground-truth`
 
-## Output ket qua
+## Output kết quả
 
-Result hien tai da tach ro:
+Result hiện tại đã tách rõ:
 
 - `chunks`
 - `embeddingTotals`
@@ -100,22 +100,22 @@ Result hien tai da tach ro:
 - `usageLogs`
 - `totals`
 
-Debug result bo sung:
+Debug result bổ sung:
 
 - `policy`
 - `rubric`
 - `groundTruth`
 
-## Ghi chu nghiep vu
+## Ghi chú nghiệp vụ
 
-Phan embedding va tagging hien da ho tro:
+Phần embedding và tagging hiện đã hỗ trợ:
 
-- embedding model linh hoat
-- tagging model linh hoat
+- embedding model linh hoạt
+- tagging model linh hoạt
 
-Nghia la pipeline co the dung:
+Nghĩa là pipeline có thể dùng:
 
 - 1 model embedding
-- 1 model tagging khac
+- 1 model tagging khác
 
-de benchmark chat luong tagging giua nhieu model khac nhau tren cung 1 bo chunk.
+để benchmark chất lượng tagging giữa nhiều model khác nhau trên cùng 1 bộ chunk.

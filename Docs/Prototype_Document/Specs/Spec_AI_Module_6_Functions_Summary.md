@@ -1,15 +1,15 @@
 # AI Module 6 Functions Summary
 
-## Muc tieu
+## Mục tiêu
 
-Tai lieu nay tong hop toan bo 6 chuc nang AI da duoc mo hinh hoa trong prototype `.NET` de:
+Tài liệu này tổng hợp toàn bộ 6 chức năng AI đã được mô hình hoá trong prototype `.NET` để:
 
 - benchmark cost
 - test output
-- so sanh model
-- lam module neo de ghep vao BE that sau nay
+- so sánh model
+- làm module neo để ghép vào BE thật sau này
 
-6 chuc nang gom:
+6 chức năng gồm:
 
 1. `AI Gatekeeper`
 2. `AI Extracted Content`
@@ -18,33 +18,33 @@ Tai lieu nay tong hop toan bo 6 chuc nang AI da duoc mo hinh hoa trong prototype
 5. `AI Review Result of AI Question Generation`
 6. `AI Code Mentor`
 
-## Kien truc tong quat
+## Kiến trúc tổng quát
 
-Pipeline tong quat hien tai:
+Pipeline tổng quát hiện tại:
 
-`Input file -> Gatekeeper -> Extracted Content -> Embedding + Auto Tagging -> Question Generation -> Question Review -> Code Mentor / cac flow khac`
+`Input file -> Gatekeeper -> Extracted Content -> Embedding + Auto Tagging -> Question Generation -> Question Review -> Code Mentor / các flow khác`
 
-Muc tieu cua prototype:
+Mục tiêu của prototype:
 
 - JSON-first
 - DB-ready
 - provider-flexible
-- co prompt, policy, rubric, ground truth theo tung function
+- có prompt, policy, rubric, ground truth theo từng function
 
 ## 1. AI Gatekeeper
 
-### Vai tro
+### Vai trò
 
-- doc nhanh noi dung tai lieu
-- xac dinh tai lieu co thuoc whitelist mon hoc duoc he thong ho tro hay khong
+- đọc nhanh nội dung tài liệu
+- xác định tài liệu có thuộc whitelist môn học được hệ thống hỗ trợ hay không
 
-### Whitelist hien tai
+### Whitelist hiện tại
 
 - `C`
 - `JAVA_OOP`
 - `DSA_JAVA`
 
-### Output chuan hoa
+### Output chuẩn hoá
 
 - `isSupported`
 - `verdict`
@@ -64,7 +64,7 @@ Muc tieu cua prototype:
 - `GET /api/ai-module/gatekeeper/rubric`
 - `GET /api/ai-module/gatekeeper/ground-truth`
 
-### File lien quan
+### File liên quan
 
 - prompt: `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/gatekeeper-policy.json`
@@ -72,27 +72,27 @@ Muc tieu cua prototype:
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/GATEKEEPER_CORE.json`
 - note: `Docs/Prototype_Document/Specs/Spec_AI_Gatekeeper_Whitelist_Design.md`
 
-### Trang thai
+### Trạng thái
 
-- da co precheck rule-based
-- da co whitelist policy
-- da co debug route
-- da du benchmark va ghep BE
+- đã có precheck rule-based
+- đã có whitelist policy
+- đã có debug route
+- đã đủ benchmark và ghép BE
 
 ## 2. AI Extracted Content
 
-### Vai tro
+### Vai trò
 
-- nhan noi dung tai lieu dau vao
-- chuyen noi dung thanh markdown sach
-- neu co image marker va co vision model thi mo rong phan anh thanh markdown
+- nhận nội dung tài liệu đầu vào
+- chuyển nội dung thành markdown sạch
+- nếu có image marker và có vision model thì mở rộng phần ảnh thành markdown
 
-### Mode hien tai
+### Mode hiện tại
 
 - `TextOnly`
 - `FullMultimodalPage`
 
-### Output chuan hoa
+### Output chuẩn hoá
 
 - `rawText`
 - `normalizedMarkdown`
@@ -112,7 +112,7 @@ Muc tieu cua prototype:
 - `GET /api/ai-module/extracted-content/rubric`
 - `GET /api/ai-module/extracted-content/ground-truth`
 
-### File lien quan
+### File liên quan
 
 - prompt: `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/extracted-content-policy.json`
@@ -120,28 +120,28 @@ Muc tieu cua prototype:
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/EXTRACTED_CONTENT_CORE.json`
 - note: `Docs/Prototype_Document/Specs/Spec_AI_Extracted_Content_Design.md`
 
-### Trang thai
+### Trạng thái
 
-- da co warning system
-- da co debug route
-- da du cho benchmark va pipeline prototype
-- da co route upload ingest cho `pdf/docx/pptx/image`
-- `pdf` da dung parser `PdfPig`
-- `docx/pptx` da boc duoc media tu package va chen image marker
-- chua phai parser/OCR production-final
+- đã có warning system
+- đã có debug route
+- đã đủ cho benchmark và pipeline prototype
+- đã có route upload ingest cho `pdf/docx/pptx/image`
+- `pdf` đã dùng parser `PdfPig`
+- `docx/pptx` đã bóc được media từ package và chèn image marker
+- chưa phải parser/OCR production-final
 
 ## 3. AI Embedding + Auto Tagging
 
-### Vai tro
+### Vai trò
 
-- nhan noi dung da extract
+- nhận nội dung đã extract
 - chia chunk
-- embedding tung chunk
-- gan topic tags cho tung chunk
+- embedding từng chunk
+- gắn topic tags cho từng chunk
 
 ### Contract `KnowledgeChunk`
 
-Da duoc chuan hoa theo schema DB-ready:
+Đã được chuẩn hoá theo schema DB-ready:
 
 - `Id`
 - `CourseId`
@@ -175,7 +175,7 @@ Da duoc chuan hoa theo schema DB-ready:
 - `CreatedAt`
 - `UpdatedAt`
 
-### Ket qua tra ve
+### Kết quả trả về
 
 - `chunks`
 - `embeddingTotals`
@@ -192,7 +192,7 @@ Da duoc chuan hoa theo schema DB-ready:
 - `GET /api/ai-module/embedding-tagging/rubric`
 - `GET /api/ai-module/embedding-tagging/ground-truth`
 
-### File lien quan
+### File liên quan
 
 - prompt: `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/embedding-tagging-policy.json`
@@ -200,20 +200,20 @@ Da duoc chuan hoa theo schema DB-ready:
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/EMBEDDING_TAGGING_CORE.json`
 - note: `Docs/Prototype_Document/Specs/Spec_AI_Embedding_AutoTagging_Design.md`
 
-### Trang thai
+### Trạng thái
 
-- da support embedding model va tagging model tach rieng
-- da co taxonomy policy
-- da co debug route
-- da du de benchmark cost va xem xet chat luong tagging
+- đã support embedding model và tagging model tách riêng
+- đã có taxonomy policy
+- đã có debug route
+- đã đủ để benchmark cost và xem xét chất lượng tagging
 
 ## 4. AI Question Generation
 
-### Vai tro
+### Vai trò
 
-- nhan `KnowledgeChunks`
-- tao cau hoi `FE` hoac `PE`
-- ep output bam sat schema question bank
+- nhận `KnowledgeChunks`
+- tạo câu hỏi `FE` hoặc `PE`
+- ép output bám sát schema question bank
 
 ### Output FE
 
@@ -247,7 +247,7 @@ Da duoc chuan hoa theo schema DB-ready:
 - `GET /api/ai-module/question-generation/ground-truth`
 - `POST /api/ai-module/question-generation/regression`
 
-### File lien quan
+### File liên quan
 
 - prompt: `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/*.json`
@@ -257,23 +257,23 @@ Da duoc chuan hoa theo schema DB-ready:
   - `Docs/Prototype_Document/DB_Resources/AI_Generation_Review_Export.md`
   - `Docs/Prototype_Document/Specs/Spec_Question_Generation_Review_FE_PE_Summary.md`
 
-### Trang thai
+### Trạng thái
 
-- da co normalize output
-- da co schema validation
-- da co DB-ready mapping FE/PE
-- da co duplicate check muc co ban
-- da co difficulty alignment
-- `question-generation/debug` hien dang la route placeholder, tra cung payload runtime nhu route thuong
+- đã có normalize output
+- đã có schema validation
+- đã có DB-ready mapping FE/PE
+- đã có duplicate check mức cơ bản
+- đã có difficulty alignment
+- `question-generation/debug` hiện đang là route placeholder, trả cùng payload runtime như route thường
 
 ## 5. AI Review Result of AI Question Generation
 
-### Vai tro
+### Vai trò
 
-- doc ket qua cua AI generator
-- doi chieu voi chunk context
-- doi chieu voi rubric
-- accept hoac reject
+- đọc kết quả của AI generator
+- đối chiếu với chunk context
+- đối chiếu với rubric
+- accept hoặc reject
 
 ### Mode
 
@@ -281,11 +281,11 @@ Da duoc chuan hoa theo schema DB-ready:
 - `SameModelDualRole`
 - `DualAgent`
 
-### Luong
+### Luồng
 
-- AI1 tao de
+- AI1 tạo đề
 - AI2 review
-- neu fail thi AI1 duoc tao lai toi da 1 lan nua
+- nếu fail thì AI1 được tạo lại tối đa 1 lần nữa
 
 ### Route
 
@@ -296,7 +296,7 @@ Da duoc chuan hoa theo schema DB-ready:
 
 ### Export package
 
-Da co goi JSON chuan hoa gom:
+Đã có gói JSON chuẩn hoá gồm:
 
 - `metadata`
 - `request`
@@ -312,31 +312,31 @@ Da co goi JSON chuan hoa gom:
 - `usageLogs`
 - `totals`
 
-### Trang thai
+### Trạng thái
 
-- da co rubric runtime theo mon + FE/PE
-- da co ground truth starter
-- da co regression runner
-- da du de benchmark va ghep voi BE tong
-- `generation-review/debug` hien dang la route placeholder, tra cung payload runtime nhu route thuong
+- đã có rubric runtime theo môn + FE/PE
+- đã có ground truth starter
+- đã có regression runner
+- đã đủ để benchmark và ghép với BE tổng
+- `generation-review/debug` hiện đang là route placeholder, trả cùng payload runtime như route thường
 
 ## 6. AI Code Mentor
 
-### Vai tro
+### Vai trò
 
-- nhan de bai + code sinh vien nop
-- phan tich loi co the suy ra tu code
-- tra ve feedback co cau truc
+- nhận đề bài + code sinh viên nộp
+- phân tích lỗi có thể suy ra từ code
+- trả về feedback có cấu trúc
 
-### Scope hien tai
+### Scope hiện tại
 
-- khong compile/run code
-- khong gia vo da chay code
-- phan tich dua tren problem + code + rubric/policy
+- không compile/run code
+- không giả vờ đã chạy code
+- phân tích dựa trên problem + code + rubric/policy
 
-Judge0 se la phan nang cap sau khi ghep production.
+Judge0 sẽ là phần nâng cấp sau khi ghép production.
 
-### Output chuan hoa
+### Output chuẩn hoá
 
 - `verdict`
 - `issueCategories`
@@ -355,7 +355,7 @@ Judge0 se la phan nang cap sau khi ghep production.
 - `GET /api/ai-module/code-mentor/rubric`
 - `GET /api/ai-module/code-mentor/ground-truth`
 
-### File lien quan
+### File liên quan
 
 - prompt: `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/code-mentor-policy.json`
@@ -363,22 +363,22 @@ Judge0 se la phan nang cap sau khi ghep production.
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/CODE_MENTOR_CORE.json`
 - note: `Docs/Prototype_Document/Specs/Spec_AI_Code_Mentor_Design.md`
 
-### Trang thai
+### Trạng thái
 
-- da co policy/rubric/ground truth rieng
-- da co debug route
-- da du benchmark va test feedback structure
-- chua co judge/runtime integration
+- đã có policy/rubric/ground truth riêng
+- đã có debug route
+- đã đủ benchmark và test feedback structure
+- chưa có judge/runtime integration
 
-## Config va quan ly prompt/policy/rubric/ground truth
+## Config và quản lý prompt/policy/rubric/ground truth
 
 ### Prompt
 
-Prompt hien tai la file-backed:
+Prompt hiện tại là file-backed:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 
-Route prompt da co:
+Route prompt đã có:
 
 - `GET /api/ai-module/prompts`
 - `GET /api/ai-module/prompts/{key}`
@@ -386,36 +386,36 @@ Route prompt da co:
 - `PUT /api/ai-module/prompts/{key}`
 - `POST /api/ai-module/prompts/render`
 
-### Cac collection DB-ready da chot
+### Các collection DB-ready đã chốt
 
 - `AI_Prompt_Versions`
 - `AI_Policies`
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 
-Tai lieu lien quan:
+Tài liệu liên quan:
 
 - `Docs/Prototype_Document/DB_Resources/AI_Configuration_Collections.md`
 - `Docs/Prototype_Document/DB_Resources/AI_Policies.md`
 - `Docs/Prototype_Document/DB_Resources/AI_Rubrics.md`
 - `Docs/Prototype_Document/DB_Resources/AI_GroundTruth_Sets.md`
 
-### Luu y quan trong ve `AI_Policies`
+### Lưu ý quan trọng về `AI_Policies`
 
-Module prototype hien tai dung file policy trong `App_Data` lam source of truth runtime.
+Module prototype hiện tại dùng file policy trong `App_Data` làm source of truth runtime.
 
-Nhung khi dua vao DB that, da chot theo huong:
+Nhưng khi đưa vào DB thật, đã chốt theo hướng:
 
 - file prototype = payload runtime
 - DB = wrapper record `AI_Policies` + `content_json`
 
-Tai lieu doi chieu chi tiet:
+Tài liệu đối chiếu chi tiết:
 
 - `Docs/Prototype_Document/Guides/Guide_App_Data_vs_DB_Mapping.md`
 
-## Log va benchmark
+## Log và benchmark
 
-Prototype da co:
+Prototype đã có:
 
 - `stageLogs`
 - `usageLogs`
@@ -424,76 +424,76 @@ Prototype da co:
 - `NormalizedError`
 - `UsageCapture`
 
-Giup:
+Giúp:
 
-- tinh token in/out
-- tinh cost theo stage
-- luu payload debug
-- so sanh model
-- phan biet `raw` usage va `estimated` usage
-- chuan hoa loi provider de so sanh benchmark / production test
-- tong hop session benchmark va export TSV/JSON
+- tính token in/out
+- tính cost theo stage
+- lưu payload debug
+- so sánh model
+- phân biệt `raw` usage và `estimated` usage
+- chuẩn hoá lỗi provider để so sánh benchmark / production test
+- tổng hợp session benchmark và export TSV/JSON
 
-Run history summary hien tai con co:
+Run history summary hiện tại còn có:
 
 - `modelFields`
 - `usageSource`
 - `error`
 - `totals`
 
-Tai lieu lien quan:
+Tài liệu liên quan:
 
 - `Docs/Prototype_Document/Guides/Guide_AI_Pipeline_Log_Storage.md`
 - `Docs/Prototype_Document/Guides/Guide_AI_Usage_Log_Pipeline.md`
 - `Docs/Prototype_Document/Guides/Guide_AI_Module_Run.md`
 
-## Trang thai module hien tai
+## Trạng thái module hiện tại
 
-Module AI prototype hien tai da dat muc:
+Module AI prototype hiện tại đã đạt mức:
 
-- co 6 AI function
-- co prompt file-backed
-- co policy/rubric/ground truth theo function
-- co route debug
-- co output JSON chuan hoa
-- co log token/cost
-- co `usage_source` (`raw` / `estimated` / `mixed`)
-- co `normalized error catalog` o muc runtime
-- co benchmark session save/open
-- co parser PDF that cho production test harness
-- co kha nang ghep vao BE tong sau nay
+- có 6 AI function
+- có prompt file-backed
+- có policy/rubric/ground truth theo function
+- có route debug
+- có output JSON chuẩn hoá
+- có log token/cost
+- có `usage_source` (`raw` / `estimated` / `mixed`)
+- có `normalized error catalog` ở mức runtime
+- có benchmark session save/open
+- có parser PDF thật cho production test harness
+- có khả năng ghép vào BE tổng sau này
 
-## Danh gia prototype testing/production hien tai
+## Đánh giá prototype testing/production hiện tại
 
-O muc prototype test harness, module da on cho:
+Ở mức prototype test harness, module đã ổn cho:
 
 - benchmark cost
 - benchmark token
-- so sanh model
-- test pipeline nghiep vu chinh
-- giu bang chung JSON/TSV/history
+- so sánh model
+- test pipeline nghiệp vụ chính
+- giữ bằng chứng JSON/TSV/history
 
-Nhung chua nen xem la production-final vi:
+Nhưng chưa nên xem là production-final vì:
 
-- `question-generation/debug` va `generation-review/debug` chua co debug payload rieng
-- `full-pipeline` hien gom `ingestion + generation/review`, chua chay `code mentor`
-- repository van la in-memory/file-backed
-- parser `docx/pptx/pdf` da dung duoc cho prototype, nhung chua dat muc semantic parser/OCR cuoi cung
+- `question-generation/debug` và `generation-review/debug` chưa có debug payload riêng
+- `full-pipeline` hiện gồm `ingestion + generation/review`, chưa chạy `code mentor`
+- repository vẫn là in-memory/file-backed
+- parser `docx/pptx/pdf` đã dùng được cho prototype, nhưng chưa đạt mức semantic parser/OCR cuối cùng
 
-## Nhung gi con lai khi ghep production
+## Những gì còn lại khi ghép production
 
-1. Mongo repository that
-2. Judge0 compile/run cho `PE` va `Code Mentor`
+1. Mongo repository thật
+2. Judge0 compile/run cho `PE` và `Code Mentor`
 3. provider price catalog production-final
-4. vector duplicate detection that
-5. parser/OCR production-final cho tai lieu phuc tap hon nua
-6. luu prompt/rubric/ground truth tu DB thay vi file
+4. vector duplicate detection thật
+5. parser/OCR production-final cho tài liệu phức tạp hơn nữa
+6. lưu prompt/rubric/ground truth từ DB thay vì file
 
-## Ket luan
+## Kết luận
 
-Tinh den hien tai, prototype da khong con la bo benchmark thu nghiem don le nua, ma da tro thanh:
+Tính đến hiện tại, prototype đã không còn là bộ benchmark thử nghiệm đơn lẻ nữa, mà đã trở thành:
 
-- mot `AI core module`
-- co the benchmark
-- co the test
-- co the dung lam nen tang de ghep vao he thong that
+- một `AI core module`
+- có thể benchmark
+- có thể test
+- có thể dùng làm nền tảng để ghép vào hệ thống thật

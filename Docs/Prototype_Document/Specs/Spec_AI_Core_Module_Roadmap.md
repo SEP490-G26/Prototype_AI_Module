@@ -1,50 +1,50 @@
 # AI Core Module Roadmap
 
-## 1. Muc tieu
+## 1. Mục tiêu
 
-Tai lieu nay chot huong phat trien module AI theo dung ban chat moi:
+Tài liệu này chốt hướng phát triển module AI theo đúng bản chất mới:
 
-- khong con la benchmark tool don le
-- tro thanh `AI Core Prototype`
-- vua dung de benchmark, test accuracy, test cost
-- vua la nen de ghep vao BE chinh cua do an
+- không còn là benchmark tool đơn lẻ
+- trở thành `AI Core Prototype`
+- vừa dùng để benchmark, test accuracy, test cost
+- vừa là nền để ghép vào BE chính của đồ án
 
-Module nay phai duoc xay theo huong:
+Module này phải được xây theo hướng:
 
 - JSON-first
 - pipeline-first
 - provider-agnostic
 - prompt-versioned
-- co kha nang doi sang DB that sau nay
+- có khả năng đổi sang DB thật sau này
 
-## 2. Vai tro cua module
+## 2. Vai trò của module
 
-Module AI nay dong thoi phuc vu 3 viec:
+Module AI này đồng thời phục vụ 3 việc:
 
 ### 2.1 Benchmark
 
 - test token
 - test cost
 - test latency
-- so sanh model
-- luu log chi tiet theo tung stage
+- so sánh model
+- lưu log chi tiết theo từng stage
 
-### 2.2 Prototype nghiep vu
+### 2.2 Prototype nghiệp vụ
 
-- chay duoc cac luong AI chinh cua do an
-- mo phong dung pipeline san pham
-- kiem tra output JSON co dung schema mong muon khong
+- chạy được các luồng AI chính của đồ án
+- mô phỏng đúng pipeline sản phẩm
+- kiểm tra output JSON có đúng schema mong muốn không
 
-### 2.3 Nen de tich hop production
+### 2.3 Nền để tích hợp production
 
-- co the noi vao BE tong
-- doi repository tam sang Mongo repository
-- map object sang collection that
-- giu nguyen logic orchestration va provider gateway
+- có thể nối vào BE tổng
+- đổi repository tạm sang Mongo repository
+- map object sang collection thật
+- giữ nguyên logic orchestration và provider gateway
 
-## 3. 6 chuc nang AI cot loi
+## 3. 6 chức năng AI cốt lõi
 
-Module phai bao gom day du 6 chuc nang sau:
+Module phải bao gồm đầy đủ 6 chức năng sau:
 
 1. `AI Gatekeeper`
 2. `AI Extracted Content`
@@ -53,19 +53,19 @@ Module phai bao gom day du 6 chuc nang sau:
 5. `AI Question Generation + AI Review`
 6. `AI Code Mentor`
 
-Luu y:
+Lưu ý:
 
-- `Question Generation` va `Review` la 2 agent rieng ve mat logic
-- co the chay cung 1 model, cung 1 provider, hoac 2 model khac nhau
-- `Embedding` va `Auto Tagging` la 2 stage rieng, khong nen gop thanh 1 log duy nhat
+- `Question Generation` và `Review` là 2 agent riêng về mặt logic
+- có thể chạy cùng 1 model, cùng 1 provider hoặc 2 model khác nhau
+- `Embedding` và `Auto Tagging` là 2 stage riêng, không nên gộp thành 1 log duy nhất
 
-## 4. Kien truc muc tieu
+## 4. Kiến trúc mục tiêu
 
 ### 4.1 Domain
 
-Chua:
+Chứa:
 
-- entity nghiep vu AI
+- entity nghiệp vụ AI
 - result contract
 - token/cost/log contract
 - review decision
@@ -73,145 +73,145 @@ Chua:
 
 ### 4.2 Application
 
-Chua:
+Chứa:
 
 - DTO request/response
 - interface cho provider gateway
-- orchestrator cho tung pipeline
-- rule xu ly pipeline
+- orchestrator cho từng pipeline
+- rule xử lý pipeline
 
 ### 4.3 Infrastructure
 
-Chua:
+Chứa:
 
 - provider adapter
 - prompt store
 - parser / chunking / file extraction
-- repository tam
-- sau nay se them Mongo adapter
+- repository tạm
+- sau này sẽ thêm Mongo adapter
 
 ### 4.4 API
 
-Chua:
+Chứa:
 
-- route cho tung function AI
+- route cho từng function AI
 - route benchmark/test
 - route provider management
 - route prompt management
 
-## 5. Phan chia giai doan
+## 5. Phân chia giai đoạn
 
 ### Phase 1 - Core Benchmarkable Prototype
 
-Muc tieu:
+Mục tiêu:
 
-- chay duoc end-to-end
-- tra JSON duoc
-- test duoc token/cost/log
-- doi duoc model/provider
+- chạy được end-to-end
+- trả JSON được
+- test được token/cost/log
+- đổi được model/provider
 
 Done criteria:
 
-- ca 6 function co route rieng
-- provider load tu `.env`
-- prompt khong hard-code hoan toan trong service
-- moi pipeline co `stageLogs` va `usageLogs`
+- cả 6 function có route riêng
+- provider load từ `.env`
+- prompt không hard-code hoàn toàn trong service
+- mỗi pipeline có `stageLogs` và `usageLogs`
 
-Trang thai hien tai:
+Trạng thái hiện tại:
 
-- da dat phan lon
-- nhung van chua du production-ready
+- đã đạt phần lớn
+- nhưng vẫn chưa đủ production-ready
 
 ### Phase 2 - Schema Hardening
 
-Muc tieu:
+Mục tiêu:
 
-- ep output dung schema DB / collection that
-- giam output loi / thieu field / null field
+- ép output đúng schema DB / collection thật
+- giảm output lỗi / thiếu field / null field
 
-Can lam:
+Cần làm:
 
-1. siet prompt generation
-2. them validation sau generation
-3. them review rubric ro rang
-4. neu output sai schema thi reject som
+1. siết prompt generation
+2. thêm validation sau generation
+3. thêm review rubric rõ ràng
+4. nếu output sai schema thì reject sớm
 
 Done criteria:
 
-- FE question output dung schema FE
-- PE question output dung schema PE
-- mentor output co cau truc on dinh
-- gatekeeper va extraction co verdict ro
+- FE question output đúng schema FE
+- PE question output đúng schema PE
+- mentor output có cấu trúc ổn định
+- gatekeeper và extraction có verdict rõ
 
 ### Phase 3 - Subject-aware Intelligence
 
-Muc tieu:
+Mục tiêu:
 
-- dua module ve dung logic hoc tap cua do an
+- đưa module về đúng logic học tập của đồ án
 
-Can lam:
+Cần làm:
 
-1. tach prompt theo mon:
+1. tách prompt theo môn:
    - C
    - Java OOP
    - DSA Java
-2. tach rubric theo 6 to hop:
+2. tách rubric theo 6 tổ hợp:
    - C FE
    - C PE
    - Java FE
    - Java PE
    - DSA FE
    - DSA PE
-3. chot topic tag taxonomy theo tung mon
+3. chốt topic tag taxonomy theo từng môn
 
 Done criteria:
 
-- review khong con generic
-- generation va mentor co context theo mon hoc
+- review không còn generic
+- generation và mentor có context theo môn học
 
 ### Phase 4 - Persistence-ready
 
-Muc tieu:
+Mục tiêu:
 
-- co the dua vao BE tong ma khong sua lai toan bo pipeline
+- có thể đưa vào BE tổng mà không sửa lại toàn bộ pipeline
 
-Can lam:
+Cần làm:
 
-1. thay repository tam bang Mongo adapter
-2. map entity sang collection that
-3. them id mapping that (`ObjectId`)
-4. them log persistence cho `AI_Usage_Logs`
-5. them prompt version persistence
+1. thay repository tạm bằng Mongo adapter
+2. map entity sang collection thật
+3. thêm id mapping thật (`ObjectId`)
+4. thêm log persistence cho `AI_Usage_Logs`
+5. thêm prompt version persistence
 
 Done criteria:
 
-- module co the luu / doc tu Mongo
-- output JSON va du lieu DB khong lech nhau
+- module có thể lưu / đọc từ Mongo
+- output JSON và dữ liệu DB không lệch nhau
 
 ### Phase 5 - Production Integration
 
-Muc tieu:
+Mục tiêu:
 
-- merge vao codebase BE tong
+- merge vào codebase BE tổng
 
-Can lam:
+Cần làm:
 
-1. flatten module vao 4 layer cua BE chinh
-2. noi auth, credit, quota, user context
-3. noi course/document/question/submission data
-4. rate limit va timeout
-5. quan ly loi provider that
+1. flatten module vào 4 layer của BE chính
+2. nối auth, credit, quota, user context
+3. nối course/document/question/submission data
+4. rate limit và timeout
+5. quản lý lỗi provider thật
 
 Done criteria:
 
-- co the goi module tu nghiep vu that
-- benchmark va production dung chung core pipeline
+- có thể gọi module từ nghiệp vụ thật
+- benchmark và production dùng chung core pipeline
 
-## 6. Cac pipeline phai chot
+## 6. Các pipeline phải chốt
 
 ### 6.1 Ingestion pipeline
 
-Luong:
+Luồng:
 
 `Input file -> Gatekeeper -> Extracted Content / Parser -> Chunking -> Embedding -> Auto Tagging`
 
@@ -224,14 +224,14 @@ Output:
 
 ### 6.2 Generation-review pipeline
 
-Luong:
+Luồng:
 
 `Chunks -> Generator -> Reviewer -> Pass / Regenerate -> End`
 
-Quy tac:
+Quy tắc:
 
-- toi da 2 vong
-- ho tro:
+- tối đa 2 vòng
+- hỗ trợ:
   - `SingleAgent`
   - `SameModelDualRole`
   - `DualAgent`
@@ -240,11 +240,11 @@ Output:
 
 - generated questions
 - review decision
-- usage logs theo tung attempt
+- usage logs theo từng attempt
 
 ### 6.3 Code mentor pipeline
 
-Luong:
+Luồng:
 
 `Problem + Submission Code -> Mentor AI -> Feedback JSON`
 
@@ -253,11 +253,11 @@ Output:
 - verdict
 - issues
 - suggestions
-- complexity neu co
+- complexity nếu có
 
-## 7. Nhung phan phai duoc xem la "production-critical"
+## 7. Những phần phải được xem là production-critical
 
-Day la nhung phan khong duoc phep lam theo kieu demo:
+Đây là những phần không được phép làm theo kiểu demo:
 
 1. prompt management
 2. output schema validation
@@ -267,36 +267,36 @@ Day la nhung phan khong duoc phep lam theo kieu demo:
 6. subject-aware rubric
 7. mapping collection schema
 
-Neu 7 phan nay khong on, module se chi dung duoc de benchmark, chua du de dua vao he thong that.
+Nếu 7 phần này không ổn, module sẽ chỉ dùng được để benchmark, chưa đủ để đưa vào hệ thống thật.
 
-## 8. Nhung gi can sua khi noi vao DB that
+## 8. Những gì cần sửa khi nối vào DB thật
 
 ### 8.1 KnowledgeChunks
 
-Can map dung vao collection `KnowledgeChunks` va bo sung cac field metadata can thiet.
+Cần map đúng vào collection `KnowledgeChunks` và bổ sung các field metadata cần thiết.
 
 ### 8.2 FE_Questions / PE_Questions
 
-Question generation phai tra JSON de co the:
+Question generation phải trả JSON để có thể:
 
-- save thang vao `FE_Questions`
-- save thang vao `PE_Questions`
+- save thẳng vào `FE_Questions`
+- save thẳng vào `PE_Questions`
 
-neu khong thi phai co 1 lop mapper ro rang o application/infrastructure.
+nếu không thì phải có 1 lớp mapper rõ ràng ở application/infrastructure.
 
 ### 8.3 AI_Mentor_Feedbacks
 
-Mentor output phai co cau truc co the map sang:
+Mentor output phải có cấu trúc có thể map sang:
 
 - `feedback_text`
 - `suggested_complexity`
-- metadata usage log neu can
+- metadata usage log nếu cần
 
 ### 8.4 AI_Usage_Logs
 
-Moi lan goi AI la 1 ban ghi log rieng.
+Mỗi lần gọi AI là 1 bản ghi log riêng.
 
-Can giu:
+Cần giữ:
 
 - `pipeline_run_id`
 - `stage_name`
@@ -310,45 +310,45 @@ Can giu:
 - `cost_usd`
 - `payload_data`
 
-## 9. Thu tu uu tien de phat trien tiep
+## 9. Thứ tự ưu tiên để phát triển tiếp
 
-Thu tu de nghi:
+Thứ tự đề nghị:
 
-1. chot contract JSON cho 6 function
-2. siet output generation/review
-3. viet rubric theo mon hoc + loai cau hoi
-4. chot schema `KnowledgeChunks`
-5. them Mongo repository adapter
-6. them mapping log sang `AI_Usage_Logs`
-7. sau cung moi hoan thien FE test
+1. chốt contract JSON cho 6 function
+2. siết output generation/review
+3. viết rubric theo môn học + loại câu hỏi
+4. chốt schema `KnowledgeChunks`
+5. thêm Mongo repository adapter
+6. thêm mapping log sang `AI_Usage_Logs`
+7. sau cùng mới hoàn thiện FE test
 
-Ly do:
+Lý do:
 
-- FE co the doi sau
-- core pipeline neu sai thi FE dep cung vo ich
+- FE có thể đợi sau
+- core pipeline nếu sai thì FE đẹp cũng vô ích
 
-## 10. Ranh gioi giua benchmark va production
+## 10. Ranh giới giữa benchmark và production
 
 ### Benchmark mode
 
-Uu tien:
+Ưu tiên:
 
-- chay nhanh
-- de so sanh model
-- log nhieu
-- linh hoat doi model/prompt
+- chạy nhanh
+- dễ so sánh model
+- log nhiều
+- linh hoạt đổi model/prompt
 
 ### Production mode
 
-Uu tien:
+Ưu tiên:
 
-- output on dinh
-- schema chac
-- luu DB dung
-- fail-safe ro rang
-- quan ly credit/quota
+- output ổn định
+- schema chắc
+- lưu DB đúng
+- fail-safe rõ ràng
+- quản lý credit/quota
 
-Core chung giua 2 mode:
+Core chung giữa 2 mode:
 
 - provider gateway
 - prompt registry
@@ -356,19 +356,19 @@ Core chung giua 2 mode:
 - schema contract
 - usage logging
 
-## 11. Ket luan
+## 11. Kết luận
 
-Module nay phai duoc xem la:
+Module này phải được xem là:
 
 - `AI Core Prototype`
-- khong phai mot tool benchmark tam thoi
+- không phải một tool benchmark tạm thời
 
-Benchmark tu gio chi la 1 cach van hanh module de:
+Benchmark từ giờ chỉ là 1 cách vận hành module để:
 
-- do chi phi
-- do ket qua
-- so sanh model
+- đo chi phí
+- đo kết quả
+- so sánh model
 
-Con muc tieu chinh la:
+Còn mục tiêu chính là:
 
-- xay dung 1 core module co the dua vao BE tong cua do an.
+- xây dựng 1 core module có thể đưa vào BE tổng của đồ án.

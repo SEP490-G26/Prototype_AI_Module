@@ -1,39 +1,39 @@
 # AI Code Mentor Design
 
-## Muc tieu
+## Mục tiêu
 
-`AI Code Mentor` co vai tro:
+`AI Code Mentor` có vai trò:
 
-- nhan de bai va doan code sinh vien nop
-- phan tich loi ky thuat co the suy ra tu code
-- tra ve feedback co cau truc de sinh vien biet sai o dau va nen sua gi
+- nhận đề bài và đoạn code sinh viên nộp
+- phân tích lỗi kỹ thuật có thể suy ra từ code
+- trả về feedback có cấu trúc để sinh viên biết sai ở đâu và nên sửa gì
 
-## Scope hien tai
+## Scope hiện tại
 
-Prototype hien tai:
+Prototype hiện tại:
 
-- khong compile/run code
-- khong ket luan dua tren ket qua judge that
-- chi review dua tren de bai + code + rubric/policy
+- không compile/run code
+- không kết luận dựa trên kết quả judge thật
+- chỉ review dựa trên đề bài + code + rubric/policy
 
-Compile/run verification se de cho Judge0 hoac pipeline execution sau nay.
+Compile/run verification sẽ để cho Judge0 hoặc pipeline execution sau này.
 
 ## Policy runtime
 
-Policy hien tai duoc luu tai:
+Policy hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/code-mentor-policy.json`
 
-Policy chua:
+Policy chứa:
 
 - supported languages
 - issue categories
 - verdict set
 - feedback rules
 
-## Rubric va ground truth
+## Rubric và ground truth
 
-Rubric nhe:
+Rubric nhẹ:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/CODE_MENTOR.json`
 
@@ -43,18 +43,18 @@ Ground truth core:
 
 ## Prompt
 
-Prompt hien tai duoc luu tai:
+Prompt hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 
-Da nang cap de:
+Đã nâng cấp để:
 
-- nhan policy json
-- nhan rubric json
-- tra JSON only
-- tach ro verdict, categories, issues, suggestions, failing scenarios, confidence, complexity
+- nhận policy json
+- nhận rubric json
+- trả JSON only
+- tách rõ verdict, categories, issues, suggestions, failing scenarios, confidence, complexity
 
-## Route da co
+## Route đã có
 
 - `POST /api/ai-module/code-mentor`
 - `POST /api/ai-module/code-mentor/debug`
@@ -62,9 +62,9 @@ Da nang cap de:
 - `GET /api/ai-module/code-mentor/rubric`
 - `GET /api/ai-module/code-mentor/ground-truth`
 
-## Output chuan hoa
+## Output chuẩn hoá
 
-Mentor feedback hien tai gom:
+Mentor feedback hiện tại gồm:
 
 - `verdict`
 - `issueCategories`
@@ -75,16 +75,16 @@ Mentor feedback hien tai gom:
 - `complexity`
 - `modelName`
 
-## Ghi chu nghiep vu
+## Ghi chú nghiệp vụ
 
-Mentor nen:
+Mentor nên:
 
-- noi dung cu the
-- tranh phe binh mo ho
-- de xuat cach sua ro rang
-- khong khang dinh da run code neu chua run
+- nói đúng và cụ thể
+- tránh phê bình mơ hồ
+- đề xuất cách sửa rõ ràng
+- không khẳng định đã run code nếu chưa run
 
-Neu sau nay ghep Judge0:
+Nếu sau này ghép Judge0:
 
-- Mentor co the nhan them compile result / runtime result / failed test cases
-- khi do chat luong feedback se tang ro ret
+- Mentor có thể nhận thêm compile result / runtime result / failed test cases
+- khi đó chất lượng feedback sẽ tăng rõ rệt

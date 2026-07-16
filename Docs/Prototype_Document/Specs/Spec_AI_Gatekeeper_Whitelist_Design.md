@@ -1,22 +1,22 @@
 # AI Gatekeeper Whitelist Design
 
-## Muc tieu
+## Mục tiêu
 
-`AI Gatekeeper` co vai tro:
+`AI Gatekeeper` có vai trò:
 
-- doc nhanh noi dung tai lieu da extract
-- kiem tra tai lieu co thuoc whitelist mon hoc duoc he thong ho tro hay khong
-- tra ve ket qua phan loai chuan hoa de he thong quyet dinh co cho di tiep sang pipeline sau hay khong
+- đọc nhanh nội dung tài liệu đã extract
+- kiểm tra tài liệu có thuộc whitelist môn học được hệ thống hỗ trợ hay không
+- trả về kết quả phân loại chuẩn hoá để hệ thống quyết định có cho đi tiếp sang pipeline sau hay không
 
-## Whitelist hien tai
+## Whitelist hiện tại
 
 - `C`
 - `JAVA_OOP`
 - `DSA_JAVA`
 
-## Kieu ket qua
+## Kiểu kết quả
 
-Gatekeeper tra ve:
+Gatekeeper trả về:
 
 - `supported`
 - `unsupported`
@@ -24,20 +24,20 @@ Gatekeeper tra ve:
 
 ## Policy runtime
 
-Policy hien tai duoc luu tai:
+Policy hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/gatekeeper-policy.json`
 
-No chua:
+Nó chứa:
 
-- danh sach mon duoc ho tro
-- topic example cua tung mon
-- quy tac verdict
+- danh sách môn được hỗ trợ
+- topic example của từng môn
+- quy tắc verdict
 - precheck rule
 
-## Rubric va ground truth
+## Rubric và ground truth
 
-Rubric nhe:
+Rubric nhẹ:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/GATEKEEPER.json`
 
@@ -45,7 +45,7 @@ Ground truth core:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/GATEKEEPER_CORE.json`
 
-## Route da co
+## Route đã có
 
 - `POST /api/ai-module/gatekeeper`
 - `POST /api/ai-module/gatekeeper/debug`
@@ -53,9 +53,9 @@ Ground truth core:
 - `GET /api/ai-module/gatekeeper/rubric`
 - `GET /api/ai-module/gatekeeper/ground-truth`
 
-## Output chuan hoa
+## Output chuẩn hoá
 
-Gatekeeper verdict hien tai co cac field chinh:
+Gatekeeper verdict hiện tại có các field chính:
 
 - `isSupported`
 - `verdict`
@@ -67,21 +67,21 @@ Gatekeeper verdict hien tai co cac field chinh:
 - `detectedTopics`
 - `modelName`
 
-## Ghi chu nghiep vu
+## Ghi chú nghiệp vụ
 
-Gatekeeper chi nen lam dung 1 viec:
+Gatekeeper chỉ nên làm đúng 1 việc:
 
-- xac dinh co thuoc whitelist hay khong
+- xác định có thuộc whitelist hay không
 
-No khong nen:
+Nó không nên:
 
-- OCR sau
+- OCR sâu
 - chunking
 - embedding
-- sinh metadata qua sau
+- sinh metadata quá sâu
 
-Neu content qua ngan, rong, hoac qua nhieu nhieu loai mon hoc tron lan:
+Nếu content quá ngắn, rỗng hoặc có quá nhiều loại môn học trộn lẫn:
 
-- nen tra `ambiguous`
+- nên trả `ambiguous`
 
-de tranh classify sai.
+để tránh classify sai.

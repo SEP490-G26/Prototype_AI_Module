@@ -1,80 +1,80 @@
-# Tong Ket Question Generation + Review FE/PE
+# Tổng Kết Question Generation + Review FE/PE
 
-## Muc tieu
+## Mục tiêu
 
-Tai lieu nay tong hop toan bo nhung gi da lam cho chuc nang:
+Tài liệu này tổng hợp toàn bộ những gì đã làm cho chức năng:
 
-- tao cau hoi `FE`
-- tao cau hoi `PE`
-- review ket qua tao cau hoi
-- chuan hoa output de dua vao BE tong sau nay
+- tạo câu hỏi `FE`
+- tạo câu hỏi `PE`
+- review kết quả tạo câu hỏi
+- chuẩn hoá output để đưa vào BE tổng sau này
 
-Day la phan AI quan trong nhat cua he thong vi no dung de bien `KnowledgeChunks` thanh cau hoi hoc tap co the dua vao question bank.
+Đây là phần AI quan trọng nhất của hệ thống vì nó dùng để biến `KnowledgeChunks` thành câu hỏi học tập có thể đưa vào question bank.
 
-## Pham vi da lam
+## Phạm vi đã làm
 
-Da hoan thanh o muc prototype DB-ready:
+Đã hoàn thành ở mức prototype DB-ready:
 
 1. generation flow
 2. review flow
-3. generation + review pipeline 1-2 vong
+3. generation + review pipeline 1-2 vòng
 4. schema validation
-5. persistence mapping gan voi collection FE/PE
-6. duplicate detection muc co ban
-7. difficulty alignment service doc lap
-8. rubric runtime theo mon + loai cau hoi
+5. persistence mapping gần với collection FE/PE
+6. duplicate detection mức cơ bản
+7. difficulty alignment service độc lập
+8. rubric runtime theo môn + loại câu hỏi
 9. ground truth dataset runtime cho regression
-10. export package JSON chuan hoa
-11. log stage + usage + token/cost tong
+10. export package JSON chuẩn hoá
+11. log stage + usage + token/cost tổng
 
-## Cac thanh phan chinh
+## Các thành phần chính
 
 ### AI1 - Generator
 
-Vai tro:
+Vai trò:
 
-- nhan `KnowledgeChunks`
-- tao `FE` hoac `PE`
-- output JSON theo schema da chot
+- nhận `KnowledgeChunks`
+- tạo `FE` hoặc `PE`
+- output JSON theo schema đã chốt
 
-Input chinh:
+Input chính:
 
 - `subject`
 - `difficulty`
 - `questionType`
 - `count`
 - `chunks`
-- `revisionFeedback` neu regenerate
-- `previousQuestions` neu regenerate
+- `revisionFeedback` nếu regenerate
+- `previousQuestions` nếu regenerate
 
 ### AI2 - Reviewer
 
-Vai tro:
+Vai trò:
 
-- doc output cua AI1
-- doi chieu voi chunk nguon
-- doi chieu voi rubric
-- ket luan `accepted` hoac `needs_revision`
+- đọc output của AI1
+- đối chiếu với chunk nguồn
+- đối chiếu với rubric
+- kết luận `accepted` hoặc `needs_revision`
 
 ### Rule-based layer
 
-Ngoai reviewer AI, module da co them lop rule-based:
+Ngoài reviewer AI, module đã có thêm lớp rule-based:
 
 - `QuestionSchemaService`
 - `DifficultyAlignmentService`
 
-Muc dich:
+Mục đích:
 
-- khong phu thuoc 100% vao AI reviewer
-- bat som schema sai
-- bat som sai do kho
-- tra ve output map-ready cho collection that
+- không phụ thuộc 100% vào AI reviewer
+- bắt sớm schema sai
+- bắt sớm sai độ khó
+- trả về output map-ready cho collection thật
 
-## Schema output da chot
+## Schema output đã chốt
 
 ### FE
 
-Field bat buoc:
+Field bắt buộc:
 
 - `type`
 - `topic_tags`
@@ -86,7 +86,7 @@ Field bat buoc:
 - `correct_answer`
 - `explanation`
 
-Field phai la `null`:
+Field phải là `null`:
 
 - `skeleton_code`
 - `solution_code`
@@ -94,7 +94,7 @@ Field phai la `null`:
 
 ### PE
 
-Field bat buoc:
+Field bắt buộc:
 
 - `type`
 - `topic_tags`
@@ -106,7 +106,7 @@ Field bat buoc:
 - `solution_code`
 - `test_cases`
 
-Field phai la `null`:
+Field phải là `null`:
 
 - `options`
 - `correct_answer`
@@ -118,82 +118,69 @@ Field phai la `null`:
 
 Flow:
 
-1. AI generator tao danh sach cau hoi
+1. AI generator tạo danh sách câu hỏi
 2. module normalize output
 3. module validate schema
 4. module map sang FE/PE save-ready record
-5. module tinh token/cost
+5. module tính token/cost
 
-Luu y runtime:
+Lưu ý runtime:
 
-- route `POST /api/ai-module/question-generation/debug` hien ton tai
-- nhung hien dang tra cung payload runtime nhu route thuong
-- chua co debug envelope rieng cho prompt/rubric/ground-truth
+- route `POST /api/ai-module/question-generation/debug` hiện tồn tại
+- nhưng hiện đang trả cùng payload runtime như route thường
+- chưa có debug envelope riêng cho prompt/rubric/ground-truth
 
 ### `generation-review`
 
 Flow:
 
-1. chay `question-generation`
-2. chay AI reviewer
-3. neu schema sai -> ep `needs_revision`
-4. neu difficulty lech -> ep `needs_revision`
-5. neu reviewer reject -> tao lai toi da 1 lan nua
-6. sau vong cuoi -> map va save tam
+1. chạy `question-generation`
+2. chạy AI reviewer
+3. nếu schema sai -> ép `needs_revision`
+4. nếu difficulty lệch -> ép `needs_revision`
+5. nếu reviewer reject -> tạo lại tối đa 1 lần nữa
+6. sau vòng cuối -> map và save tạm
 
-Luu y runtime:
+Lưu ý runtime:
 
-- route `POST /api/ai-module/generation-review/debug` hien ton tai
-- nhung hien dang tra cung payload runtime nhu route thuong
-- route `POST /api/ai-module/generation-review/export` moi la route day du nhat de audit package
+- route `POST /api/ai-module/generation-review/debug` hiện tồn tại
+- nhưng hiện đang trả cùng payload runtime như route thường
+- route `POST /api/ai-module/generation-review/export` mới là route đầy đủ nhất để audit package
 
-Mode da ho tro:
+Mode đã hỗ trợ:
 
 - `SingleAgent`
 - `SameModelDualRole`
 - `DualAgent`
 
-## Duplicate detection da co
+## Duplicate detection đã có
 
-Da co 2 lop:
+Đã có 2 lớp:
 
-1. duplicate trong cung 1 batch generation
-2. duplicate heuristic voi repository tam
+1. duplicate trong cùng 1 batch generation
+2. duplicate heuristic với repository tạm
 
-Tac dung:
+Tác dụng:
 
-- neu trung cau hoi da ton tai hoac trung noi bo
-- schema mapping se bi danh dau issue
-- review flow co the bi ep ve `needs_revision`
+- nếu trùng câu hỏi đã tồn tại hoặc trùng nội bộ
+- schema mapping sẽ bị đánh dấu issue
+- review flow có thể bị ép về `needs_revision`
 
-## Difficulty alignment da co
+## Difficulty alignment đã có
 
-Da them service doc lap:
+Đã thêm service độc lập:
 
 - `DifficultyAlignmentService`
 
-Vai tro:
+Vai trò:
 
-- tu danh gia `Easy/Medium/Hard`
-- doi chieu voi difficulty duoc yeu cau
-- neu lech muc -> them issue va co the reject output
+- tự đánh giá `Easy/Medium/Hard`
+- đối chiếu với difficulty được yêu cầu
+- nếu lệch mức -> thêm issue và có thể reject output
 
-## Rubric da co
+## Rubric đã có
 
-Da tao 6 rubric JSON cho generation/review:
-
-- `C_FE`
-- `C_PE`
-- `JAVA_OOP_FE`
-- `JAVA_OOP_PE`
-- `DSA_JAVA_FE`
-- `DSA_JAVA_PE`
-
-Rubric da noi runtime vao review flow.
-
-## Ground truth da co
-
-Da tao bo starter ground truth cho:
+Đã tạo 6 rubric JSON cho generation/review:
 
 - `C_FE`
 - `C_PE`
@@ -202,11 +189,24 @@ Da tao bo starter ground truth cho:
 - `DSA_JAVA_FE`
 - `DSA_JAVA_PE`
 
-Ground truth da noi vao:
+Rubric đã nối runtime vào review flow.
+
+## Ground truth đã có
+
+Đã tạo bộ starter ground truth cho:
+
+- `C_FE`
+- `C_PE`
+- `JAVA_OOP_FE`
+- `JAVA_OOP_PE`
+- `DSA_JAVA_FE`
+- `DSA_JAVA_PE`
+
+Ground truth đã nối vào:
 
 - route regression
 
-## API da co
+## API đã có
 
 - `POST /api/ai-module/question-generation`
 - `POST /api/ai-module/question-generation/debug`
@@ -218,13 +218,13 @@ Ground truth da noi vao:
 - `POST /api/ai-module/generation-review/debug`
 - `POST /api/ai-module/generation-review/export`
 
-## Export package da co
+## Export package đã có
 
 Route:
 
 - `POST /api/ai-module/generation-review/export`
 
-Payload export gom:
+Payload export gồm:
 
 - `metadata`
 - `request`
@@ -240,41 +240,41 @@ Payload export gom:
 - `usageLogs`
 - `totals`
 
-Muc dich:
+Mục đích:
 
 - debug
 - benchmark
-- so sanh model
-- dua cho FE render
-- chuyen tiep vao BE tong sau nay
+- so sánh model
+- đưa cho FE render
+- chuyển tiếp vào BE tổng sau này
 
-## Collection / config lien quan da duoc dinh hinh
+## Collection / config liên quan đã được định hình
 
-Da chot huong cho 3 collection cau hinh:
+Đã chốt hướng cho 3 collection cấu hình:
 
 - `AI_Prompt_Versions`
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 
-## Nhung gi chua lam
+## Những gì chưa làm
 
-Nhung phan con lai hop ly de lam khi merge vao BE that:
+Những phần còn lại hợp lý để làm khi merge vào BE thật:
 
-1. Mongo repository that
+1. Mongo repository thật
 2. vector-based duplicate detection
-3. compile/run verification cho `PE` bang Judge0
+3. compile/run verification cho `PE` bằng Judge0
 4. publish workflow cho question bank
-5. prompt/rubric/ground truth doc that tu DB
-6. luu export package vao DB neu can audit lau dai
+5. prompt/rubric/ground truth đọc thật từ DB
+6. lưu export package vào DB nếu cần audit lâu dài
 
-## Ket luan
+## Kết luận
 
-Phan `Question Generation + Review FE/PE` hien da du muc de:
+Phần `Question Generation + Review FE/PE` hiện đã đủ mức để:
 
 - test model
 - benchmark cost
-- regression co doi chieu
-- ep JSON gan voi schema DB
-- lam prototype cho core module AI cua do an
+- regression có đối chiếu
+- ép JSON gần với schema DB
+- làm prototype cho core module AI của đồ án
 
-Nghia la khi chuyen sang AI function tiep theo, phan nay da co the xem la khoi core on dinh nhat cua module.
+Nghĩa là khi chuyển sang AI function tiếp theo, phần này đã có thể xem là khối core ổn định nhất của module.

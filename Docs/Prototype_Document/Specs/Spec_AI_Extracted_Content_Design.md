@@ -1,46 +1,46 @@
 # AI Extracted Content Design
 
-## Muc tieu
+## Mục tiêu
 
-`AI Extracted Content` co vai tro:
+`AI Extracted Content` có vai trò:
 
-- nhan noi dung tai lieu da duoc dua vao module
-- chuyen noi dung thanh markdown sach de dung cho chunking va embedding
-- neu co image marker va co vision model, mo rong noi dung anh thanh markdown
+- nhận nội dung tài liệu đã được đưa vào module
+- chuyển nội dung thành markdown sạch để dùng cho chunking và embedding
+- nếu có image marker và có vision model, mở rộng nội dung ảnh thành markdown
 
-## Scope hien tai
+## Scope hiện tại
 
-Prototype hien tai xu ly 2 mode:
+Prototype hiện tại xử lý 2 mode:
 
 - `TextOnly`
 - `FullMultimodalPage`
 
-Scope runtime hien tai:
+Scope runtime hiện tại:
 
-- co route upload ingest: `POST /api/ai-module/uploads/ingest`
-- `docx`: doc text tu `word/document.xml`, boc media tu `word/media`
-- `pptx`: doc text tu `ppt/slides/*.xml`, boc media tu `ppt/media`
-- `pdf`: doc text bang parser that `PdfPig`
-- `image`: luu file va tra marker de vision flow xu ly
+- có route upload ingest: `POST /api/ai-module/uploads/ingest`
+- `docx`: đọc text từ `word/document.xml`, bóc media từ `word/media`
+- `pptx`: đọc text từ `ppt/slides/*.xml`, bóc media từ `ppt/media`
+- `pdf`: đọc text bằng parser thật `PdfPig`
+- `image`: lưu file và trả marker để vision flow xử lý
 
-No van chua la OCR/parser production-final, nhung da duoc nang cap thanh parser prototype thuc dung cho production test harness.
+Nó vẫn chưa là OCR/parser production-final, nhưng đã được nâng cấp thành parser prototype thực dụng cho production test harness.
 
 ## Policy runtime
 
-Policy hien tai duoc luu tai:
+Policy hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/extracted-content-policy.json`
 
-Policy chua:
+Policy chứa:
 
 - supported modes
 - image markers
 - normalization rules
 - warning rules
 
-## Rubric va ground truth
+## Rubric và ground truth
 
-Rubric nhe:
+Rubric nhẹ:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/EXTRACTED_CONTENT.json`
 
@@ -48,7 +48,7 @@ Ground truth core:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/EXTRACTED_CONTENT_CORE.json`
 
-## Route da co
+## Route đã có
 
 - `POST /api/ai-module/extracted-content`
 - `POST /api/ai-module/extracted-content/debug`
@@ -56,9 +56,9 @@ Ground truth core:
 - `GET /api/ai-module/extracted-content/rubric`
 - `GET /api/ai-module/extracted-content/ground-truth`
 
-## Output chuan hoa
+## Output chuẩn hoá
 
-Output extraction hien tai gom:
+Output extraction hiện tại gồm:
 
 - `rawText`
 - `normalizedMarkdown`
@@ -70,7 +70,7 @@ Output extraction hien tai gom:
 - `detectedImageReferences`
 - `warnings`
 
-`uploads/ingest` con tra them:
+`uploads/ingest` còn trả thêm:
 
 - `savedPath`
 - `suggestedMode`
@@ -82,20 +82,20 @@ Output extraction hien tai gom:
 
 ## Warning logic
 
-He thong co the canh bao:
+Hệ thống có thể cảnh báo:
 
-- input rong
-- co image marker nhung khong co vision model
-- sau normalize khong con du text huu ich
+- input rỗng
+- có image marker nhưng không có vision model
+- sau normalize không còn đủ text hữu ích
 
-## Ghi chu nghiep vu
+## Ghi chú nghiệp vụ
 
-Chuc nang nay chi nen lam:
+Chức năng này chỉ nên làm:
 
-- chuyen noi dung ve dang markdown su dung duoc
-- bao ro warning neu chat luong input kem
+- chuyển nội dung về dạng markdown sử dụng được
+- báo rõ warning nếu chất lượng input kém
 
-No khong nen kiem nhiem:
+Nó không nên kiêm nhiệm:
 
 - whitelist classification
 - embedding

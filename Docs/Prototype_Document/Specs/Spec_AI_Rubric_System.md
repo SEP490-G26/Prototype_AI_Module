@@ -1,25 +1,25 @@
 # AI Rubric System
 
-## Muc tieu
+## Mục tiêu
 
-Tai lieu nay mo ta cach thiet ke va su dung bo `difficulty rubric` cho chuc nang:
+Tài liệu này mô tả cách thiết kế và sử dụng bộ `difficulty rubric` cho chức năng:
 
 - `AI Question Generation`
 - `AI Review result of AI Question Generation`
 
-Bo rubric nay duoc dat theo huong:
+Bộ rubric này được đặt theo hướng:
 
-- prompt va noi dung rubric dung tieng Anh
-- rubric la `structured JSON`, khong phai chi la prompt text thu cong
-- benchmark, prototype, va production co the dung cung mot source of truth
+- prompt và nội dung rubric dùng tiếng Anh
+- rubric là `structured JSON`, không phải chỉ là prompt text thủ công
+- benchmark, prototype và production có thể dùng cùng một source of truth
 
-## Vi tri rubric source
+## Vị trí rubric source
 
-Rubric source hien tai duoc dat tai:
+Rubric source hiện tại được đặt tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/`
 
-Danh sach:
+Danh sách:
 
 - `C_FE.json`
 - `C_PE.json`
@@ -29,29 +29,29 @@ Danh sach:
 - `DSA_JAVA_PE.json`
 - `README.json`
 
-Ground truth starter datasets cho `Question Generation` hien dat tai:
+Ground truth starter datasets cho `Question Generation` hiện đặt tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/`
 
-## Tai sao dung JSON thay vi prompt text thu cong
+## Tại sao dùng JSON thay vì prompt text thủ công
 
-Neu chi dung prompt text:
+Nếu chỉ dùng prompt text:
 
-- kho maintain
-- kho version hoa
-- de lech giua benchmark va production
-- kho diff khi doi tieu chi danh gia
+- khó maintain
+- khó version hoá
+- dễ lệch giữa benchmark và production
+- khó diff khi đổi tiêu chí đánh giá
 
-Neu dung JSON:
+Nếu dùng JSON:
 
-- co 1 source of truth ro rang
-- prototype va production co the dung chung
-- co the render thanh prompt cho nhieu model/provider
-- co the ghi version, review, diff rat de
+- có 1 source of truth rõ ràng
+- prototype và production có thể dùng chung
+- có thể render thành prompt cho nhiều model/provider
+- có thể ghi version, review, diff rất dễ
 
-## Cau truc chung cua 1 rubric JSON
+## Cấu trúc chung của 1 rubric JSON
 
-Moi file rubric gom cac phan chinh:
+Mỗi file rubric gồm các phần chính:
 
 ### 1. Metadata
 
@@ -64,29 +64,29 @@ Moi file rubric gom cac phan chinh:
 
 ### 2. Difficulty definitions
 
-`difficulty_definitions` chia thanh:
+`difficulty_definitions` chia thành:
 
 - `easy`
 - `medium`
 - `hard`
 
-Moi muc gom:
+Mỗi mục gồm:
 
 - `description`
 - `expected_skills`
 - `should_avoid`
 
-Y nghia:
+Ý nghĩa:
 
-- `description`: dinh nghia muc do kho
-- `expected_skills`: AI reviewer ky vong thay gi o muc do nay
-- `should_avoid`: nhung dau hieu cho thay cau hoi dang vuot qua scope hoac lech muc
+- `description`: định nghĩa mức độ khó
+- `expected_skills`: AI reviewer kỳ vọng thấy gì ở mức độ này
+- `should_avoid`: những dấu hiệu cho thấy câu hỏi đang vượt quá scope hoặc lệch mức
 
 ### 3. Review checks
 
-`review_checks` la danh sach cac tieu chi ma AI reviewer phai check moi lan review.
+`review_checks` là danh sách các tiêu chí mà AI reviewer phải check mỗi lần review.
 
-Day la lop review hoc thuat / nghiep vu.
+Đây là lớp review học thuật hoặc nghiệp vụ.
 
 ### 4. Difficulty mismatch signals
 
@@ -96,205 +96,205 @@ Day la lop review hoc thuat / nghiep vu.
 - `medium`
 - `hard`
 
-Moi muc liet ke cac dau hieu cho thay cau hoi dang bi gan sai difficulty.
+Mỗi mục liệt kê các dấu hiệu cho thấy câu hỏi đang bị gán sai difficulty.
 
-Vi du:
+Ví dụ:
 
-- gan `Easy` nhung lai can multi-step tracing
-- gan `Hard` nhung thuc te chi la definition recall
+- gán `Easy` nhưng lại cần multi-step tracing
+- gán `Hard` nhưng thực tế chỉ là definition recall
 
 ### 5. Acceptance rules
 
-`acceptance_rules` quy dinh khi nao reviewer duoc chap nhan cau hoi.
+`acceptance_rules` quy định khi nào reviewer được chấp nhận câu hỏi.
 
 ### 6. Regeneration hints
 
-`regeneration_hints` la goi y cho lan generate tiep theo neu AI reviewer reject.
+`regeneration_hints` là gợi ý cho lần generate tiếp theo nếu AI reviewer reject.
 
-## 6 to hop rubric hien tai
+## 6 tổ hợp rubric hiện tại
 
 ### 1. `C_FE`
 
-Dung cho:
+Dùng cho:
 
-- mon C nhap mon
-- cau hoi multiple choice
+- môn C nhập môn
+- câu hỏi multiple choice
 
 ### 2. `C_PE`
 
-Dung cho:
+Dùng cho:
 
-- mon C nhap mon
+- môn C nhập môn
 - practice/code question
 
 ### 3. `JAVA_OOP_FE`
 
-Dung cho:
+Dùng cho:
 
-- mon Java OOP
-- cau hoi multiple choice
+- môn Java OOP
+- câu hỏi multiple choice
 
 ### 4. `JAVA_OOP_PE`
 
-Dung cho:
+Dùng cho:
 
-- mon Java OOP
+- môn Java OOP
 - practice/code question
 
 ### 5. `DSA_JAVA_FE`
 
-Dung cho:
+Dùng cho:
 
-- mon Data Structures and Algorithms tren Java
-- cau hoi multiple choice
+- môn Data Structures and Algorithms trên Java
+- câu hỏi multiple choice
 
 ### 6. `DSA_JAVA_PE`
 
-Dung cho:
+Dùng cho:
 
-- mon Data Structures and Algorithms tren Java
+- môn Data Structures and Algorithms trên Java
 - practice/code question
 
-## Bo canh FPT University
+## Bối cảnh FPT University
 
-Rubric source hien tai da duoc them `institution_context` o muc nhe de bam sat doi tuong su dung:
+Rubric source hiện tại đã được thêm `institution_context` ở mức nhẹ để bám sát đối tượng sử dụng:
 
-- sinh vien Dai hoc FPT
-- nhom mon hoc co huong gan voi:
+- sinh viên Đại học FPT
+- nhóm môn học có hướng gần với:
   - PRF-style foundational programming
   - PRO-style Java OOP
   - CSD-style data structures and algorithms
 
-Muc dich:
+Mục đích:
 
-- giu style de bai phu hop voi sinh vien muc tieu
-- khong de rubric tro thanh qua chung chung
-- van giu noi dung o muc hoc thuat, khong phu thuoc vao 1 syllabus noi bo cu the
+- giữ style đề bài phù hợp với sinh viên mục tiêu
+- không để rubric trở thành quá chung chung
+- vẫn giữ nội dung ở mức học thuật, không phụ thuộc vào 1 syllabus nội bộ cụ thể
 
-## Cach dung trong prototype hien tai
+## Cách dùng trong prototype hiện tại
 
-Prototype hien tai nen dung bo rubric nay theo flow:
+Prototype hiện tại nên dùng bộ rubric này theo flow:
 
-1. Xac dinh:
+1. Xác định:
    - `subject`
    - `question_type`
-2. Chon file rubric JSON tuong ung
-3. Nhung rubric JSON vao `question_review` prompt
-4. AI reviewer dung rubric do de:
+2. Chọn file rubric JSON tương ứng
+3. Nhúng rubric JSON vào `question_review` prompt
+4. AI reviewer dùng rubric đó để:
    - check scope
    - check difficulty
    - check quality
-5. Neu reject:
-   - dua issue + suggestion + regeneration hints vao vong generate tiep theo
+5. Nếu reject:
+   - đưa issue + suggestion + regeneration hints vào vòng generate tiếp theo
 
-Hien tai prototype da ho tro route runtime de lay source nay:
+Hiện tại prototype đã hỗ trợ route runtime để lấy source này:
 
 - `GET /api/ai-module/question-generation/rubric?subject=...&questionType=...`
 - `GET /api/ai-module/question-generation/ground-truth?subject=...&questionType=...`
 
-## Cach dung trong production sau nay
+## Cách dùng trong production sau này
 
-Khi ghep vao BE tong, khong can copy prompt text thu cong.
+Khi ghép vào BE tổng, không cần copy prompt text thủ công.
 
-Chi can:
+Chỉ cần:
 
-1. giu nguyen rubric JSON lam source of truth
-2. dua rubric vao:
+1. giữ nguyên rubric JSON làm source of truth
+2. đưa rubric vào:
    - DB
-   - hoac config/prompt registry cua he thong
+   - hoặc config/prompt registry của hệ thống
 3. prompt template render rubric ra prompt string cho model
-4. version hoa rubric neu co thay doi
+4. version hoá rubric nếu có thay đổi
 
-Nghia la:
+Nghĩa là:
 
-- production va prototype dung chung noi dung rubric
-- chi khac cach luu tru / nạp du lieu
+- production và prototype dùng chung nội dung rubric
+- chỉ khác cách lưu trữ hoặc nạp dữ liệu
 
-## Prompt va rubric: phan nao nen de tieng Anh
+## Prompt và rubric: phần nào nên để tiếng Anh
 
-Nen de tieng Anh cho:
+Nên để tiếng Anh cho:
 
 - `difficulty definitions`
 - `review checks`
 - `difficulty mismatch signals`
 - `acceptance rules`
 - `regeneration hints`
-- prompt runtime gui cho AI
+- prompt runtime gửi cho AI
 
-Ly do:
+Lý do:
 
-- model doc on dinh hon
-- giam mo ho
-- de maintain tren nhieu provider/model
+- model đọc ổn định hơn
+- giảm mơ hồ
+- dễ maintain trên nhiều provider/model
 
-Co the de tieng Viet cho:
+Có thể để tiếng Việt cho:
 
-- tai lieu noi bo nhom
-- ghi chu bao cao
-- mo ta quy trinh
+- tài liệu nội bộ nhóm
+- ghi chú báo cáo
+- mô tả quy trình
 
-## Rubric va rule-based checks khac nhau the nao
+## Rubric và rule-based checks khác nhau thế nào
 
 ### Rubric
 
-Rubric la bo tieu chi de AI reviewer danh gia:
+Rubric là bộ tiêu chí để AI reviewer đánh giá:
 
-- pham vi kien thuc
-- do kho
-- chat luong cau hoi
-- su phu hop voi mon hoc
+- phạm vi kiến thức
+- độ khó
+- chất lượng câu hỏi
+- sự phù hợp với môn học
 
 ### Rule-based checks
 
-Rule-based checks la cac check bang code:
+Rule-based checks là các check bằng code:
 
-- schema dung hay sai
-- `correct_answer` co hop le khong
-- co field bat buoc khong
-- co duplicate khong
-- co source chunk id hop le khong
+- schema đúng hay sai
+- `correct_answer` có hợp lệ không
+- có field bắt buộc không
+- có duplicate không
+- có source chunk id hợp lệ không
 
-Can ca hai.
+Cần cả hai.
 
-Rubric khong thay the duoc validation bang code.
+Rubric không thay thế được validation bằng code.
 
-## Huong nang cap tiep theo
+## Hướng nâng cấp tiếp theo
 
-### 1. Noi rubric vao code runtime
+### 1. Nối rubric vào code runtime
 
-Hien tai bo rubric da duoc tao thanh JSON source.
+Hiện tại bộ rubric đã được tạo thành JSON source.
 
-Buoc tiep theo la:
+Bước tiếp theo là:
 
-- viet service doc rubric file
-- `BuildReviewRubric(...)` khong hard-code nua
-- render rubric JSON dong vao prompt
+- viết service đọc rubric file
+- `BuildReviewRubric(...)` không hard-code nữa
+- render rubric JSON động vào prompt
 
-### 2. Them difficulty alignment logs
+### 2. Thêm difficulty alignment logs
 
-Nen log them:
+Nên log thêm:
 
-- rubric id nao da duoc dung
+- rubric id nào đã được dùng
 - requested difficulty
 - reviewer difficulty alignment notes
 
-### 3. Them rubric versioning
+### 3. Thêm rubric versioning
 
-Moi rubric nen co:
+Mỗi rubric nên có:
 
 - `version`
 - `updated_at`
 - `updated_by`
-- change log neu can
+- change log nếu cần
 
-## Ket luan
+## Kết luận
 
-Bo rubric nay duoc thiet ke de:
+Bộ rubric này được thiết kế để:
 
-- la source of truth chung cho benchmark, prototype, va production
-- giu prompt o dang maintainable
-- nang chat luong review difficulty theo tung mon hoc va tung loai cau hoi
+- là source of truth chung cho benchmark, prototype và production
+- giữ prompt ở dạng maintainable
+- nâng chất lượng review difficulty theo từng môn học và từng loại câu hỏi
 
-No khong phai prompt text don le.
+Nó không phải prompt text đơn lẻ.
 
-No la mot he thong rubric co cau truc, co the render thanh prompt va co the version hoa ve sau.
+Nó là một hệ thống rubric có cấu trúc, có thể render thành prompt và có thể version hoá về sau.
