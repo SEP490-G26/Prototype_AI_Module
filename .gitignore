@@ -1,0 +1,12 @@
+node_modules/
+.env
+**/.env
+frontend/dist/
+backend/data/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+src-dotnet/Ape.AiModule.Api/App_Data/run-history/
+src-dotnet/Ape.AiModule.Api/App_Data/uploads/
