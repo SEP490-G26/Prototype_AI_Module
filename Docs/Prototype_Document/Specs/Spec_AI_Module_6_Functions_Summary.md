@@ -70,7 +70,7 @@ Muc tieu cua prototype:
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/gatekeeper-policy.json`
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/GATEKEEPER.json`
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/GATEKEEPER_CORE.json`
-- note: `Docs/AI_Gatekeeper_Whitelist_Design.md`
+- note: `Docs/Prototype_Document/Specs/Spec_AI_Gatekeeper_Whitelist_Design.md`
 
 ### Trang thai
 
@@ -118,7 +118,7 @@ Muc tieu cua prototype:
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/extracted-content-policy.json`
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/EXTRACTED_CONTENT.json`
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/EXTRACTED_CONTENT_CORE.json`
-- note: `Docs/AI_Extracted_Content_Design.md`
+- note: `Docs/Prototype_Document/Specs/Spec_AI_Extracted_Content_Design.md`
 
 ### Trang thai
 
@@ -198,7 +198,7 @@ Da duoc chuan hoa theo schema DB-ready:
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/embedding-tagging-policy.json`
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/EMBEDDING_TAGGING.json`
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/EMBEDDING_TAGGING_CORE.json`
-- note: `Docs/AI_Embedding_AutoTagging_Design.md`
+- note: `Docs/Prototype_Document/Specs/Spec_AI_Embedding_AutoTagging_Design.md`
 
 ### Trang thai
 
@@ -253,9 +253,9 @@ Da duoc chuan hoa theo schema DB-ready:
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/*.json`
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/QGEN_*.json`
 - note:
-  - `Docs/DB resource/AI_Generation_Review_Pipeline.md`
-  - `Docs/DB resource/AI_Generation_Review_Export.md`
-  - `Docs/Question_Generation_Review_FE_PE_Summary.md`
+  - `Docs/Prototype_Document/DB_Resources/AI_Generation_Review_Pipeline.md`
+  - `Docs/Prototype_Document/DB_Resources/AI_Generation_Review_Export.md`
+  - `Docs/Prototype_Document/Specs/Spec_Question_Generation_Review_FE_PE_Summary.md`
 
 ### Trang thai
 
@@ -361,7 +361,7 @@ Judge0 se la phan nang cap sau khi ghep production.
 - policy: `src-dotnet/Ape.AiModule.Api/App_Data/code-mentor-policy.json`
 - rubric: `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/CODE_MENTOR.json`
 - ground truth: `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/CODE_MENTOR_CORE.json`
-- note: `Docs/AI_Code_Mentor_Design.md`
+- note: `Docs/Prototype_Document/Specs/Spec_AI_Code_Mentor_Design.md`
 
 ### Trang thai
 
@@ -395,10 +395,10 @@ Route prompt da co:
 
 Tai lieu lien quan:
 
-- `Docs/DB resource/AI_Configuration_Collections.md`
-- `Docs/DB resource/AI_Policies.md`
-- `Docs/DB resource/AI_Rubrics.md`
-- `Docs/DB resource/AI_GroundTruth_Sets.md`
+- `Docs/Prototype_Document/DB_Resources/AI_Configuration_Collections.md`
+- `Docs/Prototype_Document/DB_Resources/AI_Policies.md`
+- `Docs/Prototype_Document/DB_Resources/AI_Rubrics.md`
+- `Docs/Prototype_Document/DB_Resources/AI_GroundTruth_Sets.md`
 
 ### Luu y quan trong ve `AI_Policies`
 
@@ -411,7 +411,7 @@ Nhung khi dua vao DB that, da chot theo huong:
 
 Tai lieu doi chieu chi tiet:
 
-- `Docs/App_Data_Source_Of_Truth_vs_DB_Mapping.md`
+- `Docs/Prototype_Document/Guides/Guide_App_Data_vs_DB_Mapping.md`
 
 ## Log va benchmark
 
@@ -443,9 +443,9 @@ Run history summary hien tai con co:
 
 Tai lieu lien quan:
 
-- `Docs/AI_Pipeline_Log_Storage.md`
-- `Docs/AI_Usage_Log_Pipeline.md`
-- `Docs/AI_Module_Run_Guide.md`
+- `Docs/Prototype_Document/Guides/Guide_AI_Pipeline_Log_Storage.md`
+- `Docs/Prototype_Document/Guides/Guide_AI_Usage_Log_Pipeline.md`
+- `Docs/Prototype_Document/Guides/Guide_AI_Module_Run.md`
 
 ## Trang thai module hien tai
 

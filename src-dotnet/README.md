@@ -16,11 +16,12 @@ Thư mục này chứa prototype `.NET` đang active của AI module.
 
 ## Tài liệu liên quan
 
-- `../Docs/AI_Module_Run_Guide.md`
-- `../Docs/AI_Module_6_Functions_Summary.md`
-- `../Docs/AI_Module_API_Routes_Summary.md`
+- `../Docs/Prototype_Document/Guides/Guide_AI_Module_Run.md`
+- `../Docs/Prototype_Document/Specs/Spec_AI_Module_6_Functions_Summary.md`
+- `../Docs/Prototype_Document/Guides/Guide_AI_Module_API_Routes.md`
+- `../CONTRIBUTING.md`
 
 ## Ghi chú
 
-- `Prototype_Document` đã được bỏ để tránh trùng lặp với `../Docs/`.
-- Nếu cần tài liệu, xem `../Docs/` là nguồn chính.
+- Nếu cần tài liệu, xem `../Docs/Prototype_Document/` là nguồn chính cho khối `.NET`.
+- `legacy-node-benchmark/` chỉ là tài liệu và mã tham chiếu của benchmark cũ.

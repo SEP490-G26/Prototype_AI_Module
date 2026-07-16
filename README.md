@@ -31,10 +31,11 @@ Nếu cần chạy module AI đang dùng hiện tại, đi theo hướng `.NET`:
 
 ## Tài liệu nên đọc trước
 
-1. [Run Guide](Docs/AI_Module_Run_Guide.md)
-2. [6 Functions Summary](Docs/AI_Module_6_Functions_Summary.md)
-3. [API Routes Summary](Docs/AI_Module_API_Routes_Summary.md)
-4. [Operator UI](Docs/AI_Module_Operator_UI.md)
+1. [Hướng dẫn chạy module](Docs/Prototype_Document/Guides/Guide_AI_Module_Run.md)
+2. [Tổng quan 6 chức năng AI](Docs/Prototype_Document/Specs/Spec_AI_Module_6_Functions_Summary.md)
+3. [Bảng route API](Docs/Prototype_Document/Guides/Guide_AI_Module_API_Routes.md)
+4. [Hướng dẫn UI operator](Docs/Prototype_Document/Guides/Guide_AI_Module_Operator_UI.md)
+5. [Quy ước đóng góp](CONTRIBUTING.md)
 
 ## Chạy nhanh module `.NET`
 
