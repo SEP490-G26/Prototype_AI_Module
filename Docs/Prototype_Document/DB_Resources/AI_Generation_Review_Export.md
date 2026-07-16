@@ -1,23 +1,23 @@
 # AI Generation Review Export
 
-## Muc tieu
+## Mục tiêu
 
-Tai lieu nay mo ta goi JSON chuan hoa duoc tra ve boi route:
+Tài liệu này mô tả gói JSON chuẩn hoá được trả về bởi route:
 
 - `POST /api/ai-module/generation-review/export`
 
-No dung cho 4 muc dich:
+Nó dùng cho 4 mục đích:
 
-1. benchmark chi phi
+1. benchmark chi phí
 2. debug output generator + reviewer
-3. export ket qua test de dua vao bao cao
-4. lam contract tam truoc khi noi vao Mongo repository that
+3. export kết quả test để đưa vào báo cáo
+4. làm contract tạm trước khi nối vào Mongo repository thật
 
 ## Payload metadata
 
-`metadata` gom:
+`metadata` gồm:
 
-- `packageId`: id cua goi export
+- `packageId`: id của gói export
 - `subject`
 - `questionType`
 - `requestedDifficulty`
@@ -34,7 +34,7 @@ No dung cho 4 muc dich:
 
 ## Payload request snapshot
 
-`request` la snapshot cua input goc:
+`request` là snapshot của input gốc:
 
 - `userId`
 - `courseId`
@@ -50,7 +50,7 @@ No dung cho 4 muc dich:
 - `maxAttempts`
 - `chunks`
 
-`chunks` duoc dong bang thanh:
+`chunks` được đóng gói thành:
 
 - `chunkId`
 - `contentText`
@@ -58,9 +58,9 @@ No dung cho 4 muc dich:
 - `sectionTitle`
 - `language`
 
-## Payload ket qua
+## Payload kết quả
 
-Goi export tra ve cac khoi sau:
+Gói export trả về các khối sau:
 
 - `rubric`
 - `questions`
@@ -74,26 +74,26 @@ Goi export tra ve cac khoi sau:
 - `usageLogs`
 - `totals`
 
-## Gia tri thuc te cua export package
+## Giá trị thực tế của export package
 
-No giup team:
+Nó giúp team:
 
-- so sanh 2 model tren cung 1 input
-- xem AI sai o dau: schema, difficulty, duplicate hay review
-- export nguyen goi JSON cho FE render
-- tao bang chung ro rang cho viec chon model dua tren cost + output
+- so sánh 2 model trên cùng 1 input
+- xem AI sai ở đâu: schema, difficulty, duplicate hay review
+- export nguyên gói JSON cho FE render
+- tạo bằng chứng rõ ràng cho việc chọn model dựa trên cost + output
 
-## Trang thai hien tai
+## Trạng thái hiện tại
 
-Da xong o muc prototype:
+Đã xong ở mức prototype:
 
-- contract on dinh
+- contract ổn định
 - build xanh
-- khong phu thuoc Mongo
-- co the noi vao repository that sau
+- không phụ thuộc Mongo
+- có thể nối vào repository thật sau
 
-Chua xong o muc production:
+Chưa xong ở mức production:
 
-- chua luu export package vao DB
-- chua gan version that tu `AI_Prompt_Versions`
-- chua gan `AI_Rubrics` va `AI_GroundTruth_Sets` tu Mongo
+- chưa lưu export package vào DB
+- chưa gắn version thật từ `AI_Prompt_Versions`
+- chưa gắn `AI_Rubrics` và `AI_GroundTruth_Sets` từ Mongo

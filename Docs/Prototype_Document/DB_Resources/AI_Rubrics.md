@@ -1,34 +1,34 @@
 # AI_Rubrics
 
-## Muc tieu
+## Mục tiêu
 
-Collection `AI_Rubrics` luu bo tieu chi danh gia co cau truc cho cac AI function can review theo quy chuan ro rang.
+Collection `AI_Rubrics` lưu bộ tiêu chí đánh giá có cấu trúc cho các AI function cần review theo quy chuẩn rõ ràng.
 
-Trong giai doan hien tai, rubric dang duoc luu tam o:
+Trong giai đoạn hiện tại, rubric đang được lưu tạm ở:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/`
 
-Khi dua vao BE that, cac file nay co the import vao collection `AI_Rubrics`.
+Khi đưa vào BE thật, các file này có thể import vào collection `AI_Rubrics`.
 
-## Schema de nghi
+## Schema đề nghị
 
 ```js
 {
   _id: ObjectId,
 
   rubric_id: String,               // vd: C_FE, JAVA_OOP_PE, DSA_JAVA_FE
-  rubric_name: String,             // ten de doc tren UI / admin
+  rubric_name: String,             // tên để đọc trên UI / admin
   function_name: String,           // QuestionGenerationReview | CodeMentor
 
   subject_code: String,            // C | JAVA_OOP | DSA_JAVA
-  question_type: String,           // FE | PE | null neu rubric khong theo FE/PE
+  question_type: String,           // FE | PE | null nếu rubric không theo FE/PE
   language: String,                // en
 
   version: String,                 // vd: v1
   institution_context: String,     // FPT University, PRF / PRO / CSD style
-  description: String,             // mo ta ngan muc dich rubric
+  description: String,             // mô tả ngắn mục đích rubric
 
-  content_json: Object,            // noi dung rubric chi tiet
+  content_json: Object,            // nội dung rubric chi tiết
 
   is_active: Boolean,
   created_at: Date,
@@ -36,26 +36,26 @@ Khi dua vao BE that, cac file nay co the import vao collection `AI_Rubrics`.
 }
 ```
 
-## Giai thich field
+## Giải thích field
 
-- `rubric_id`: ma rubric on dinh cho runtime
-- `rubric_name`: ten hien thi
-- `function_name`: rubric thuoc AI function nao
-- `subject_code`: rubric gan voi mon hoc nao
-- `question_type`: FE hay PE; neu rubric cho mentor co the de `null`
-- `language`: ngon ngu viet rubric, hien tai nen de `en`
-- `version`: version cua rubric
-- `institution_context`: boi canh hoc thuat cua FPT University
-- `description`: mo ta muc dich rubric
-- `content_json`: noi dung chi tiet dung cho runtime
-- `is_active`: rubric dang duoc su dung hay da ngung
-- `created_at`, `updated_at`: thoi gian quan tri du lieu
+- `rubric_id`: mã rubric ổn định cho runtime
+- `rubric_name`: tên hiển thị
+- `function_name`: rubric thuộc AI function nào
+- `subject_code`: rubric gắn với môn học nào
+- `question_type`: FE hay PE; nếu rubric cho mentor có thể để `null`
+- `language`: ngôn ngữ viết rubric, hiện tại nên để `en`
+- `version`: version của rubric
+- `institution_context`: bối cảnh học thuật của FPT University
+- `description`: mô tả mục đích rubric
+- `content_json`: nội dung chi tiết dùng cho runtime
+- `is_active`: rubric đang được sử dụng hay đã ngừng
+- `created_at`, `updated_at`: thời gian quản trị dữ liệu
 
-## Cau truc `content_json`
+## Cấu trúc `content_json`
 
-### Doi voi Question Generation / Review
+### Đối với Question Generation / Review
 
-`content_json` nen co toi thieu:
+`content_json` nên có tối thiểu:
 
 ```js
 {
@@ -68,18 +68,18 @@ Khi dua vao BE that, cac file nay co the import vao collection `AI_Rubrics`.
 }
 ```
 
-Y nghia:
+Ý nghĩa:
 
-- `difficulty_definitions`: mo ta `Easy`, `Medium`, `Hard` theo tung mon
-- `review_checks`: danh sach tieu chi can reviewer check
-- `acceptance_rules`: dieu kien de accept
-- `rejection_rules`: dieu kien bat buoc reject / needs_revision
-- `difficulty_mismatch_signals`: dau hieu sai do kho
-- `regeneration_hints`: huong dan de AI generator sua lai
+- `difficulty_definitions`: mô tả `Easy`, `Medium`, `Hard` theo từng môn
+- `review_checks`: danh sách tiêu chí cần reviewer check
+- `acceptance_rules`: điều kiện để accept
+- `rejection_rules`: điều kiện bắt buộc reject / needs_revision
+- `difficulty_mismatch_signals`: dấu hiệu sai độ khó
+- `regeneration_hints`: hướng dẫn để AI generator sửa lại
 
-### Doi voi Code Mentor
+### Đối với Code Mentor
 
-`content_json` nen co:
+`content_json` nên có:
 
 ```js
 {
@@ -91,9 +91,9 @@ Y nghia:
 }
 ```
 
-## Rubric da co trong prototype hien tai
+## Rubric đã có trong prototype hiện tại
 
-Phan `Question Generation + Review` da co 6 rubric:
+Phần `Question Generation + Review` đã có 6 rubric:
 
 - `C_FE`
 - `C_PE`
@@ -102,13 +102,13 @@ Phan `Question Generation + Review` da co 6 rubric:
 - `DSA_JAVA_FE`
 - `DSA_JAVA_PE`
 
-Y nghia:
+Ý nghĩa:
 
-- `C`: mon nhap mon C
+- `C`: môn nhập môn C
 - `JAVA_OOP`: Java OOP
-- `DSA_JAVA`: cau truc du lieu va giai thuat tren Java
+- `DSA_JAVA`: cấu trúc dữ liệu và giải thuật trên Java
 
-## Index de nghi
+## Index đề nghị
 
 ```js
 { rubric_id: 1, version: 1 }
@@ -118,18 +118,18 @@ Y nghia:
 
 ## Runtime mapping trong prototype
 
-Trong `.NET prototype`, collection nay tuong ung voi:
+Trong `.NET prototype`, collection này tương ứng với:
 
 - `AiRubricRecord`
 
-Runtime hien da co:
+Runtime hiện đã có:
 
 - load rubric theo `subject + questionType`
-- noi rubric vao `Question Review` flow
+- nối rubric vào `Question Review` flow
 - export rubric trong route `generation-review/export`
 
-## Khuyen nghi khi import vao DB that
+## Khuyến nghị khi import vào DB thật
 
-1. moi rubric nen co `rubric_id` co dinh
-2. khong sua truc tiep version cu neu da dung benchmark
-3. neu prompt doi theo rubric, can luu lien ket giua `AI_Prompt_Versions` va `AI_Rubrics`
+1. mỗi rubric nên có `rubric_id` cố định
+2. không sửa trực tiếp version cũ nếu đã dùng benchmark
+3. nếu prompt đổi theo rubric, cần lưu liên kết giữa `AI_Prompt_Versions` và `AI_Rubrics`

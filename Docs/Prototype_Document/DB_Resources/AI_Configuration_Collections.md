@@ -1,30 +1,30 @@
 # AI Configuration Collections
 
-## Muc tieu
+## Mục tiêu
 
-Tai lieu nay chot khung collection de dua vao DB that cho nhom cau hinh AI:
+Tài liệu này chốt khung collection để đưa vào DB thật cho nhóm cấu hình AI:
 
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 - `AI_Prompt_Versions`
 
-Muc tieu la:
+Mục tiêu là:
 
-- prototype va BE tong co cung mot huong field
-- prompt, rubric, va ground truth co version ro rang
-- de benchmark va production co the trace lai dang dung version nao
+- prototype và BE tổng có cùng một hướng field
+- prompt, rubric và ground truth có version rõ ràng
+- để benchmark và production có thể trace lại đang dùng version nào
 
 ## 1. AI_Prompt_Versions
 
-Collection nay la ban doi ten/chuan hoa tu collection `Prompts` ma nhom hien da co.
+Collection này là bản đổi tên và chuẩn hoá từ collection `Prompts` mà nhóm hiện đã có.
 
-### Muc dich
+### Mục đích
 
-- luu version prompt cua tung AI agent
-- cho phep bat/tat prompt version
-- de trace benchmark/prod dang dung prompt nao
+- lưu version prompt của từng AI agent
+- cho phép bật và tắt prompt version
+- để trace benchmark hoặc production đang dùng prompt nào
 
-### Schema de nghi
+### Schema đề nghị
 
 ```js
 {
@@ -39,32 +39,32 @@ Collection nay la ban doi ten/chuan hoa tu collection `Prompts` ma nhom hien da 
 }
 ```
 
-### Mapping voi prototype hien tai
+### Mapping với prototype hiện tại
 
-Trong prototype `.NET`, object gan tuong ung la:
+Trong prototype `.NET`, object gần tương ứng là:
 
 - `AiPromptVersionRecord`
 
-### Ghi chu
+### Ghi chú
 
-- moi `agent_id` co the co nhieu version
-- chi nen co 1 version active tai 1 thoi diem cho 1 `agent_id`
-- benchmark co the override prompt version de so sanh
+- mỗi `agent_id` có thể có nhiều version
+- chỉ nên có 1 version active tại 1 thời điểm cho 1 `agent_id`
+- benchmark có thể override prompt version để so sánh
 
 ## 2. AI_Rubrics
 
-Collection nay dung de luu rubric co cau truc cho cac tac vu can danh gia theo tieu chi hoc thuat/nghiep vu.
+Collection này dùng để lưu rubric có cấu trúc cho các tác vụ cần đánh giá theo tiêu chí học thuật hoặc nghiệp vụ.
 
-### Tac vu chinh nen dung
+### Tác vụ chính nên dùng
 
 - `Question Generation / Review`
 - `Code Mentor`
 
-Co the mo rong sau cho:
+Có thể mở rộng sau cho:
 
-- `Gatekeeper` policy rubric nhe
+- `Gatekeeper` policy rubric nhẹ
 
-### Schema de nghi
+### Schema đề nghị
 
 ```js
 {
@@ -72,19 +72,19 @@ Co the mo rong sau cho:
   rubric_id: String,           // vd: C_FE, JAVA_OOP_PE, CODE_MENTOR_JAVA
   function_name: String,       // QuestionGenerationReview | CodeMentor
   subject_code: String,        // C | JAVA_OOP | DSA_JAVA
-  question_type: String,       // FE | PE | null neu khong ap dung
+  question_type: String,       // FE | PE | null nếu không áp dụng
   version: String,             // vd: v1, v2
   language: String,            // en
   is_active: Boolean,
-  content_json: Object,        // toan bo rubric JSON co cau truc
+  content_json: Object,        // toàn bộ rubric JSON có cấu trúc
   created_at: Date,
   updated_at: Date
 }
 ```
 
-### content_json nen chua gi
+### `content_json` nên chứa gì
 
-Voi `Question Generation / Review`, `content_json` nen chua:
+Với `Question Generation / Review`, `content_json` nên chứa:
 
 - `difficulty_definitions`
 - `review_checks`
@@ -92,7 +92,7 @@ Voi `Question Generation / Review`, `content_json` nen chua:
 - `acceptance_rules`
 - `regeneration_hints`
 
-Voi `Code Mentor`, `content_json` co the chua:
+Với `Code Mentor`, `content_json` có thể chứa:
 
 - `verdict_levels`
 - `issue_categories`
@@ -100,32 +100,32 @@ Voi `Code Mentor`, `content_json` co the chua:
 - `difficulty_expectations`
 - `suggestion_quality_rules`
 
-### Mapping voi prototype hien tai
+### Mapping với prototype hiện tại
 
-Trong prototype `.NET`, object gan tuong ung la:
+Trong prototype `.NET`, object gần tương ứng là:
 
 - `AiRubricRecord`
 
-### Ghi chu
+### Ghi chú
 
-- file JSON hien tai trong `App_Data/ai-rubrics/` la source of truth tam thoi
-- khi dua vao production, cac file nay co the import vao `AI_Rubrics`
+- file JSON hiện tại trong `App_Data/ai-rubrics/` là source of truth tạm thời
+- khi đưa vào production, các file này có thể import vào `AI_Rubrics`
 
 ## 3. AI_GroundTruth_Sets
 
-Collection nay dung de luu bo ground truth de:
+Collection này dùng để lưu bộ ground truth để:
 
 - benchmark
 - accuracy evaluation
 - regression test
 
-### Tac vu chinh nen dung
+### Tác vụ chính nên dùng
 
 - `Question Generation / Review`
 - `Code Mentor`
-- co the co bo nhe cho `Gatekeeper`
+- có thể có bộ nhẹ cho `Gatekeeper`
 
-### Schema de nghi
+### Schema đề nghị
 
 ```js
 {
@@ -133,27 +133,27 @@ Collection nay dung de luu bo ground truth de:
   dataset_name: String,        // vd: mentor_20_cases_v1
   function_name: String,       // Gatekeeper | QuestionGenerationReview | CodeMentor
   subject_code: String,        // C | JAVA_OOP | DSA_JAVA | MIXED
-  question_type: String,       // FE | PE | null neu khong ap dung
+  question_type: String,       // FE | PE | null nếu không áp dụng
   version: String,             // vd: v1
   language: String,            // en | vi | mixed
   is_active: Boolean,
-  content_json: Object,        // toan bo dataset / expected answers / labels
+  content_json: Object,        // toàn bộ dataset / expected answers / labels
   created_at: Date,
   updated_at: Date
 }
 ```
 
-### content_json nen chua gi
+### `content_json` nên chứa gì
 
-Voi `Question Generation / Review`:
+Với `Question Generation / Review`:
 
 - case list
-- source chunks hoac dataset reference
+- source chunks hoặc dataset reference
 - expected difficulty
 - expected topic tags
 - expected accept/reject note
 
-Voi `Code Mentor`:
+Với `Code Mentor`:
 
 - problem statement
 - student code
@@ -161,77 +161,77 @@ Voi `Code Mentor`:
 - expected verdict
 - expected suggestion direction
 
-Voi `Gatekeeper`:
+Với `Gatekeeper`:
 
 - file case id
 - supported / unsupported / ambiguous
 - expected domain
 
-### Mapping voi prototype hien tai
+### Mapping với prototype hiện tại
 
-Trong prototype `.NET`, object gan tuong ung la:
+Trong prototype `.NET`, object gần tương ứng là:
 
 - `AiGroundTruthSetRecord`
 
-## 4. Quan he giua 3 collection
+## 4. Quan hệ giữa 3 collection
 
 ### AI_Prompt_Versions
 
-Tra loi cau hoi:
+Trả lời câu hỏi:
 
-- agent nay dang noi gi voi AI
+- agent này đang nói gì với AI
 
 ### AI_Rubrics
 
-Tra loi cau hoi:
+Trả lời câu hỏi:
 
-- agent nay danh gia / quy chuan theo bo tieu chi nao
+- agent này đánh giá hoặc quy chuẩn theo bộ tiêu chí nào
 
 ### AI_GroundTruth_Sets
 
-Tra loi cau hoi:
+Trả lời câu hỏi:
 
-- agent nay duoc test/cham dua tren bo du lieu chuan nao
+- agent này được test hoặc chấm dựa trên bộ dữ liệu chuẩn nào
 
-## 5. Collection nao lien quan toi chuc nang nao
+## 5. Collection nào liên quan tới chức năng nào
 
 ### Question Generation / Review
 
-- can `AI_Prompt_Versions`
-- can `AI_Rubrics`
-- can `AI_GroundTruth_Sets`
+- cần `AI_Prompt_Versions`
+- cần `AI_Rubrics`
+- cần `AI_GroundTruth_Sets`
 
 ### Code Mentor
 
-- can `AI_Prompt_Versions`
-- can `AI_Rubrics`
-- can `AI_GroundTruth_Sets`
+- cần `AI_Prompt_Versions`
+- cần `AI_Rubrics`
+- cần `AI_GroundTruth_Sets`
 
 ### Gatekeeper
 
-- can `AI_Prompt_Versions`
-- co the co `AI_GroundTruth_Sets`
-- co the co `AI_Rubrics` nhe theo policy
+- cần `AI_Prompt_Versions`
+- có thể có `AI_GroundTruth_Sets`
+- có thể có `AI_Rubrics` nhẹ theo policy
 
 ### Extracted Content
 
-- can `AI_Prompt_Versions`
-- thuong khong can rubric hoc thuat
-- co the co test set quality rieng neu can
+- cần `AI_Prompt_Versions`
+- thường không cần rubric học thuật
+- có thể có test set quality riêng nếu cần
 
 ### Embedding
 
-- thuong khong can prompt
-- khong can rubric
-- co the can benchmark dataset, nhung khong nhat thiet vao `AI_GroundTruth_Sets` neu chi tinh cost
+- thường không cần prompt
+- không cần rubric
+- có thể cần benchmark dataset, nhưng không nhất thiết vào `AI_GroundTruth_Sets` nếu chỉ tính cost
 
 ### Auto Tagging
 
-- can prompt neu tagging bang LLM
-- co the co taxonomy/tagging guideline
-- co the co ground truth nho de check tag alignment neu sau nay muon danh gia accuracy
+- cần prompt nếu tagging bằng LLM
+- có thể có taxonomy hoặc tagging guideline
+- có thể có ground truth nhỏ để check tag alignment nếu sau này muốn đánh giá accuracy
 
-## 6. Index de nghi
+## 6. Index đề nghị
 
 ### AI_Prompt_Versions
 
@@ -248,40 +248,40 @@ Tra loi cau hoi:
 - `{ dataset_name: 1, version: 1 }`
 - `{ function_name: 1, subject_code: 1, question_type: 1, is_active: 1 }`
 
-## 7. Khuyen nghi chuyen tu prototype sang production
+## 7. Khuyến nghị chuyển từ prototype sang production
 
-### Giai doan hien tai
+### Giai đoạn hiện tại
 
-- prompt co the van load tu file/registry tam
-- rubric source dang nam o file JSON
-- ground truth dang nam trong dataset file JSON
+- prompt có thể vẫn load từ file hoặc registry tạm
+- rubric source đang nằm ở file JSON
+- ground truth đang nằm trong dataset file JSON
 
-### Khi ghep BE tong
+### Khi ghép BE tổng
 
-1. import prompt versions vao `AI_Prompt_Versions`
-2. import rubric files vao `AI_Rubrics`
-3. import benchmark/accuracy datasets vao `AI_GroundTruth_Sets`
-4. luu `version`/`rubric_id`/`dataset_name` vao log benchmark neu can
+1. import prompt versions vào `AI_Prompt_Versions`
+2. import rubric files vào `AI_Rubrics`
+3. import benchmark hoặc accuracy datasets vào `AI_GroundTruth_Sets`
+4. lưu `version`, `rubric_id`, `dataset_name` vào log benchmark nếu cần
 
-## 8. Question Generation con gi nua khong
+## 8. Question Generation còn gì nữa không
 
-Sau nhung gi da lam, `Question Generation` van con cac khoang trong chinh:
+Sau những gì đã làm, `Question Generation` vẫn còn các khoảng trống chính:
 
-1. `AI_Rubrics` chua duoc noi runtime vao code review flow
-2. `AI_GroundTruth_Sets` chua duoc dung cho regression/accuracy testing tu dong
-3. duplicate check voi DB moi dang o muc heuristic text similarity
-4. chua co vector-based duplicate detection
-5. chua co compile/run verification cho `PE`
-6. chua co difficulty alignment service doc lap
-7. chua co publish workflow cho FE/PE question bank
-8. chua co Mongo repository that
+1. `AI_Rubrics` chưa được nối runtime vào code review flow
+2. `AI_GroundTruth_Sets` chưa được dùng cho regression hoặc accuracy testing tự động
+3. duplicate check với DB mới đang ở mức heuristic text similarity
+4. chưa có vector-based duplicate detection
+5. chưa có compile/run verification cho `PE`
+6. chưa có difficulty alignment service độc lập
+7. chưa có publish workflow cho FE/PE question bank
+8. chưa có Mongo repository thật
 
-## Ket luan
+## Kết luận
 
-Ba collection nay la khung hop ly de dua module AI vao BE tong:
+Ba collection này là khung hợp lý để đưa module AI vào BE tổng:
 
 - `AI_Prompt_Versions` = prompt versioning
 - `AI_Rubrics` = evaluation/policy criteria
 - `AI_GroundTruth_Sets` = benchmark/accuracy source of truth
 
-Tu day tro di, cac AI function khac co the duoc chuyen doi sang cung mot cach quan ly thong nhat.
+Từ đây trở đi, các AI function khác có thể được chuyển đổi sang cùng một cách quản lý thống nhất.

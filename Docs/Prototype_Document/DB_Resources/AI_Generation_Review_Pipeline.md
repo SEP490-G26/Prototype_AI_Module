@@ -1,22 +1,22 @@
 # AI Generation Review Pipeline
 
-## Muc tieu
+## Mục tiêu
 
-Luong nay dung de tao cau hoi FE/PE tu `KnowledgeChunks` va kiem soat chat luong bang mot AI reviewer truoc khi tra ket qua cho he thong.
+Luồng này dùng để tạo câu hỏi FE/PE từ `KnowledgeChunks` và kiểm soát chất lượng bằng một AI reviewer trước khi trả kết quả cho hệ thống.
 
-Day la luong quan trong nhat cua do an vi no quyet dinh:
+Đây là luồng quan trọng nhất của đồ án vì nó quyết định:
 
-- cau hoi co bam sat tri thuc da embedding hay khong
-- chi phi AI cua chuc nang tao de
-- kha nang tai su dung thang vao BE tong
+- câu hỏi có bám sát tri thức đã embedding hay không
+- chi phí AI của chức năng tạo đề
+- khả năng tái sử dụng thẳng vào BE tổng
 
-## Schema output da duoc siet lai
+## Schema output đã được siết lại
 
-Module hien tai da bat dau ep output generation bam sat collection that hon.
+Module hiện tại đã bắt đầu ép output generation bám sát collection thật hơn.
 
 ### FE
 
-Moi cau hoi FE can co:
+Mỗi câu hỏi FE cần có:
 
 - `type`
 - `topic_tags`
@@ -28,7 +28,7 @@ Moi cau hoi FE can co:
 - `correct_answer`
 - `explanation`
 
-Va cac field sau phai la `null`:
+Và các field sau phải là `null`:
 
 - `skeleton_code`
 - `solution_code`
@@ -36,7 +36,7 @@ Va cac field sau phai la `null`:
 
 ### PE
 
-Moi cau hoi PE can co:
+Mỗi câu hỏi PE cần có:
 
 - `type`
 - `topic_tags`
@@ -48,7 +48,7 @@ Moi cau hoi PE can co:
 - `solution_code`
 - `test_cases`
 
-Va cac field sau phai la `null`:
+Và các field sau phải là `null`:
 
 - `options`
 - `correct_answer`
@@ -56,57 +56,57 @@ Va cac field sau phai la `null`:
 
 ### Normalize sau generation
 
-Sau khi AI1 tra ket qua:
+Sau khi AI1 trả kết quả:
 
 1. module parse JSON array
-2. co gang map ca `snake_case` va `camelCase`
-3. loai cau hoi sai `question_type`
-4. bo sung `source_chunk_ids` neu model khong tra ve
+2. cố gắng map cả `snake_case` và `camelCase`
+3. loại câu hỏi sai `question_type`
+4. bổ sung `source_chunk_ids` nếu model không trả về
 5. FE:
-   - phai co `options`
-   - phai co `correct_answer`
-   - neu `correct_answer` tra ve full text thi module quy doi ve label nhu `A`, `B`
+   - phải có `options`
+   - phải có `correct_answer`
+   - nếu `correct_answer` trả về full text thì module quy đổi về label như `A`, `B`
 6. PE:
-   - phai co `skeleton_code`
-   - phai co `solution_code`
-   - phai co `test_cases`
-7. neu thieu field bat buoc thi cau hoi bi loai ngay
+   - phải có `skeleton_code`
+   - phải có `solution_code`
+   - phải có `test_cases`
+7. nếu thiếu field bắt buộc thì câu hỏi bị loại ngay
 
 ## Hai agent
 
 ### AI1 - Generator
 
-Vai tro:
+Vai trò:
 
-- nhan `KnowledgeChunk` da duoc trich, chunk, tag
-- tao ra cau hoi theo dung schema JSON cua:
+- nhận `KnowledgeChunk` đã được trích, chunk và tag
+- tạo ra câu hỏi theo đúng schema JSON của:
   - `FE_Questions`
   - `PE_Questions`
 
-Input chinh:
+Input chính:
 
 - `subject`
 - `difficulty`
 - `question_type`
 - `count`
 - `chunks_json`
-- `revision_feedback` neu day la lan tao lai
-- `previous_questions_json` neu day la lan tao lai
+- `revision_feedback` nếu đây là lần tạo lại
+- `previous_questions_json` nếu đây là lần tạo lại
 
 Output:
 
-- mang JSON cua cac cau hoi
+- mảng JSON của các câu hỏi
 
 ### AI2 - Reviewer
 
-Vai tro:
+Vai trò:
 
-- doc ket qua cua AI1
-- so sanh voi chunk context
-- so sanh voi rubric tung loai cau hoi
-- ket luan co chap nhan hay khong
+- đọc kết quả của AI1
+- so sánh với chunk context
+- so sánh với rubric từng loại câu hỏi
+- kết luận có chấp nhận hay không
 
-Input chinh:
+Input chính:
 
 - `subject`
 - `question_type`
@@ -128,37 +128,37 @@ Output:
 }
 ```
 
-## Rubric danh gia
+## Rubric đánh giá
 
 ### FE
 
-AI reviewer can check:
+AI reviewer cần check:
 
-- output co dung schema `FE_Questions` khong
-- cau hoi co bam sat chunk nguon khong
-- `topic_tags` co hop ly khong
-- `difficulty` co dung muc yeu cau khong
-- `options` co day du va khong mo ho khong
-- `correct_answer` co hop le khong
-- `explanation` co giai thich hop ly khong
+- output có đúng schema `FE_Questions` không
+- câu hỏi có bám sát chunk nguồn không
+- `topic_tags` có hợp lý không
+- `difficulty` có đúng mức yêu cầu không
+- `options` có đầy đủ và không mơ hồ không
+- `correct_answer` có hợp lệ không
+- `explanation` có giải thích hợp lý không
 
 ### PE
 
-AI reviewer can check:
+AI reviewer cần check:
 
-- output co dung schema `PE_Questions` khong
-- de bai co bam sat chunk nguon khong
-- `topic_tags` co hop ly khong
-- `difficulty` co dung muc yeu cau khong
-- `skeleton_code` co dung ngon ngu khong
-- `solution_code` co giai duoc de khong
-- `test_cases` co hop ly khong
+- output có đúng schema `PE_Questions` không
+- đề bài có bám sát chunk nguồn không
+- `topic_tags` có hợp lý không
+- `difficulty` có đúng mức yêu cầu không
+- `skeleton_code` có đúng ngôn ngữ không
+- `solution_code` có giải được đề không
+- `test_cases` có hợp lý không
 
-### Rubric theo mon hoc
+### Rubric theo môn học
 
-Reviewer khong con review generic theo FE/PE thuần.
+Reviewer không còn review generic theo FE/PE thuần.
 
-Rubric hien tai da chia theo:
+Rubric hiện tại đã chia theo:
 
 - `C + FE`
 - `C + PE`
@@ -167,114 +167,114 @@ Rubric hien tai da chia theo:
 - `DSA Java + FE`
 - `DSA Java + PE`
 
-Y nghia:
+Ý nghĩa:
 
-- C: tap trung bien, vong lap, mang, con tro, ham
-- Java OOP: tap trung class, object, constructor, encapsulation, inheritance, polymorphism
-- DSA Java: tap trung array, list, stack, queue, tree, graph, search, sort
+- C: tập trung biến, vòng lặp, mảng, con trỏ, hàm
+- Java OOP: tập trung class, object, constructor, encapsulation, inheritance, polymorphism
+- DSA Java: tập trung array, list, stack, queue, tree, graph, search, sort
 
-## Vong lap
+## Vòng lặp
 
-De tranh ton token, vong lap chi chay toi da `2` lan.
+Để tránh tốn token, vòng lặp chỉ chạy tối đa `2` lần.
 
-## Lop validation va mapping noi bo
+## Lớp validation và mapping nội bộ
 
-Ngoai AI reviewer, module hien tai da co them 1 lop `rule-based validation` trong application layer:
+Ngoài AI reviewer, module hiện tại đã có thêm 1 lớp `rule-based validation` trong application layer:
 
 - `QuestionSchemaService`
 
-Vai tro:
+Vai trò:
 
-1. validate output cua AI1 theo schema FE/PE
-2. map sang object gan voi collection that:
+1. validate output của AI1 theo schema FE/PE
+2. map sang object gần với collection thật:
    - `FeQuestionDocument`
    - `PeQuestionDocument`
-3. tra ve `QuestionSchemaMappingResult`
+3. trả về `QuestionSchemaMappingResult`
 
-No giup:
+Nó giúp:
 
-- khong phu thuoc hoan toan vao reviewer AI
-- reject som cac output sai schema
-- chuan bi duong dan `validate -> map -> save`
+- không phụ thuộc hoàn toàn vào reviewer AI
+- reject sớm các output sai schema
+- chuẩn bị đường dẫn `validate -> map -> save`
 
-### Tieu chi validate FE
+### Tiêu chí validate FE
 
-- dung `type = FE`
-- co `topic_tags`
-- co `title`
-- co `description`
-- co `source_chunk_ids`
-- co `options`
-- co `correct_answer`
-- `correct_answer` phai khop label cua option
-- khong duoc co field PE
+- đúng `type = FE`
+- có `topic_tags`
+- có `title`
+- có `description`
+- có `source_chunk_ids`
+- có `options`
+- có `correct_answer`
+- `correct_answer` phải khớp label của option
+- không được có field PE
 
-### Tieu chi validate PE
+### Tiêu chí validate PE
 
-- dung `type = PE`
-- co `topic_tags`
-- co `title`
-- co `description`
-- co `source_chunk_ids`
-- co `skeleton_code`
-- co `solution_code`
-- co `test_cases`
-- khong duoc co field FE
+- đúng `type = PE`
+- có `topic_tags`
+- có `title`
+- có `description`
+- có `source_chunk_ids`
+- có `skeleton_code`
+- có `solution_code`
+- có `test_cases`
+- không được có field FE
 
-### Tac dong len review
+### Tác động lên review
 
-Neu `QuestionSchemaService` ket luan output sai schema:
+Nếu `QuestionSchemaService` kết luận output sai schema:
 
-- reviewer result se bi ep ve `needs_revision`
+- reviewer result sẽ bị ép về `needs_revision`
 - `schemaValid = false`
-- score bi ha xuong
-- issue schema duoc gop vao issue cua AI reviewer
+- score bị hạ xuống
+- issue schema được gộp vào issue của AI reviewer
 
 ### Attempt 1
 
-1. AI1 tao cau hoi
+1. AI1 tạo câu hỏi
 2. AI2 review
-3. Neu `accepted` -> dung
-4. Neu `needs_revision` -> chuyen sang Attempt 2
+3. Nếu `accepted` -> dừng
+4. Nếu `needs_revision` -> chuyển sang Attempt 2
 
 ### Attempt 2
 
-1. AI1 nhan them:
+1. AI1 nhận thêm:
    - `revision_feedback`
    - `previous_questions_json`
-2. AI1 tao lai cau hoi
-3. AI2 review lai
-4. Du accepted hay fail thi deu dung tai day
+2. AI1 tạo lại câu hỏi
+3. AI2 review lại
+4. Dù accepted hay fail thì đều dừng tại đây
 
-## Ly do gioi han 2 lan
+## Lý do giới hạn 2 lần
 
-- tranh vong lap vo han
-- kiem soat chi phi benchmark
-- van du de do kha nang self-correction cua he thong
+- tránh vòng lặp vô hạn
+- kiểm soát chi phí benchmark
+- vẫn đủ để đo khả năng self-correction của hệ thống
 
-## API hien tai
+## API hiện tại
 
 - `POST /api/ai-module/question-generation`
 - `POST /api/ai-module/question-review`
 - `POST /api/ai-module/generation-review`
 - `POST /api/ai-module/generation-review/export`
 
-## Export package JSON chuan hoa
+## Export package JSON chuẩn hoá
 
 Route:
 
 - `POST /api/ai-module/generation-review/export`
 
-Muc dich:
+Mục đích:
 
-- tra ve mot goi JSON hoan chinh de debug, benchmark, luu file, hoac dua sang BE tong
-- giu cung mot payload chuan cho ca:
+- trả về một gói JSON hoàn chỉnh để debug, benchmark, lưu file hoặc đưa sang BE tổng
+- giữ cùng một payload chuẩn cho cả:
   - test tay
   - regression
-  - so sanh model
-  - luu tam lam bang chung bao cao
+  - so sánh model
+  - lưu tạm làm bằng chứng báo cáo
 
-Cau truc goi export gom:
+Cấu trúc gói export gồm:
 
 - `metadata`
 - `request`
@@ -290,53 +290,53 @@ Cau truc goi export gom:
 - `usageLogs`
 - `totals`
 
-Y nghia:
+Ý nghĩa:
 
-- `metadata`: thong tin package, model, rubric, prompt key, dataset id neu co
-- `request`: snapshot request goc
-- `rubric`: rubric runtime dang dung cho review
+- `metadata`: thông tin package, model, rubric, prompt key, dataset id nếu có
+- `request`: snapshot request gốc
+- `rubric`: rubric runtime đang dùng cho review
 - `questions`: output raw sau generation
-- `schemaMapping`: ket qua validate/map noi bo
-- `mappedFeQuestions` / `mappedPeQuestions`: ban ghi save-ready gan voi collection
-- `review`: ket qua AI reviewer sau cung
-- `stageLogs`: log tung stage/tung attempt
-- `usageLogs`: log usage/cost phuc vu benchmark va audit
-- `totals`: tong token/cost/latency cua ca flow
+- `schemaMapping`: kết quả validate/map nội bộ
+- `mappedFeQuestions` / `mappedPeQuestions`: bản ghi save-ready gần với collection
+- `review`: kết quả AI reviewer sau cùng
+- `stageLogs`: log từng stage hoặc từng attempt
+- `usageLogs`: log usage/cost phục vụ benchmark và audit
+- `totals`: tổng token/cost/latency của cả flow
 
-## Prompt hien tai
+## Prompt hiện tại
 
-Trong prompt registry tam thoi dang co:
+Trong prompt registry tạm thời đang có:
 
 - `question_generation`
 - `question_review`
 
-Prompt khong bi hard-code co dinh trong flow nghiep vu ma duoc lay tu prompt store file-backed.
+Prompt không bị hard-code cố định trong flow nghiệp vụ mà được lấy từ prompt store file-backed.
 
-## Prompt storage tam thoi
+## Prompt storage tạm thời
 
-Prompt hien tai duoc luu tai:
+Prompt hiện tại được lưu tại:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
 
-Tam thoi day la bo nho dem/prompt registry de BE va UI test co the:
+Tạm thời đây là bộ nhớ đệm hoặc prompt registry để BE và UI test có thể:
 
 - xem prompt
-- sua prompt
+- sửa prompt
 - reload prompt
 
-Sau nay khi merge vao BE tong, nguon nay se duoc thay bang prompt version trong DB.
+Sau này khi merge vào BE tổng, nguồn này sẽ được thay bằng prompt version trong DB.
 
-## Trang thai hien tai
+## Trạng thái hiện tại
 
-Luong da duoc trien khai o muc:
+Luồng đã được triển khai ở mức:
 
-- co 2 agent
-- co rubric review theo FE/PE
-- co loop toi da 2 lan
-- co ghi log tung attempt
-- co su dung provider that neu config phu hop
+- có 2 agent
+- có rubric review theo FE/PE
+- có loop tối đa 2 lần
+- có ghi log từng attempt
+- có sử dụng provider thật nếu config phù hợp
 
-Nhung van can siet them:
+Nhưng vẫn cần siết thêm:
 
-- them mapper save thang vao `FE_Questions` va `PE_Questions`
-- them usage log that neu provider tra usage
+- thêm mapper save thẳng vào `FE_Questions` và `PE_Questions`
+- thêm usage log thật nếu provider trả usage

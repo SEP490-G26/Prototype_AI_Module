@@ -1,80 +1,80 @@
 # AI_Policies
 
-## Muc tieu
+## Mục tiêu
 
-Collection `AI_Policies` dung de luu cac cau hinh nghiep vu runtime cho tung AI function.
+Collection `AI_Policies` dùng để lưu các cấu hình nghiệp vụ runtime cho từng AI function.
 
-`Policy` khac voi:
+`Policy` khác với:
 
-- `Prompt`: AI se duoc noi gi
-- `Rubric`: AI se duoc danh gia theo tieu chi nao
-- `GroundTruth`: AI se duoc test bang bo du lieu nao
+- `Prompt`: AI sẽ được nói gì
+- `Rubric`: AI sẽ được đánh giá theo tiêu chí nào
+- `GroundTruth`: AI sẽ được test bằng bộ dữ liệu nào
 
-`Policy` tra loi cau hoi:
+`Policy` trả lời câu hỏi:
 
-- he thong cho phep gi
-- rang buoc nghiep vu nao dang duoc ap dung
-- taxonomy/tag rule/threshold/runtime rule nao dang duoc su dung
+- hệ thống cho phép gì
+- ràng buộc nghiệp vụ nào đang được áp dụng
+- taxonomy, tag rule, threshold hay runtime rule nào đang được sử dụng
 
-## Vi sao can collection rieng
+## Vì sao cần collection riêng
 
-Khong nen gop `policy` vao:
+Không nên gộp `policy` vào:
 
 - `AI_Prompt_Versions`
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 
-Ly do:
+Lý do:
 
-- prompt la noi dung goi AI
-- rubric la tieu chi review/cham
-- ground truth la bo du lieu test
-- policy la config nghiep vu runtime
+- prompt là nội dung gọi AI
+- rubric là tiêu chí review hoặc chấm
+- ground truth là bộ dữ liệu test
+- policy là config nghiệp vụ runtime
 
-Do do, `AI_Policies` nen la mot collection rieng.
+Do đó, `AI_Policies` nên là một collection riêng.
 
-## Schema de nghi
+## Schema đề nghị
 
 ```js
 {
   _id: ObjectId,
 
   policy_id: String,              // vd: GATEKEEPER_POLICY, EMBEDDING_TAGGING_POLICY
-  policy_name: String,            // ten hien thi tren admin/UI
+  policy_name: String,            // tên hiển thị trên admin/UI
   function_name: String,          // Gatekeeper | ExtractedContent | EmbeddingTagging | CodeMentor
 
-  subject_code: String,           // nullable, neu policy gan theo mon hoc
-  language: String,               // nullable, neu policy phu thuoc ngon ngu
+  subject_code: String,           // nullable, nếu policy gắn theo môn học
+  language: String,               // nullable, nếu policy phụ thuộc ngôn ngữ
 
   version: String,                // vd: v1, v2
   is_active: Boolean,
 
-  description: String,            // mo ta ngan muc dich policy
-  content_json: Object,           // toan bo noi dung policy co cau truc
+  description: String,            // mô tả ngắn mục đích policy
+  content_json: Object,           // toàn bộ nội dung policy có cấu trúc
 
   created_at: Date,
   updated_at: Date
 }
 ```
 
-## Giai thich field
+## Giải thích field
 
-- `policy_id`: ma dinh danh on dinh cua policy
-- `policy_name`: ten de doc tren admin/UI
-- `function_name`: policy nay thuoc AI function nao
-- `subject_code`: neu policy dung rieng cho 1 mon hoc thi luu ma mon; neu ap dung chung co the de `null`
-- `language`: neu policy phu thuoc ngon ngu thi luu; neu khong thi co the de `null`
-- `version`: version cua policy
-- `is_active`: policy dang duoc ap dung hay khong
-- `description`: mo ta ngan noi dung policy
-- `content_json`: phan cau truc chinh cua policy
-- `created_at`, `updated_at`: field audit co ban
+- `policy_id`: mã định danh ổn định của policy
+- `policy_name`: tên để đọc trên admin/UI
+- `function_name`: policy này thuộc AI function nào
+- `subject_code`: nếu policy dùng riêng cho 1 môn học thì lưu mã môn; nếu áp dụng chung có thể để `null`
+- `language`: nếu policy phụ thuộc ngôn ngữ thì lưu; nếu không thì có thể để `null`
+- `version`: version của policy
+- `is_active`: policy đang được áp dụng hay không
+- `description`: mô tả ngắn nội dung policy
+- `content_json`: phần cấu trúc chính của policy
+- `created_at`, `updated_at`: field audit cơ bản
 
-## Cac function nen dung `AI_Policies`
+## Các function nên dùng `AI_Policies`
 
 ### 1. Gatekeeper
 
-Vi du `content_json` co the chua:
+Ví dụ `content_json` có thể chứa:
 
 ```js
 {
@@ -84,15 +84,15 @@ Vi du `content_json` co the chua:
 }
 ```
 
-Dung de:
+Dùng để:
 
-- whitelist mon hoc
-- quy tac `supported | unsupported | ambiguous`
-- precheck min word count / empty content
+- whitelist môn học
+- quy tắc `supported | unsupported | ambiguous`
+- precheck min word count hoặc empty content
 
 ### 2. ExtractedContent
 
-Vi du `content_json` co the chua:
+Ví dụ `content_json` có thể chứa:
 
 ```js
 {
@@ -103,15 +103,15 @@ Vi du `content_json` co the chua:
 }
 ```
 
-Dung de:
+Dùng để:
 
-- dieu khien normalize text
-- warning neu co image ma khong co vision model
-- warning neu content rong / sau normalize khong con noi dung huu ich
+- điều khiển normalize text
+- warning nếu có image mà không có vision model
+- warning nếu content rỗng hoặc sau normalize không còn nội dung hữu ích
 
 ### 3. EmbeddingTagging
 
-Vi du `content_json` co the chua:
+Ví dụ `content_json` có thể chứa:
 
 ```js
 {
@@ -121,16 +121,16 @@ Vi du `content_json` co the chua:
 }
 ```
 
-Dung de:
+Dùng để:
 
-- chunking strategy mac dinh
-- retrieval enabled / status mac dinh
+- chunking strategy mặc định
+- retrieval enabled hoặc status mặc định
 - max tag per chunk
-- taxonomy tag theo mon hoc
+- taxonomy tag theo môn học
 
 ### 4. CodeMentor
 
-Vi du `content_json` co the chua:
+Ví dụ `content_json` có thể chứa:
 
 ```js
 {
@@ -141,22 +141,22 @@ Vi du `content_json` co the chua:
 }
 ```
 
-Dung de:
+Dùng để:
 
-- rang buoc ngon ngu lap trinh duoc ho tro
-- nhom loi duoc phep su dung
-- tap verdict duoc phep tra ve
-- quy tac feedback co hanh dong cu the
+- ràng buộc ngôn ngữ lập trình được hỗ trợ
+- nhóm lỗi được phép sử dụng
+- tập verdict được phép trả về
+- quy tắc feedback có hành động cụ thể
 
-## Nguyen tac du lieu
+## Nguyên tắc dữ liệu
 
-Nen giu 3 nguyen tac:
+Nên giữ 3 nguyên tắc:
 
-1. `policy_id` on dinh
-2. `content_json` la source of truth runtime
-3. moi lan sua lon thi tang `version`, khong ghi de version cu da benchmark
+1. `policy_id` ổn định
+2. `content_json` là source of truth runtime
+3. mỗi lần sửa lớn thì tăng `version`, không ghi đè version cũ đã benchmark
 
-## Index de nghi
+## Index đề nghị
 
 ```js
 { policy_id: 1, version: 1 }
@@ -164,27 +164,27 @@ Nen giu 3 nguyen tac:
 { function_name: 1, subject_code: 1, is_active: 1 }
 ```
 
-## Mapping voi prototype hien tai
+## Mapping với prototype hiện tại
 
-Trong prototype hien tai, policy dang duoc luu bang file JSON payload runtime:
+Trong prototype hiện tại, policy đang được lưu bằng file JSON payload runtime:
 
 - `App_Data/gatekeeper-policy.json`
 - `App_Data/extracted-content-policy.json`
 - `App_Data/embedding-tagging-policy.json`
 - `App_Data/code-mentor-policy.json`
 
-Luu y quan trong:
+Lưu ý quan trọng:
 
-- cac file tren **khong phai full DB record**
-- cac file tren chi la **payload runtime**
-- khi dua vao DB that, payload nay se duoc dat vao field `content_json`
+- các file trên **không phải full DB record**
+- các file trên chỉ là **payload runtime**
+- khi đưa vào DB thật, payload này sẽ được đặt vào field `content_json`
 
-Noi cach khac:
+Nói cách khác:
 
 - file prototype = `content_json source`
 - DB production = `wrapper record + content_json`
 
-### Vi du mapping
+### Ví dụ mapping
 
 #### Prototype file
 
@@ -222,41 +222,41 @@ Noi cach khac:
 }
 ```
 
-### Ket luan mapping
+### Kết luận mapping
 
-Chot theo `Cach 1`:
+Chốt theo `Cách 1`:
 
-- giu DB schema wrapper record
-- coi file `App_Data/*-policy.json` la payload runtime
-- import payload vao `content_json`
+- giữ DB schema wrapper record
+- coi file `App_Data/*-policy.json` là payload runtime
+- import payload vào `content_json`
 
-## Quan he voi 3 collection AI con lai
+## Quan hệ với 3 collection AI còn lại
 
 ### `AI_Prompt_Versions`
 
-- Prompt cho biet AI se nhan chi dan gi
+- Prompt cho biết AI sẽ nhận chỉ dẫn gì
 
 ### `AI_Rubrics`
 
-- Rubric cho biet AI output se duoc danh gia theo tieu chi nao
+- Rubric cho biết AI output sẽ được đánh giá theo tiêu chí nào
 
 ### `AI_GroundTruth_Sets`
 
-- Ground truth cho biet AI se duoc test bang dataset nao
+- Ground truth cho biết AI sẽ được test bằng dataset nào
 
 ### `AI_Policies`
 
-- Policy cho biet he thong dang ap rang buoc runtime nao
+- Policy cho biết hệ thống đang áp ràng buộc runtime nào
 
-## Ket luan
+## Kết luận
 
-Bo 4 collection AI config hop ly de dua vao document DB va production:
+Bộ 4 collection AI config hợp lý để đưa vào document DB và production:
 
 - `AI_Prompt_Versions`
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 - `AI_Policies`
 
-Trong do:
+Trong đó:
 
-- `AI_Policies` la collection can thiet de luu runtime business rules mot cach dung ban chat va de quan ly version ro rang.
+- `AI_Policies` là collection cần thiết để lưu runtime business rules một cách đúng bản chất và để quản lý version rõ ràng.
