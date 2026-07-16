@@ -192,6 +192,7 @@ button {
   border-radius: var(--radius);
   padding: 22px;
   box-shadow: var(--shadow);
+  min-width: 0;
 }
 
 .panel--output {
@@ -204,6 +205,7 @@ button {
   gap: 12px;
   align-items: flex-start;
   margin-bottom: 18px;
+  flex-wrap: wrap;
 }
 
 .panel-head h3,
@@ -234,6 +236,7 @@ label {
   flex-direction: column;
   gap: 8px;
   font-size: 0.94rem;
+  min-width: 0;
 }
 
 input,
@@ -283,6 +286,7 @@ button.secondary:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
 }
 
 .provider-grid,
@@ -310,6 +314,7 @@ button.secondary:hover {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   padding: 14px;
+  min-width: 0;
 }
 
 .summary-card {
@@ -327,6 +332,8 @@ button.secondary:hover {
 
 .summary-value {
   font-size: 1.05rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .status-badge {
@@ -378,6 +385,7 @@ button.secondary:hover {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
   padding: 14px;
+  min-width: 0;
 }
 
 .result-section pre,
@@ -385,8 +393,22 @@ button.secondary:hover {
 .mini-json {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   word-break: break-word;
   overflow: auto;
+}
+
+.result-section p,
+.provider-card p,
+.list-card p,
+.kv-row,
+.summary-label,
+.summary-value,
+.panel-head,
+.hero-copy,
+.brand p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .details-block {
@@ -423,12 +445,26 @@ button.secondary:hover {
   margin: 6px 0 0;
 }
 
+.list-card pre.chunk-text {
+  margin-top: 10px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(29, 26, 22, 0.06);
+  border: 1px solid rgba(216, 207, 193, 0.8);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .kv-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid rgba(216, 207, 193, 0.6);
+  flex-wrap: wrap;
 }
 
 .kv-row:last-child {
@@ -456,6 +492,8 @@ ul {
   border-bottom: 1px solid rgba(216, 207, 193, 0.7);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .data-table th {

@@ -2,17 +2,10 @@ const appState = {
   providers: {},
   providerList: [],
   prompts: [],
-  presets: {},
   lastResults: {},
-  batchResults: [],
-  matrixResults: [],
-  summaryResults: [],
-  sessionList: [],
-  openedSession: null,
   historyDetail: null,
   historyList: [],
   historyMasterList: [],
-  compareMeta: null
 };
 
 const functionSources = {
@@ -50,165 +43,6 @@ const functionSources = {
     rubricUrl: "/api/ai-module/code-mentor/rubric",
     groundTruthUrl: "/api/ai-module/code-mentor/ground-truth",
     sourceElementId: "mentor-source"
-  }
-};
-
-const compareConfigs = {
-  gatekeeper: {
-    endpoint: "/api/ai-module/gatekeeper",
-    buildPayload: () => buildGatekeeperPayload(document.getElementById("gatekeeper-form")),
-    targets: [
-      { value: "primary", label: "Primary gatekeeper model" }
-    ],
-    helpText: "Uses the current Gatekeeper form payload and swaps only the gatekeeper model.",
-    applyTarget: (payload, model) => ({ ...payload, model })
-  },
-  extracted: {
-    endpoint: "/api/ai-module/extracted-content",
-    buildPayload: () => buildExtractedPayload(document.getElementById("extracted-form")),
-    targets: [
-      { value: "vision", label: "Vision model" }
-    ],
-    helpText: "Uses the current Extracted Content payload and swaps only the vision model.",
-    applyTarget: (payload, model) => ({ ...payload, visionModel: model })
-  },
-  embedding: {
-    endpoint: "/api/ai-module/embedding-tagging",
-    buildPayload: () => buildEmbeddingPayload(document.getElementById("embedding-form")),
-    targets: [
-      { value: "embedding", label: "Embedding model" },
-      { value: "tagging", label: "Auto-tagging model" },
-      { value: "both", label: "Both embedding + tagging" }
-    ],
-    helpText: "Choose whether to compare the embedding model, the tagging model, or force the same selected model into both fields.",
-    applyTarget: (payload, model, target) => {
-      if (target === "embedding") {
-        return { ...payload, embeddingModel: model };
-      }
-
-      if (target === "both") {
-        return { ...payload, embeddingModel: model, taggingModel: model };
-      }
-
-      return { ...payload, taggingModel: model };
-    }
-  },
-  generation: {
-    endpoint: "/api/ai-module/generation-review",
-    buildPayload: () => buildGenerationPayload(document.getElementById("generation-form")),
-    targets: [
-      { value: "generator", label: "A1 generator model" },
-      { value: "reviewer", label: "A2 reviewer model" },
-      { value: "both", label: "Both generator + reviewer" }
-    ],
-    helpText: "Compare A1 only, A2 only, or force the same selected model into both A1 and A2.",
-    applyTarget: (payload, model, target) => {
-      if (target === "generator") {
-        return { ...payload, generatorModel: model };
-      }
-
-      if (target === "reviewer") {
-        return { ...payload, reviewerModel: model };
-      }
-
-      return { ...payload, generatorModel: model, reviewerModel: model };
-    }
-  },
-  mentor: {
-    endpoint: "/api/ai-module/code-mentor",
-    buildPayload: () => buildMentorPayload(document.getElementById("mentor-form")),
-    targets: [
-      { value: "primary", label: "Mentor model" }
-    ],
-    helpText: "Uses the current Code Mentor payload and swaps only the mentor model.",
-    applyTarget: (payload, model) => ({ ...payload, mentorModel: model })
-  },
-  ingestion: {
-    endpoint: "/api/ai-module/ingestion",
-    buildPayload: () => buildIngestionPayload(document.getElementById("ingestion-form")),
-    targets: [
-      { value: "gatekeeper", label: "Gatekeeper model" },
-      { value: "vision", label: "Vision model" },
-      { value: "embedding", label: "Embedding model" },
-      { value: "tagging", label: "Auto-tagging model" }
-    ],
-    helpText: "Uses the current Ingestion payload and swaps only the selected stage model.",
-    applyTarget: (payload, model, target) => {
-      if (target === "vision") {
-        return { ...payload, visionModel: model };
-      }
-
-      if (target === "embedding") {
-        return { ...payload, embeddingModel: model };
-      }
-
-      if (target === "tagging") {
-        return { ...payload, taggingModel: model };
-      }
-
-      return { ...payload, gatekeeperModel: model };
-    }
-  }
-};
-
-const matrixConfigs = {
-  gatekeeper: {
-    endpoint: "/api/ai-module/gatekeeper",
-    buildPayload: () => buildGatekeeperPayload(document.getElementById("gatekeeper-form")),
-    targets: [{ value: "primary", label: "Primary gatekeeper model" }],
-    applyTarget: (payload, model) => ({ ...payload, model }),
-    capabilityHint: ""
-  },
-  extracted: {
-    endpoint: "/api/ai-module/extracted-content",
-    buildPayload: () => buildExtractedPayload(document.getElementById("extracted-form")),
-    targets: [{ value: "vision", label: "Vision model" }],
-    applyTarget: (payload, model) => ({ ...payload, visionModel: model }),
-    capabilityHint: "vision"
-  },
-  embedding: {
-    endpoint: "/api/ai-module/embedding-tagging",
-    buildPayload: () => buildEmbeddingPayload(document.getElementById("embedding-form")),
-    targets: [
-      { value: "embedding", label: "Embedding model" },
-      { value: "tagging", label: "Auto-tagging model" }
-    ],
-    applyTarget: (payload, model, target) => target === "embedding" ? { ...payload, embeddingModel: model } : { ...payload, taggingModel: model },
-    capabilityHint: ""
-  },
-  generation: {
-    endpoint: "/api/ai-module/generation-review",
-    buildPayload: () => buildGenerationPayload(document.getElementById("generation-form")),
-    targets: [
-      { value: "generator", label: "A1 generator model" },
-      { value: "reviewer", label: "A2 reviewer model" }
-    ],
-    applyTarget: (payload, model, target) => target === "reviewer" ? { ...payload, reviewerModel: model } : { ...payload, generatorModel: model },
-    capabilityHint: ""
-  },
-  mentor: {
-    endpoint: "/api/ai-module/code-mentor",
-    buildPayload: () => buildMentorPayload(document.getElementById("mentor-form")),
-    targets: [{ value: "primary", label: "Mentor model" }],
-    applyTarget: (payload, model) => ({ ...payload, mentorModel: model }),
-    capabilityHint: ""
-  },
-  ingestion: {
-    endpoint: "/api/ai-module/ingestion",
-    buildPayload: () => buildIngestionPayload(document.getElementById("ingestion-form")),
-    targets: [
-      { value: "gatekeeper", label: "Gatekeeper model" },
-      { value: "vision", label: "Vision model" },
-      { value: "embedding", label: "Embedding model" },
-      { value: "tagging", label: "Auto-tagging model" }
-    ],
-    applyTarget: (payload, model, target) => {
-      if (target === "vision") return { ...payload, visionModel: model };
-      if (target === "embedding") return { ...payload, embeddingModel: model };
-      if (target === "tagging") return { ...payload, taggingModel: model };
-      return { ...payload, gatekeeperModel: model };
-    },
-    capabilityHint: ""
   }
 };
 
@@ -383,6 +217,83 @@ function inferTone(value) {
 function renderBadge(value, tone = null) {
   const resolvedTone = tone ?? inferTone(value);
   return `<span class="status-badge status-badge--${escapeHtml(resolvedTone)}">${escapeHtml(value)}</span>`;
+}
+
+function coerceDisplayText(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => coerceDisplayText(item)).filter(Boolean).join(", ");
+  }
+
+  return value.verdict
+    ?? value.reviewStatus
+    ?? value.reason
+    ?? value.status
+    ?? value.decision
+    ?? JSON.stringify(value);
+}
+
+function getChunkText(chunk) {
+  return chunk?.normalizedText
+    ?? chunk?.contentText
+    ?? chunk?.rawText
+    ?? chunk?.markdownText
+    ?? "";
+}
+
+function normalizeImportedChunk(chunk, index = 0) {
+  if (!chunk || typeof chunk !== "object") {
+    return null;
+  }
+
+  const chunkId = chunk.chunkId ?? chunk.id ?? `chunk-import-${index + 1}`;
+  const contentText = getChunkText(chunk);
+  const topicTags = Array.isArray(chunk.topicTags)
+    ? chunk.topicTags
+    : Array.isArray(chunk.topic_tags)
+      ? chunk.topic_tags
+      : [];
+  const sectionTitle = chunk.sectionTitle ?? chunk.section_title ?? chunk.chunkType ?? chunk.chunk_type ?? null;
+  const language = chunk.language ?? "en";
+
+  if (!String(contentText ?? "").trim()) {
+    return null;
+  }
+
+  return {
+    chunkId: String(chunkId),
+    contentText: String(contentText),
+    topicTags: topicTags.map((item) => String(item)).filter(Boolean),
+    sectionTitle: sectionTitle ? String(sectionTitle) : null,
+    language: String(language)
+  };
+}
+
+function extractChunkArrayFromImport(payload) {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (Array.isArray(payload?.chunks)) {
+    return payload.chunks;
+  }
+
+  if (Array.isArray(payload?.document?.chunks)) {
+    return payload.document.chunks;
+  }
+
+  if (Array.isArray(payload?.ingestion?.document?.chunks)) {
+    return payload.ingestion.document.chunks;
+  }
+
+  return [];
 }
 
 async function copyText(text) {
@@ -576,72 +487,6 @@ function buildHistoryTsvRow(detail) {
   ].map(toTsvCell).join("\t");
 }
 
-function buildCompareTsv(aMeta, bMeta) {
-  const header = [
-    "function",
-    "slot",
-    "model",
-    "status",
-    "input_tokens",
-    "output_tokens",
-    "total_tokens",
-    "total_cost_usd",
-    "latency_ms"
-  ].join("\t");
-
-  const rows = [aMeta, bMeta].map((item) => [
-    item.functionName,
-    item.slot,
-    item.model,
-    item.status,
-    item.inputTokens,
-    item.outputTokens,
-    item.totalTokens,
-    formatCurrency(item.totalCostUsd),
-    item.latencyMs
-  ].map(toTsvCell).join("\t"));
-
-  return `${header}\n${rows.join("\n")}`;
-}
-
-function buildBatchTsv(results) {
-  const header = [
-    "function",
-    "preset_id",
-    "preset_label",
-    "status",
-    "error_code",
-    "error_category",
-    "attempts_used",
-    "retries_used",
-    "input_tokens",
-    "output_tokens",
-    "total_tokens",
-    "total_cost_usd",
-    "latency_ms",
-    "model_summary"
-  ].join("\t");
-
-  const rows = (Array.isArray(results) ? results : []).map((item) => [
-    item.functionName ?? "",
-    item.presetId ?? "",
-    item.presetLabel ?? "",
-    item.status ?? "",
-    item.normalizedError?.code ?? "",
-    item.normalizedError?.category ?? "",
-    item.attemptsUsed ?? 1,
-    item.retriesUsed ?? 0,
-    item.inputTokens ?? "",
-    item.outputTokens ?? "",
-    item.totalTokens ?? "",
-    formatCurrency(item.totalCostUsd ?? 0),
-    item.latencyMs ?? "",
-    item.modelSummary ?? ""
-  ].map(toTsvCell).join("\t"));
-
-  return `${header}\n${rows.join("\n")}`;
-}
-
 function buildMatrixTsv(results) {
   const header = [
     "function",
@@ -678,62 +523,6 @@ function buildMatrixTsv(results) {
   ].map(toTsvCell).join("\t"));
 
   return `${header}\n${rows.join("\n")}`;
-}
-
-function buildSummaryTsv(results) {
-  const header = [
-    "function",
-    "model_summary",
-    "runs",
-    "input_tokens",
-    "output_tokens",
-    "total_tokens",
-    "total_cost_usd",
-    "avg_cost_usd",
-    "avg_latency_ms"
-  ].join("\t");
-
-  const rows = (Array.isArray(results) ? results : []).map((item) => [
-    item.functionName ?? "",
-    item.modelSummary ?? "",
-    item.runs ?? 0,
-    item.inputTokens ?? 0,
-    item.outputTokens ?? 0,
-    item.totalTokens ?? 0,
-    formatCurrency(item.totalCostUsd ?? 0),
-    formatCurrency(item.avgCostUsd ?? 0),
-    item.avgLatencyMs ?? ""
-  ].map(toTsvCell).join("\t"));
-
-  return `${header}\n${rows.join("\n")}`;
-}
-
-function buildSessionDetailTsv(session) {
-  const batchResults = session?.batchResults ?? session?.BatchResults ?? [];
-  const matrixResults = session?.matrixResults ?? session?.MatrixResults ?? [];
-  const lines = [];
-
-  if (Array.isArray(batchResults) && batchResults.length > 0) {
-    lines.push("# batch");
-    lines.push(buildBatchTsv(batchResults));
-  }
-
-  if (Array.isArray(matrixResults) && matrixResults.length > 0) {
-    if (lines.length > 0) {
-      lines.push("");
-    }
-    lines.push("# matrix");
-    lines.push(buildMatrixTsv(matrixResults));
-  }
-
-  return lines.join("\n");
-}
-
-function getRunnerRetryConfig() {
-  return {
-    retryCount: Math.max(0, Number($("#runner-retry-count")?.value || 0)),
-    baseDelayMs: Math.max(0, Number($("#runner-retry-delay-ms")?.value || 0))
-  };
 }
 
 function sleep(ms) {
@@ -784,76 +573,6 @@ function isRetryableError(error) {
     || text.includes("network");
 }
 
-async function runWithRetry(work, options = {}) {
-  const retryCount = Math.max(0, Number(options.retryCount ?? 0));
-  const baseDelayMs = Math.max(0, Number(options.baseDelayMs ?? 0));
-  let attemptsUsed = 0;
-  let lastError = null;
-
-  for (let attempt = 0; attempt <= retryCount; attempt++) {
-    attemptsUsed = attempt + 1;
-    try {
-      const result = await work(attemptsUsed);
-      return { ok: true, result, attemptsUsed, retriesUsed: attempt };
-    } catch (error) {
-      lastError = error;
-      if (attempt >= retryCount || !isRetryableError(error)) {
-        break;
-      }
-
-      const retryAfterMs = tryReadRetryAfterMs(error);
-      const delayMs = retryAfterMs ?? (baseDelayMs * Math.pow(2, attempt));
-      await sleep(delayMs);
-    }
-  }
-
-  return { ok: false, error: lastError, attemptsUsed, retriesUsed: Math.max(0, attemptsUsed - 1) };
-}
-
-function normalizeRunnerError(error, stage = "runner") {
-  const status = Number(error?.status);
-  const rawMessage = stringifyError(error);
-  const lowered = rawMessage.toLowerCase();
-
-  let category = "unknown";
-  let code = "unknown";
-
-  if (lowered.includes("quota exceeded")) {
-    category = "quota_exceeded";
-    code = "quota_exceeded";
-  } else if (lowered.includes("rate limit") || status === 429) {
-    category = "rate_limited";
-    code = "rate_limited";
-  } else if (lowered.includes("service unavailable") || lowered.includes("high demand") || status === 503) {
-    category = "provider_unavailable";
-    code = "provider_unavailable";
-  } else if (lowered.includes("timeout") || status === 408 || status === 504) {
-    category = "timeout";
-    code = "timeout";
-  } else if (lowered.includes("not found") || lowered.includes("model is not found") || status === 404) {
-    category = "invalid_model";
-    code = "invalid_model";
-  } else if (lowered.includes("bad request") || status === 400) {
-    category = "invalid_request";
-    code = "invalid_request";
-  } else if (lowered.includes("network")) {
-    category = "network";
-    code = "network";
-  } else if (status >= 500) {
-    category = "provider_error";
-    code = "provider_error";
-  }
-
-  return {
-    category,
-    code,
-    providerStatus: Number.isFinite(status) ? status : null,
-    retryable: isRetryableError(error),
-    stage,
-    rawMessage
-  };
-}
-
 function setSelectOptions(selectId, items, labelBuilder, valueBuilder) {
   const select = document.getElementById(selectId);
   if (!select) {
@@ -880,23 +599,6 @@ function renderSummaryCards(targetId, cards) {
     .join("");
 
   setHtml(targetId, html || '<article class="summary-card"><span class="summary-label">No summary</span><strong class="summary-value">Run a request</strong></article>');
-}
-
-function renderKeyValueTable(targetId, title, source) {
-  if (!source || typeof source !== "object") {
-    setHtml(targetId, `<div class="placeholder">${escapeHtml(title)} is not available.</div>`);
-    return;
-  }
-
-  const rows = Object.entries(source)
-    .slice(0, 20)
-    .map(([key, value]) => {
-      const display = Array.isArray(value) ? value.join(", ") : typeof value === "object" ? JSON.stringify(value) : String(value);
-      return `<div class="kv-row"><span>${escapeHtml(key)}</span><strong>${escapeHtml(display)}</strong></div>`;
-    })
-    .join("");
-
-  setHtml(targetId, `<div class="kv-block"><h4>${escapeHtml(title)}</h4>${rows}</div>`);
 }
 
 function renderUsageLogSection(usageLogs) {
@@ -985,12 +687,12 @@ function formatResultBlock(data) {
   const sections = [];
 
   if (data.verdict || data.reviewStatus) {
-    const decision = data.verdict ?? data.reviewStatus;
+    const decision = coerceDisplayText(data.verdict ?? data.reviewStatus);
     sections.push(`<div class="result-section"><h4>Decision</h4><p>${renderBadge(decision)}</p></div>`);
   }
 
-  if (data.reason) {
-    sections.push(`<div class="result-section"><h4>Reason</h4><p>${escapeHtml(data.reason)}</p></div>`);
+  if (data.reason || data.verdict?.reason) {
+    sections.push(`<div class="result-section"><h4>Reason</h4><p>${escapeHtml(coerceDisplayText(data.reason ?? data.verdict?.reason))}</p></div>`);
   }
 
   if (data.detectedTopics || data.topicTags) {
@@ -1053,11 +755,11 @@ function formatResultBlock(data) {
   }
 
   if (Array.isArray(data.chunks)) {
-    const items = data.chunks.slice(0, 8).map((chunk) => `
+    const items = data.chunks.map((chunk) => `
       <article class="list-card">
         <h4>${escapeHtml(chunk.id ?? chunk.chunkId ?? `chunk-${chunk.chunkIndex ?? "?"}`)}</h4>
         <p class="muted">${escapeHtml(chunk.sectionTitle ?? chunk.chunkType ?? "chunk")}</p>
-        <p>${escapeHtml((chunk.normalizedText ?? chunk.contentText ?? chunk.rawText ?? "").slice(0, 320))}</p>
+        <pre class="chunk-text">${escapeHtml(getChunkText(chunk))}</pre>
         <p class="muted">Tags: ${escapeHtml((chunk.topicTags ?? chunk.topic_tags ?? []).join(", "))}</p>
       </article>
     `).join("");
@@ -1065,11 +767,11 @@ function formatResultBlock(data) {
   }
 
   if (data.document?.chunks && Array.isArray(data.document.chunks)) {
-    const items = data.document.chunks.slice(0, 8).map((chunk) => `
+    const items = data.document.chunks.map((chunk) => `
       <article class="list-card">
         <h4>${escapeHtml(chunk.id ?? chunk.chunkId ?? `chunk-${chunk.chunkIndex ?? "?"}`)}</h4>
         <p class="muted">${escapeHtml(chunk.sectionTitle ?? chunk.chunkType ?? "chunk")}</p>
-        <p>${escapeHtml((chunk.normalizedText ?? chunk.contentText ?? chunk.rawText ?? "").slice(0, 320))}</p>
+        <pre class="chunk-text">${escapeHtml(getChunkText(chunk))}</pre>
         <p class="muted">Tags: ${escapeHtml((chunk.topicTags ?? chunk.topic_tags ?? []).join(", "))}</p>
       </article>
     `).join("");
@@ -1141,9 +843,9 @@ function renderOutput(prefix, data) {
 
   if (prefix === "gatekeeper") {
     cards.unshift(
-      { label: "Verdict", value: data.verdict, badge: true },
-      { label: "Primary domain", value: data.primaryDomain },
-      { label: "Confidence", value: data.confidence }
+      { label: "Verdict", value: coerceDisplayText(data.verdict), badge: true },
+      { label: "Primary domain", value: data.primaryDomain ?? data.verdict?.primaryDomain },
+      { label: "Confidence", value: data.confidence ?? data.verdict?.confidence }
     );
   }
 
@@ -1173,9 +875,9 @@ function renderOutput(prefix, data) {
 
   if (prefix === "mentor") {
     cards.unshift(
-      { label: "Verdict", value: data.verdict, badge: true },
-      { label: "Complexity", value: data.complexity },
-      { label: "Confidence", value: data.confidence }
+      { label: "Verdict", value: coerceDisplayText(data.verdict ?? data.feedback?.verdict), badge: true },
+      { label: "Complexity", value: data.complexity ?? data.feedback?.complexity },
+      { label: "Confidence", value: data.confidence ?? data.feedback?.confidence }
     );
   }
 
@@ -1183,7 +885,7 @@ function renderOutput(prefix, data) {
     cards.unshift(
       { label: "Document ID", value: data.document?.documentId ?? data.documentId },
       { label: "Chunks", value: Array.isArray(data.embedding?.chunks) ? data.embedding.chunks.length : Array.isArray(data.chunks) ? data.chunks.length : null },
-      { label: "Gatekeeper", value: data.gatekeeper?.verdict, badge: true }
+      { label: "Gatekeeper", value: coerceDisplayText(data.gatekeeper?.verdict ?? data.document?.gatekeeper?.verdict), badge: true }
     );
   }
 
@@ -1230,7 +932,7 @@ function renderHistoryListParsed(list) {
     const recordedAt = item.recordedAt ?? item.RecordedAt ?? "";
 
     return `
-      <article class="list-card">
+      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
         <h4>${escapeHtml(runId)}</h4>
         <p><strong>${escapeHtml(functionName)}</strong> ${status ? `| ${renderBadge(status)}` : ""}</p>
         <p class="muted">${escapeHtml(recordedAt)}</p>
@@ -1239,173 +941,6 @@ function renderHistoryListParsed(list) {
       </article>
     `;
   }).join("");
-}
-
-function getPresetList(key) {
-  return Array.isArray(appState.presets?.[key]) ? appState.presets[key] : [];
-}
-
-function getSelectedPreset(key) {
-  const select = document.getElementById(`${key}-preset`);
-  if (!select) {
-    return null;
-  }
-
-  return getPresetList(key).find((item) => item.id === select.value) ?? null;
-}
-
-function applyGatekeeperPreset(preset) {
-  const form = document.getElementById("gatekeeper-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.fileName.value = preset.fileName ?? form.fileName.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.language.value = preset.language ?? form.language.value;
-  form.rawContent.value = preset.rawContent ?? form.rawContent.value;
-}
-
-function applyExtractedPreset(preset) {
-  const form = document.getElementById("extracted-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.fileName.value = preset.fileName ?? form.fileName.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.language.value = preset.language ?? form.language.value;
-  form.mode.value = preset.mode ?? form.mode.value;
-  form.rawContent.value = preset.rawContent ?? form.rawContent.value;
-}
-
-function applyEmbeddingPreset(preset) {
-  const form = document.getElementById("embedding-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.fileName.value = preset.fileName ?? form.fileName.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.language.value = preset.language ?? form.language.value;
-  form.mode.value = preset.mode ?? form.mode.value;
-  form.allowedTags.value = preset.allowedTags ?? form.allowedTags.value;
-  form.content.value = preset.content ?? form.content.value;
-}
-
-function applyGenerationPreset(preset) {
-  const form = document.getElementById("generation-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.courseId.value = preset.courseId ?? form.courseId.value;
-  form.documentId.value = preset.documentId ?? form.documentId.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.difficulty.value = preset.difficulty ?? form.difficulty.value;
-  form.questionType.value = preset.questionType ?? form.questionType.value;
-  form.count.value = String(preset.count ?? form.count.value);
-  form.mode.value = preset.mode ?? form.mode.value;
-  form.maxAttempts.value = String(preset.maxAttempts ?? form.maxAttempts.value);
-  form.isPublic.value = String(preset.isPublic ?? form.isPublic.value);
-  form.chunks.value = stringifyJson(preset.chunks ?? []);
-}
-
-function applyMentorPreset(preset) {
-  const form = document.getElementById("mentor-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.submissionId.value = preset.submissionId ?? form.submissionId.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.language.value = preset.language ?? form.language.value;
-  form.problem.value = preset.problem ?? form.problem.value;
-  form.code.value = preset.code ?? form.code.value;
-  form.sourceFiles.value = stringifyJson(preset.sourceFiles ?? []);
-}
-
-function applyIngestionPreset(preset) {
-  const form = document.getElementById("ingestion-form");
-  if (!form || !preset) {
-    return;
-  }
-
-  form.fileName.value = preset.fileName ?? form.fileName.value;
-  form.subject.value = preset.subject ?? form.subject.value;
-  form.language.value = preset.language ?? form.language.value;
-  form.mode.value = preset.mode ?? form.mode.value;
-  form.allowedTags.value = preset.allowedTags ?? form.allowedTags.value;
-  form.rawContent.value = preset.rawContent ?? form.rawContent.value;
-}
-
-function applyPreset(functionKey, preset) {
-  if (!preset) {
-    return;
-  }
-
-  if (functionKey === "gatekeeper") {
-    applyGatekeeperPreset(preset);
-  } else if (functionKey === "extracted") {
-    applyExtractedPreset(preset);
-  } else if (functionKey === "embedding") {
-    applyEmbeddingPreset(preset);
-  } else if (functionKey === "generation") {
-    applyGenerationPreset(preset);
-  } else if (functionKey === "mentor") {
-    applyMentorPreset(preset);
-  } else if (functionKey === "ingestion") {
-    applyIngestionPreset(preset);
-  }
-}
-
-async function loadPresets() {
-  const presets = await fetchJson("/data/benchmark-presets.json");
-  appState.presets = presets ?? {};
-
-  ["gatekeeper", "extracted", "embedding", "generation", "mentor", "ingestion"].forEach((key) => {
-    const items = getPresetList(key);
-    setSelectOptions(`${key}-preset`, items, (item) => item.label ?? item.id, (item) => item.id);
-  });
-}
-
-function bindPresetLoaders() {
-  document.querySelectorAll("[data-load-preset]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const functionKey = button.dataset.loadPreset;
-      applyPreset(functionKey, getSelectedPreset(functionKey));
-    });
-  });
-}
-
-function applyUploadResultToForm(target, result) {
-  if (!result) {
-    return;
-  }
-
-  if (target === "gatekeeper") {
-    const form = document.getElementById("gatekeeper-form");
-    form.fileName.value = result.fileName ?? form.fileName.value;
-    form.rawContent.value = result.extractedText ?? result.suggestedRawContent ?? form.rawContent.value;
-  }
-
-  if (target === "extracted") {
-    const form = document.getElementById("extracted-form");
-    form.fileName.value = result.fileName ?? form.fileName.value;
-    form.rawContent.value = result.extractedText ?? result.suggestedRawContent ?? form.rawContent.value;
-    if (result.suggestedMode) {
-      form.mode.value = result.suggestedMode;
-    }
-  }
-
-  if (target === "embedding") {
-    const form = document.getElementById("embedding-form");
-    form.fileName.value = result.fileName ?? form.fileName.value;
-    form.content.value = result.extractedText ?? result.suggestedRawContent ?? form.content.value;
-    if (result.suggestedMode) {
-      form.mode.value = result.suggestedMode;
-    }
-  }
 }
 
 function bindUploadInputs() {
@@ -1421,83 +956,13 @@ function bindUploadInputs() {
       }
 
       try {
-        setJson(outputId, { status: "uploading", fileName: file.name });
         const formData = new FormData();
         formData.append("file", file);
         const result = await postForm("/api/ai-module/uploads/ingest", formData);
-        setJson(outputId, result);
         applyUploadResultToForm(target, result);
-      } catch (error) {
-        setJson(outputId, { error });
-      }
+      } catch {}
     });
   });
-}
-
-function getBatchConfig(functionName) {
-  return functionName === "gatekeeper"
-    ? { endpoint: "/api/ai-module/gatekeeper", buildPayload: () => buildGatekeeperPayload(document.getElementById("gatekeeper-form")) }
-    : functionName === "extracted"
-      ? { endpoint: "/api/ai-module/extracted-content", buildPayload: () => buildExtractedPayload(document.getElementById("extracted-form")) }
-      : functionName === "embedding"
-        ? { endpoint: "/api/ai-module/embedding-tagging", buildPayload: () => buildEmbeddingPayload(document.getElementById("embedding-form")) }
-        : functionName === "generation"
-          ? { endpoint: "/api/ai-module/generation-review", buildPayload: () => buildGenerationPayload(document.getElementById("generation-form")) }
-          : functionName === "mentor"
-            ? { endpoint: "/api/ai-module/code-mentor", buildPayload: () => buildMentorPayload(document.getElementById("mentor-form")) }
-            : functionName === "ingestion"
-              ? { endpoint: "/api/ai-module/ingestion", buildPayload: () => buildIngestionPayload(document.getElementById("ingestion-form")) }
-              : null;
-}
-
-function renderBatchResults(results) {
-  appState.batchResults = Array.isArray(results) ? results : [];
-  setJson("batch-results-json", appState.batchResults);
-
-  const container = document.getElementById("batch-results-parsed");
-  if (!container) {
-    return;
-  }
-
-  if (appState.batchResults.length === 0) {
-    container.innerHTML = '<div class="placeholder">No batch result yet.</div>';
-    return;
-  }
-
-  container.innerHTML = appState.batchResults.map((item) => `
-    <article class="list-card">
-      <h4>${escapeHtml(item.presetLabel ?? item.presetId ?? "preset")}</h4>
-      <p><strong>${escapeHtml(item.functionName ?? "")}</strong> | ${renderBadge(item.status ?? "")}</p>
-      <p class="muted">Tokens: ${escapeHtml(String(item.totalTokens ?? 0))} | Cost: ${escapeHtml(formatCurrency(item.totalCostUsd ?? 0))} | Latency: ${escapeHtml(String(item.latencyMs ?? ""))}</p>
-      <p class="muted">Attempts: ${escapeHtml(String(item.attemptsUsed ?? 1))} | Retries: ${escapeHtml(String(item.retriesUsed ?? 0))}</p>
-      <p>${escapeHtml(item.modelSummary ?? "")}</p>
-    </article>
-  `).join("");
-}
-
-function renderMatrixResults(results) {
-  appState.matrixResults = Array.isArray(results) ? results : [];
-  setJson("matrix-results-json", appState.matrixResults);
-
-  const container = document.getElementById("matrix-results-parsed");
-  if (!container) {
-    return;
-  }
-
-  if (appState.matrixResults.length === 0) {
-    container.innerHTML = '<div class="placeholder">No matrix result yet.</div>';
-    return;
-  }
-
-  container.innerHTML = appState.matrixResults.map((item) => `
-    <article class="list-card">
-      <h4>${escapeHtml(item.model ?? "model")}</h4>
-      <p><strong>${escapeHtml(item.functionName ?? "")}</strong> | <strong>${escapeHtml(item.target ?? "")}</strong> | ${renderBadge(item.status ?? "")}</p>
-      <p class="muted">Tokens: ${escapeHtml(String(item.totalTokens ?? 0))} | Cost: ${escapeHtml(formatCurrency(item.totalCostUsd ?? 0))} | Latency: ${escapeHtml(String(item.latencyMs ?? ""))}</p>
-      <p class="muted">Attempts: ${escapeHtml(String(item.attemptsUsed ?? 1))} | Retries: ${escapeHtml(String(item.retriesUsed ?? 0))}</p>
-      <p>${escapeHtml(item.modelSummary ?? "")}</p>
-    </article>
-  `).join("");
 }
 
 function renderSummaryResults(results) {
@@ -1616,258 +1081,6 @@ async function runBatchPresets() {
   }
 }
 
-function bindBatchRunner() {
-  $("#batch-run-presets")?.addEventListener("click", runBatchPresets);
-
-  $("#batch-export-json")?.addEventListener("click", () => {
-    if (!Array.isArray(appState.batchResults) || appState.batchResults.length === 0) {
-      return;
-    }
-
-    exportJsonFile("batch-presets", appState.batchResults);
-  });
-
-  $("#batch-copy-tsv")?.addEventListener("click", async () => {
-    if (!Array.isArray(appState.batchResults) || appState.batchResults.length === 0) {
-      return;
-    }
-
-    await copyText(buildBatchTsv(appState.batchResults));
-  });
-}
-
-function refreshMatrixTargetOptions() {
-  const functionName = $("#matrix-function")?.value;
-  const config = matrixConfigs[functionName];
-  const targetSelect = $("#matrix-target");
-  if (!config || !targetSelect) {
-    return;
-  }
-
-  targetSelect.innerHTML = (config.targets ?? []).map((item) =>
-    `<option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>`
-  ).join("");
-}
-
-function refreshMatrixProviderFilter() {
-  const providerSelect = $("#matrix-provider-filter");
-  if (!providerSelect) {
-    return;
-  }
-
-  const options = ['<option value="">all</option>']
-    .concat(Object.keys(appState.providers).map((provider) => `<option value="${escapeHtml(provider)}">${escapeHtml(provider)}</option>`));
-  providerSelect.innerHTML = options.join("");
-}
-
-function fillMatrixModelsFromCatalog() {
-  const providerFilter = ($("#matrix-provider-filter")?.value ?? "").trim().toLowerCase();
-  const functionName = $("#matrix-function")?.value;
-  const config = matrixConfigs[functionName];
-  const models = [];
-
-  for (const [provider, catalog] of Object.entries(appState.providers)) {
-    if (providerFilter && provider !== providerFilter) {
-      continue;
-    }
-
-    const items = catalog.models ?? catalog.Models ?? [];
-    for (const item of items) {
-      const id = item.id ?? item.Id;
-      const capabilities = item.capabilities ?? item.Capabilities ?? [];
-      if (!id) {
-        continue;
-      }
-
-      if (config?.capabilityHint && !capabilities.some((cap) => String(cap).toLowerCase().includes(config.capabilityHint))) {
-        continue;
-      }
-
-      models.push(id);
-    }
-  }
-
-  $("#matrix-model-list").value = Array.from(new Set(models)).join("\n");
-}
-
-async function runMatrixBenchmarks() {
-  const functionName = $("#matrix-function")?.value;
-  const target = $("#matrix-target")?.value ?? "primary";
-  const config = matrixConfigs[functionName];
-  if (!config) {
-    return;
-  }
-
-  const retryConfig = getRunnerRetryConfig();
-  const models = ($("#matrix-model-list")?.value ?? "")
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  const results = [];
-  renderMatrixResults([]);
-  setJson("matrix-results-json", { status: "running", functionName, target, modelCount: models.length, ...retryConfig });
-
-  for (const model of models) {
-    const basePayload = config.buildPayload();
-    const payload = config.applyTarget(basePayload, model, target);
-    const execution = await runWithRetry(
-      () => postJson(config.endpoint, payload),
-      retryConfig
-    );
-
-    if (execution.ok) {
-      const response = execution.result;
-      const usageLogs = Array.isArray(response?.usageLogs) ? response.usageLogs : [];
-      const inputTokens = usageLogs.reduce((sum, item) => sum + (item.inputTokens ?? 0), 0);
-      const outputTokens = usageLogs.reduce((sum, item) => sum + (item.outputTokens ?? 0), 0);
-      const metrics = summarizeMetrics(response);
-      const normalizedFunction = functionName === "generation" ? "generation" : functionName;
-
-      results.push({
-        functionName,
-        target,
-        model,
-        status: inferStatusFromResult(normalizedFunction, response),
-        modelSummary: inferModelSummaryFromResult(normalizedFunction, response),
-        inputTokens,
-        outputTokens,
-        totalTokens: inputTokens + outputTokens,
-        totalCostUsd: metrics.cost,
-        latencyMs: metrics.latency !== null ? Number(metrics.latency).toFixed(2) : "",
-        attemptsUsed: execution.attemptsUsed,
-        retriesUsed: execution.retriesUsed,
-        response
-      });
-    } else {
-      results.push({
-        functionName,
-        target,
-        model,
-        status: "error",
-        modelSummary: "",
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        totalCostUsd: 0,
-        latencyMs: "",
-        attemptsUsed: execution.attemptsUsed,
-        retriesUsed: execution.retriesUsed,
-        normalizedError: normalizeRunnerError(execution.error, "matrix"),
-        error: execution.error
-      });
-    }
-
-    renderMatrixResults(results);
-  }
-}
-
-function bindMatrixRunner() {
-  $("#matrix-function")?.addEventListener("change", refreshMatrixTargetOptions);
-  $("#matrix-fill-models")?.addEventListener("click", fillMatrixModelsFromCatalog);
-  $("#matrix-run")?.addEventListener("click", runMatrixBenchmarks);
-
-  $("#matrix-export-json")?.addEventListener("click", () => {
-    if (!Array.isArray(appState.matrixResults) || appState.matrixResults.length === 0) {
-      return;
-    }
-    exportJsonFile("matrix-benchmark", appState.matrixResults);
-  });
-
-  $("#matrix-copy-tsv")?.addEventListener("click", async () => {
-    if (!Array.isArray(appState.matrixResults) || appState.matrixResults.length === 0) {
-      return;
-    }
-    await copyText(buildMatrixTsv(appState.matrixResults));
-  });
-}
-
-function normalizeSummaryItem(item) {
-  const totals = item.totals ?? item.Totals ?? {};
-  const inputTokens = totals.inputTokens ?? 0;
-  const outputTokens = totals.outputTokens ?? 0;
-  const totalCostUsd = totals.totalCostUsd ?? 0;
-  const latencyMs = totals.latencyMs ?? 0;
-
-  return {
-    functionName: item.functionName ?? item.FunctionName ?? "",
-    modelSummary: item.modelSummary ?? item.ModelSummary ?? "unknown",
-    inputTokens,
-    outputTokens,
-    totalTokens: inputTokens + outputTokens,
-    totalCostUsd,
-    latencyMs
-  };
-}
-
-async function loadSummaryDashboard() {
-  const functions = ["gatekeeper", "extracted-content", "embedding-tagging", "generation-review", "code-mentor", "ingestion", "full-pipeline"];
-  const all = [];
-
-  setJson("summary-json", { status: "loading", functions });
-
-  for (const functionName of functions) {
-    try {
-      const items = await fetchJson(`/api/ai-module/history/${functionName}?take=200`);
-      for (const item of (Array.isArray(items) ? items : [])) {
-        all.push(normalizeSummaryItem(item));
-      }
-    } catch (error) {
-      all.push({
-        functionName,
-        modelSummary: "error",
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        totalCostUsd: 0,
-        latencyMs: 0,
-        error
-      });
-    }
-  }
-
-  const grouped = new Map();
-  for (const item of all) {
-    const key = `${item.functionName}||${item.modelSummary}`;
-    if (!grouped.has(key)) {
-      grouped.set(key, {
-        functionName: item.functionName,
-        modelSummary: item.modelSummary,
-        runs: 0,
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        totalCostUsd: 0,
-        totalLatencyMs: 0
-      });
-    }
-
-    const bucket = grouped.get(key);
-    bucket.runs += 1;
-    bucket.inputTokens += item.inputTokens ?? 0;
-    bucket.outputTokens += item.outputTokens ?? 0;
-    bucket.totalTokens += item.totalTokens ?? 0;
-    bucket.totalCostUsd += item.totalCostUsd ?? 0;
-    bucket.totalLatencyMs += item.latencyMs ?? 0;
-  }
-
-  const results = Array.from(grouped.values())
-    .map((item) => ({
-      functionName: item.functionName,
-      modelSummary: item.modelSummary,
-      runs: item.runs,
-      inputTokens: item.inputTokens,
-      outputTokens: item.outputTokens,
-      totalTokens: item.totalTokens,
-      totalCostUsd: item.totalCostUsd,
-      avgCostUsd: item.runs > 0 ? item.totalCostUsd / item.runs : 0,
-      avgLatencyMs: item.runs > 0 ? (item.totalLatencyMs / item.runs).toFixed(2) : ""
-    }))
-    .sort((a, b) => (a.functionName.localeCompare(b.functionName) || b.totalCostUsd - a.totalCostUsd));
-
-  renderSummaryResults(results);
-}
-
 function bindSummaryDashboard() {
   $("#summary-load-history")?.addEventListener("click", loadSummaryDashboard);
   $("#summary-export-json")?.addEventListener("click", () => {
@@ -1884,93 +1097,11 @@ function bindSummaryDashboard() {
   });
 }
 
-async function loadBenchmarkSessions() {
-  const take = Number($("#session-take")?.value || 20);
-  const items = await fetchJson(`/api/ai-module/benchmark-sessions?take=${take}`);
-  renderSessionList(items);
-}
-
-async function saveBenchmarkSession() {
-  const payload = {
-    name: $("#session-name")?.value ?? "",
-    notes: $("#session-notes")?.value ?? "",
-    summaryResults: appState.summaryResults,
-    batchResults: appState.batchResults,
-    matrixResults: appState.matrixResults
-  };
-
-  const result = await postJson("/api/ai-module/benchmark-sessions", payload);
-  appState.openedSession = result;
-  setJson("session-json", result);
-  await loadBenchmarkSessions();
-}
-
-async function openBenchmarkSession() {
-  const sessionId = $("#session-select")?.value;
-  if (!sessionId) {
-    return;
-  }
-
-  const result = await fetchJson(`/api/ai-module/benchmark-sessions/${encodeURIComponent(sessionId)}`);
-  appState.openedSession = result;
-  setJson("session-json", result);
-}
-
-function bindBenchmarkSessions() {
-  $("#session-save")?.addEventListener("click", async () => {
-    try {
-      await saveBenchmarkSession();
-    } catch (error) {
-      setJson("session-json", { error });
-    }
-  });
-
-  $("#session-refresh")?.addEventListener("click", async () => {
-    try {
-      await loadBenchmarkSessions();
-    } catch (error) {
-      setJson("session-json", { error });
-    }
-  });
-
-  $("#session-open")?.addEventListener("click", async () => {
-    try {
-      await openBenchmarkSession();
-    } catch (error) {
-      setJson("session-json", { error });
-    }
-  });
-
-  $("#session-export-json")?.addEventListener("click", () => {
-    if (!appState.openedSession) {
-      return;
-    }
-
-    exportJsonFile("benchmark-session", appState.openedSession);
-  });
-
-  $("#session-copy-summary-tsv")?.addEventListener("click", async () => {
-    if (!appState.openedSession) {
-      return;
-    }
-
-    const summaryResults = appState.openedSession.summaryResults ?? appState.openedSession.SummaryResults ?? [];
-    await copyText(buildSummaryTsv(summaryResults));
-  });
-
-  $("#session-copy-detail-tsv")?.addEventListener("click", async () => {
-    if (!appState.openedSession) {
-      return;
-    }
-
-    await copyText(buildSessionDetailTsv(appState.openedSession));
-  });
-}
-
 function renderHistoryDetail(detail) {
   appState.historyDetail = detail;
   const summary = getHistorySummary(detail) ?? {};
   const response = getHistoryResponse(detail);
+  const selectedRunId = summary.runId ?? summary.RunId ?? "";
 
   renderSummaryCards("history-summary", [
     { label: "Run ID", value: summary.runId ?? summary.RunId },
@@ -1984,6 +1115,10 @@ function renderHistoryDetail(detail) {
 
   setHtml("history-detail-result", formatResultBlock(response));
   setJson("history-detail-json", detail);
+
+  document.querySelectorAll(".history-card").forEach((card) => {
+    card.classList.toggle("is-selected", card.dataset.runId === selectedRunId);
+  });
 }
 
 function setBusy(targetId, message = "Running...") {
@@ -2190,7 +1325,7 @@ function fillPromptStudioForm(key) {
 async function loadFunctionSource(target, sourceType) {
   const config = functionSources[target];
   if (!config) {
-    return;
+    return null;
   }
 
   let payload;
@@ -2221,7 +1356,71 @@ async function loadFunctionSource(target, sourceType) {
     }
   }
 
-  setJson(config.sourceElementId, payload ?? { message: "No source available." });
+  if (config.sourceElementId) {
+    setJson(config.sourceElementId, payload ?? { message: "No source available." });
+  }
+
+  return payload ?? { message: "No source available." };
+}
+
+function getSourceKindOptions(functionKey) {
+  if (functionKey === "generation") {
+    return [
+      { value: "generationPrompt", label: "Generator Prompt" },
+      { value: "reviewPrompt", label: "Reviewer Prompt" },
+      { value: "rubric", label: "Rubric" },
+      { value: "groundTruth", label: "Ground Truth" }
+    ];
+  }
+
+  return [
+    { value: "prompt", label: "Prompt" },
+    { value: "policy", label: "Policy" },
+    { value: "rubric", label: "Rubric" },
+    { value: "groundTruth", label: "Ground Truth" }
+  ];
+}
+
+function formatSourceViewerBlock(payload) {
+  if (!payload || typeof payload !== "object") {
+    return '<div class="placeholder">No source loaded.</div>';
+  }
+
+  const title = payload.key
+    ?? payload.promptKey
+    ?? payload.policy_id
+    ?? payload.policyId
+    ?? payload.dataset_id
+    ?? payload.datasetId
+    ?? payload.rubric_id
+    ?? payload.rubricId
+    ?? payload.name
+    ?? "Source";
+  const version = payload.version ?? payload.Version ?? payload.currentVersion ?? "";
+  const description = payload.description ?? payload.Description ?? payload.summary ?? "";
+  const systemPrompt = payload.systemPrompt ?? payload.system_prompt;
+  const userPrompt = payload.userPrompt ?? payload.user_prompt;
+
+  const blocks = [
+    `<div class="result-section"><h4>${escapeHtml(String(title))}</h4>${version ? `<p class="muted">Version: ${escapeHtml(String(version))}</p>` : ""}${description ? `<p>${escapeHtml(String(description))}</p>` : ""}</div>`
+  ];
+
+  if (systemPrompt) {
+    blocks.push(`<div class="result-section"><h4>System Prompt</h4><pre>${escapeHtml(String(systemPrompt))}</pre></div>`);
+  }
+
+  if (userPrompt) {
+    blocks.push(`<div class="result-section"><h4>User Prompt</h4><pre>${escapeHtml(String(userPrompt))}</pre></div>`);
+  }
+
+  const preview = { ...payload };
+  delete preview.systemPrompt;
+  delete preview.system_prompt;
+  delete preview.userPrompt;
+  delete preview.user_prompt;
+
+  blocks.push(`<div class="result-section"><h4>Metadata</h4><pre>${escapeHtml(JSON.stringify(preview, null, 2))}</pre></div>`);
+  return blocks.join("");
 }
 
 function buildGatekeeperPayload(form) {
@@ -2262,11 +1461,28 @@ function buildEmbeddingPayload(form) {
 }
 
 function parseChunks(text) {
-  const chunks = safeJsonParse(text, []);
-  return Array.isArray(chunks) ? chunks : [];
+  const trimmed = String(text ?? "").trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  const parsed = safeJsonParse(trimmed, null);
+  if (parsed === null) {
+    throw new Error("Chunk context JSON is invalid.");
+  }
+
+  const rawChunks = extractChunkArrayFromImport(parsed);
+  return rawChunks
+    .map((chunk, index) => normalizeImportedChunk(chunk, index))
+    .filter(Boolean);
 }
 
 function buildGenerationPayload(form) {
+  const chunks = parseChunks(form.chunks.value);
+  if (form.mode.value === "SameModelDualRole") {
+    form.reviewerModel.value = form.generatorModel.value;
+  }
+
   return {
     userId: form.userId.value,
     courseId: form.courseId.value || null,
@@ -2278,10 +1494,33 @@ function buildGenerationPayload(form) {
     count: Number(form.count.value),
     mode: form.mode.value,
     generatorModel: form.generatorModel.value,
-    reviewerModel: form.reviewerModel.value,
+    reviewerModel: form.mode.value === "SameModelDualRole" ? form.generatorModel.value : form.reviewerModel.value,
     maxAttempts: Number(form.maxAttempts.value),
-    chunks: parseChunks(form.chunks.value)
+    chunks
   };
+}
+
+async function importGenerationChunksFromFile(file) {
+  const text = await file.text();
+  const parsed = safeJsonParse(text, null);
+  if (parsed === null) {
+    throw new Error("Imported file is not valid JSON.");
+  }
+
+  const chunks = extractChunkArrayFromImport(parsed)
+    .map((chunk, index) => normalizeImportedChunk(chunk, index))
+    .filter(Boolean);
+
+  if (chunks.length === 0) {
+    throw new Error("Imported JSON does not contain any valid chunks.");
+  }
+
+  const form = document.getElementById("generation-form");
+  form.chunks.value = JSON.stringify(chunks, null, 2);
+  const inferredDocumentId = parsed?.documentId ?? parsed?.document?.documentId ?? parsed?.ingestion?.document?.documentId ?? null;
+  if (inferredDocumentId && form.documentId) {
+    form.documentId.value = inferredDocumentId;
+  }
 }
 
 function buildMentorPayload(form) {
@@ -2298,24 +1537,12 @@ function buildMentorPayload(form) {
   };
 }
 
-function buildIngestionPayload(form) {
-  return {
-    userId: form.userId.value,
-    fileName: form.fileName.value,
-    subject: form.subject.value,
-    language: form.language.value,
-    rawContent: form.rawContent.value,
-    mode: form.mode.value,
-    gatekeeperModel: form.gatekeeperModel.value,
-    embeddingModel: form.embeddingModel.value,
-    taggingModel: form.taggingModel.value,
-    visionModel: form.visionModel.value || null,
-    allowedTags: parseCsvList(form.allowedTags.value)
-  };
-}
-
 async function handleFormSubmit(formId, outputPrefix, url, builder) {
   const form = document.getElementById(formId);
+  if (!form) {
+    return;
+  }
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
@@ -2323,14 +1550,6 @@ async function handleFormSubmit(formId, outputPrefix, url, builder) {
       const payload = builder(form);
       const result = await postJson(url, payload);
       renderOutput(outputPrefix, result);
-      await loadHistoryList(mapOutputPrefixToHistoryKey(outputPrefix)).catch(() => null);
-
-      if (outputPrefix === "ingestion") {
-        const documentId = result.document?.documentId ?? result.documentId;
-        if (documentId) {
-          document.getElementById("generation-form").documentId.value = documentId;
-        }
-      }
     } catch (error) {
       renderOutput(outputPrefix, { error });
     }
@@ -2346,25 +1565,21 @@ function bindDebugButtons() {
           setBusy("gatekeeper-json");
           const payload = buildGatekeeperPayload(document.getElementById("gatekeeper-form"));
           renderOutput("gatekeeper", await postJson("/api/ai-module/gatekeeper/debug", payload));
-          await loadHistoryList("gatekeeper").catch(() => null);
         }
         if (target === "extracted") {
           setBusy("extracted-json");
           const payload = buildExtractedPayload(document.getElementById("extracted-form"));
           renderOutput("extracted", await postJson("/api/ai-module/extracted-content/debug", payload));
-          await loadHistoryList("extracted-content").catch(() => null);
         }
         if (target === "embedding") {
           setBusy("embedding-json");
           const payload = buildEmbeddingPayload(document.getElementById("embedding-form"));
           renderOutput("embedding", await postJson("/api/ai-module/embedding-tagging/debug", payload));
-          await loadHistoryList("embedding-tagging").catch(() => null);
         }
         if (target === "mentor") {
           setBusy("mentor-json");
           const payload = buildMentorPayload(document.getElementById("mentor-form"));
           renderOutput("mentor", await postJson("/api/ai-module/code-mentor/debug", payload));
-          await loadHistoryList("code-mentor").catch(() => null);
         }
       } catch (error) {
         renderOutput(target, { error });
@@ -2388,6 +1603,39 @@ function bindSourceButtons() {
   });
 }
 
+function bindSourceViewer() {
+  const functionSelect = $("#source-function");
+  const kindSelect = $("#source-kind");
+
+  const syncOptions = () => {
+    const functionKey = functionSelect?.value ?? "gatekeeper";
+    const items = getSourceKindOptions(functionKey);
+    setSelectOptions("source-kind", items, (item) => item.label, (item) => item.value);
+
+    const isGeneration = functionKey === "generation";
+    document.querySelectorAll("[data-source-generation-only]").forEach((element) => {
+      element.hidden = !isGeneration;
+    });
+  };
+
+  functionSelect?.addEventListener("change", syncOptions);
+  syncOptions();
+
+  $("#source-load")?.addEventListener("click", async () => {
+    const functionKey = functionSelect?.value ?? "gatekeeper";
+    const sourceKind = kindSelect?.value ?? "prompt";
+
+    try {
+      const payload = await loadFunctionSource(functionKey, sourceKind);
+      setHtml("source-viewer-result", formatSourceViewerBlock(payload));
+      setJson("source-viewer-json", payload);
+    } catch (error) {
+      setHtml("source-viewer-result", '<div class="placeholder">Failed to load source.</div>');
+      setJson("source-viewer-json", { error });
+    }
+  });
+}
+
 function bindNavigation() {
   document.querySelectorAll("[data-tab-target]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2406,24 +1654,8 @@ async function runGenerationExport() {
     const payload = buildGenerationPayload(document.getElementById("generation-form"));
     const result = await postJson("/api/ai-module/generation-review/export", payload);
     renderOutput("generation", result);
-    await loadHistoryList("generation-review").catch(() => null);
   } catch (error) {
     renderOutput("generation", { error });
-  }
-}
-
-async function runFullPipeline() {
-  try {
-    setBusy("pipeline-json");
-    const payload = {
-      ingestion: buildIngestionPayload(document.getElementById("ingestion-form")),
-      generationReview: buildGenerationPayload(document.getElementById("generation-form"))
-    };
-    const result = await postJson("/api/ai-module/full-pipeline", payload);
-    renderOutput("pipeline", result);
-    await loadHistoryList("full-pipeline").catch(() => null);
-  } catch (error) {
-    renderOutput("pipeline", { error });
   }
 }
 
@@ -2463,41 +1695,6 @@ function bindPromptStudio() {
     const prompt = await fetchJson(`/api/ai-module/prompts/${key}`);
     fillPromptStudioForm(key);
     setJson("prompt-studio-json", prompt);
-  });
-}
-
-function bindOverviewActions() {
-  $("#refresh-provider-list")?.addEventListener("click", () => loadProviders().catch((error) => setJson("provider-raw", { error })));
-  $("#refresh-overview")?.addEventListener("click", async () => {
-    try {
-      await loadProviders();
-      await loadPrompts();
-    } catch (error) {
-      setJson("provider-raw", { error });
-    }
-  });
-  $("#reload-provider-config")?.addEventListener("click", () => reloadProviderConfig().catch((error) => setJson("provider-raw", { error })));
-  $("#refresh-prompt-list")?.addEventListener("click", () => loadPrompts().catch((error) => setJson("prompt-raw", { error })));
-  $("#reload-prompts")?.addEventListener("click", async () => {
-    try {
-      await postJson("/api/ai-module/prompts/reload", {});
-      await loadPrompts();
-    } catch (error) {
-      setJson("prompt-raw", { error });
-    }
-  });
-
-  document.body.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-ping-provider]");
-    if (!button) {
-      return;
-    }
-
-    try {
-      await pingProvider(button.dataset.pingProvider);
-    } catch (error) {
-      alert(JSON.stringify(error, null, 2));
-    }
   });
 }
 
@@ -2682,26 +1879,6 @@ async function openHistory(functionName) {
 }
 
 function bindHistoryActions() {
-  document.querySelectorAll("[data-load-history]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      try {
-        await loadHistoryList(button.dataset.loadHistory);
-      } catch (error) {
-        setJson(`${button.dataset.loadHistory}-history-json`, { error });
-      }
-    });
-  });
-
-  document.querySelectorAll("[data-open-history]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      try {
-        await openHistory(button.dataset.openHistory);
-      } catch (error) {
-        setJson(`${button.dataset.openHistory}-history-json`, { error });
-      }
-    });
-  });
-
   $("#history-load-list")?.addEventListener("click", async () => {
     const functionName = $("#history-function").value;
     const take = Number($("#history-take").value || 30);
@@ -2710,9 +1887,14 @@ function bindHistoryActions() {
     refreshHistoryBrowser();
   });
 
-  $("#history-open-selected")?.addEventListener("click", async () => {
+  $("#history-list-parsed")?.addEventListener("click", async (event) => {
+    const card = event.target.closest(".history-card");
+    if (!card) {
+      return;
+    }
+
     const functionName = $("#history-function").value;
-    const runId = $("#history-run-select").value;
+    const runId = card.dataset.runId;
     if (!runId) {
       return;
     }
@@ -2784,105 +1966,11 @@ function bindHistoryActions() {
     $("#history-date-to").value = "";
     refreshHistoryBrowser();
   });
-}
 
-function summarizeForCompare(functionName, model, data, slot) {
-  const usageLogs = Array.isArray(data?.usageLogs) ? data.usageLogs : [];
-  const inputTokens = usageLogs.reduce((sum, item) => sum + (item.inputTokens ?? 0), 0);
-  const outputTokens = usageLogs.reduce((sum, item) => sum + (item.outputTokens ?? 0), 0);
-  const metrics = summarizeMetrics(data);
-  return {
-    functionName,
-    slot,
-    model,
-    status: inferStatusFromResult(functionName, data),
-    inputTokens,
-    outputTokens,
-    totalTokens: inputTokens + outputTokens,
-    totalCostUsd: metrics.cost,
-    latencyMs: metrics.latency !== null ? Number(metrics.latency).toFixed(2) : ""
-  };
-}
-
-function refreshCompareTargetOptions() {
-  const functionName = $("#compare-function")?.value;
-  const config = compareConfigs[functionName];
-  const targetSelect = $("#compare-target");
-  if (!config || !targetSelect) {
-    return;
-  }
-
-  const options = Array.isArray(config.targets) && config.targets.length > 0
-    ? config.targets
-    : [{ value: "primary", label: "Primary model" }];
-
-  targetSelect.innerHTML = options
-    .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`)
-    .join("");
-
-  if ($("#compare-help")) {
-    $("#compare-help").textContent = config.helpText ?? "Uses the current payload from the corresponding function form. Only the selected model field is swapped.";
-  }
-}
-
-function bindCompareLab() {
-  $("#compare-function")?.addEventListener("change", refreshCompareTargetOptions);
-
-  $("#compare-form")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const functionName = $("#compare-function").value;
-    const config = compareConfigs[functionName];
-    if (!config) {
-      return;
-    }
-
-    const modelA = $("#compare-model-a").value;
-    const modelB = $("#compare-model-b").value;
-    const compareTarget = $("#compare-target")?.value ?? "primary";
-    const basePayload = config.buildPayload();
-
-    $("#compare-a-json").textContent = "Running A...";
-    $("#compare-b-json").textContent = "Running B...";
-    setHtml("compare-a-result", "");
-    setHtml("compare-b-result", "");
-
-    try {
-      const [resultA, resultB] = await Promise.all([
-        postJson(config.endpoint, config.applyTarget(basePayload, modelA, compareTarget)),
-        postJson(config.endpoint, config.applyTarget(basePayload, modelB, compareTarget))
-      ]);
-
-      setJson("compare-a-json", resultA);
-      setJson("compare-b-json", resultB);
-      setHtml("compare-a-result", formatResultBlock(resultA));
-      setHtml("compare-b-result", formatResultBlock(resultB));
-
-      const metaA = summarizeForCompare(functionName, modelA, resultA, "A");
-      const metaB = summarizeForCompare(functionName, modelB, resultB, "B");
-      appState.compareMeta = { metaA, metaB };
-
-      renderSummaryCards("compare-summary", [
-        { label: "Function", value: functionName },
-        { label: "Target", value: compareTarget },
-        { label: "Model A cost", value: formatCurrency(metaA.totalCostUsd) },
-        { label: "Model B cost", value: formatCurrency(metaB.totalCostUsd) },
-        { label: "Model A tokens", value: metaA.totalTokens },
-        { label: "Model B tokens", value: metaB.totalTokens },
-        { label: "Status A", value: metaA.status, badge: true },
-        { label: "Status B", value: metaB.status, badge: true }
-      ]);
-    } catch (error) {
-      setJson("compare-a-json", { error });
-      setJson("compare-b-json", { error });
-    }
-  });
-
-  $("#compare-copy-tsv")?.addEventListener("click", async () => {
-    if (!appState.compareMeta) {
-      return;
-    }
-
-    await copyText(buildCompareTsv(appState.compareMeta.metaA, appState.compareMeta.metaB));
+  $("#history-function")?.addEventListener("change", () => {
+    appState.historyDetail = null;
+    setHtml("history-detail-result", '<div class="placeholder">Chọn một run ở cột bên trái để xem chi tiết.</div>');
+    setJson("history-detail-json", { message: "No run selected." });
   });
 }
 
@@ -2895,7 +1983,52 @@ function mapOutputPrefixToHistoryKey(outputPrefix) {
 }
 
 function attachGenerationActions() {
+  const generationForm = document.getElementById("generation-form");
+  const syncGenerationMode = () => {
+    if (!generationForm) {
+      return;
+    }
+
+    const sameModel = generationForm.mode.value === "SameModelDualRole";
+    const reviewerProvider = generationForm.reviewerProvider;
+    const reviewerModel = generationForm.reviewerModel;
+
+    if (sameModel) {
+      reviewerModel.value = generationForm.generatorModel.value;
+      reviewerProvider.value = generationForm.generatorProvider.value;
+    }
+
+    reviewerProvider.disabled = sameModel;
+    reviewerModel.disabled = sameModel;
+  };
+
+  generationForm?.mode?.addEventListener("change", syncGenerationMode);
+  generationForm?.generatorModel?.addEventListener("change", syncGenerationMode);
+  generationForm?.generatorProvider?.addEventListener("change", () => {
+    setTimeout(syncGenerationMode, 0);
+  });
+
   document.querySelector("[data-run-export='generation']")?.addEventListener("click", runGenerationExport);
+  document.getElementById("generation-import-json")?.addEventListener("change", async (event) => {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      await importGenerationChunksFromFile(file);
+      setJson("generation-json", { status: "imported", fileName: file.name, chunkCount: parseChunks(document.getElementById("generation-form").chunks.value).length });
+    } catch (error) {
+      setJson("generation-json", { error: { message: error.message ?? String(error) } });
+    } finally {
+      input.value = "";
+    }
+  });
+  document.getElementById("generation-import-trigger")?.addEventListener("click", () => {
+    document.getElementById("generation-import-json")?.click();
+  });
+  syncGenerationMode();
   document.getElementById("pipeline-form")?.addEventListener("submit", (event) => {
     event.preventDefault();
     runFullPipeline();
@@ -2905,19 +2038,13 @@ function attachGenerationActions() {
 async function bootstrap() {
   bindNavigation();
   bindProviderSelectors();
-  bindSourceButtons();
   bindDebugButtons();
-  bindPresetLoaders();
   bindUploadInputs();
-  bindBatchRunner();
-  bindMatrixRunner();
-  bindSummaryDashboard();
-  bindBenchmarkSessions();
   bindPromptStudio();
+  bindSourceViewer();
   bindOverviewActions();
   bindHistoryActions();
   bindResultActions();
-  bindCompareLab();
   attachGenerationActions();
 
   handleFormSubmit("gatekeeper-form", "gatekeeper", "/api/ai-module/gatekeeper", buildGatekeeperPayload);
@@ -2939,39 +2066,11 @@ async function bootstrap() {
     setJson("prompt-raw", { error });
   }
 
-  try {
-    await loadPresets();
-  } catch (error) {
-    console.error("Failed to load presets", error);
-  }
-
-  renderSummaryCards("gatekeeper-summary", []);
-  renderSummaryCards("extracted-summary", []);
-  renderSummaryCards("embedding-summary", []);
-  renderSummaryCards("generation-summary", []);
-  renderSummaryCards("mentor-summary", []);
-  renderSummaryCards("ingestion-summary", []);
-  renderSummaryCards("pipeline-summary", []);
   renderSummaryCards("history-summary", []);
-  renderSummaryCards("compare-summary", []);
-  renderSummaryCards("summary-overview-cards", []);
-  setHtml("history-detail-result", '<div class="placeholder">Open a run to view parsed result.</div>');
+  setHtml("history-detail-result", '<div class="placeholder">Chọn một run ở cột bên trái để xem chi tiết.</div>');
   renderHistoryListParsed([]);
-  renderBatchResults([]);
-  renderMatrixResults([]);
-  refreshCompareTargetOptions();
-  refreshMatrixTargetOptions();
-  refreshMatrixProviderFilter();
-  setJson("summary-json", { message: "Load summary to aggregate cost from run history." });
-  setJson("session-json", { message: "Save current summary, batch, and matrix results into a benchmark session." });
-
-  await loadBenchmarkSessions().catch(() => null);
-
-  for (const functionName of ["gatekeeper", "extracted-content", "embedding-tagging", "generation-review", "code-mentor", "ingestion", "full-pipeline"]) {
-    await loadHistoryList(functionName).catch(() => null);
-  }
-
-  $("#history-load-list")?.click();
+  setHtml("source-viewer-result", '<div class="placeholder">Chọn function và loại source rồi bấm Load Source.</div>');
+  setJson("source-viewer-json", { message: "No source loaded." });
 }
 
 bootstrap();

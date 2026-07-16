@@ -13,7 +13,7 @@
         <div class="brand-mark">AI</div>
         <div>
           <h1>APE AI Module</h1>
-          <p>Prototype operator console</p>
+          <p>Prototype testing console</p>
         </div>
       </div>
 
@@ -24,11 +24,7 @@
         <button class="nav-link" data-tab-target="embedding-tab">3. Embedding + Tagging</button>
         <button class="nav-link" data-tab-target="generation-tab">4-5. Generation + Review</button>
         <button class="nav-link" data-tab-target="mentor-tab">6. Code Mentor</button>
-        <button class="nav-link" data-tab-target="ingestion-tab">Ingestion</button>
-        <button class="nav-link" data-tab-target="pipeline-tab">Full Pipeline</button>
-        <button class="nav-link" data-tab-target="prompts-tab">Prompt Studio</button>
         <button class="nav-link" data-tab-target="history-tab">Run History</button>
-        <button class="nav-link" data-tab-target="compare-tab">Compare Lab</button>
       </nav>
     </aside>
 
@@ -36,11 +32,11 @@
       <section class="hero">
         <div>
           <p class="eyebrow">AI prototype runtime</p>
-          <h2>Operate 6 AI functions, inspect source-of-truth config, and review JSON-first outputs.</h2>
-          <p class="hero-copy">This UI is aligned to the current `.NET` API contracts. It is for prototype operation, prompt tuning, and debug payload inspection before Mongo integration.</p>
+          <h2>Test 6 AI functions, inspect parsed output, and keep raw JSON as evidence.</h2>
+          <p class="hero-copy">Giao diện này chỉ giữ lại những phần cần để test thực tế: chọn model, chạy function, xem output đã parse, xem token/cost, export JSON, và tra lại run history.</p>
         </div>
         <div class="hero-actions">
-          <button id="refresh-overview" class="secondary">Refresh Provider State</button>
+          <button id="refresh-overview" class="secondary">Refresh Providers</button>
           <button id="reload-provider-config" class="secondary">Reload Provider Config</button>
           <button id="reload-prompts" class="secondary">Reload Prompts</button>
         </div>
@@ -56,6 +52,7 @@
               </div>
               <button id="refresh-provider-list" class="secondary">Reload List</button>
             </div>
+            <p class="text-note">Kiểm tra endpoint, API key và model catalog của OpenAI, Gemini, Cohere trước khi chạy test.</p>
             <div id="provider-cards" class="provider-grid"></div>
             <details class="details-block">
               <summary>Raw provider catalog</summary>
@@ -66,185 +63,84 @@
           <section class="panel">
             <div class="panel-head">
               <div>
-                <p class="panel-kicker">Source of truth</p>
+                <p class="panel-kicker">Source Of Truth</p>
+                <h3>Prompt / Policy / Rubric / Ground Truth</h3>
+              </div>
+            </div>
+            <p class="text-note">Xem tập trung toàn bộ luật, prompt và ground truth ở đây thay vì rải nút ở từng tab.</p>
+            <div class="stack-form">
+              <div class="grid grid--3">
+                <label>Function
+                  <select id="source-function">
+                    <option value="gatekeeper">gatekeeper</option>
+                    <option value="extracted">extracted</option>
+                    <option value="embedding">embedding</option>
+                    <option value="generation">generation</option>
+                    <option value="mentor">mentor</option>
+                  </select>
+                </label>
+                <label>Source type
+                  <select id="source-kind"></select>
+                </label>
+                <label data-source-generation-only hidden>Subject
+                  <select id="source-subject">
+                    <option value="JAVA_OOP">JAVA_OOP</option>
+                    <option value="C">C</option>
+                    <option value="DSA_JAVA">DSA_JAVA</option>
+                  </select>
+                </label>
+                <label data-source-generation-only hidden>Question type
+                  <select id="source-question-type">
+                    <option value="FE">FE</option>
+                    <option value="PE">PE</option>
+                  </select>
+                </label>
+              </div>
+              <div class="action-row">
+                <button type="button" id="source-load">Load Source</button>
+              </div>
+            </div>
+            <div id="source-viewer-result" class="result-card"></div>
+            <details class="details-block">
+              <summary>Source JSON</summary>
+              <pre id="source-viewer-json" class="json-view"></pre>
+            </details>
+          </section>
+        </div>
+
+        <div class="panel-grid panel-grid--overview">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Prompt Studio</p>
                 <h3>Prompt registry</h3>
               </div>
-              <button id="refresh-prompt-list" class="secondary">Reload Prompt List</button>
-            </div>
-            <div id="prompt-list" class="mini-list"></div>
-            <details class="details-block">
-              <summary>Prompt payload</summary>
-              <pre id="prompt-raw" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-        <div class="panel-grid panel-grid--overview">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Archive</p>
-                <h3>Benchmark sessions</h3>
-              </div>
               <div class="action-row">
-                <button id="session-save" type="button">Save Current Session</button>
-                <button id="session-refresh" type="button" class="secondary">Refresh Sessions</button>
+                <button id="prompt-reload-action" class="secondary">Reload prompts</button>
+                <button id="prompt-refresh-action" class="secondary">Refresh selected</button>
               </div>
             </div>
-            <div class="grid grid--3">
-              <label>Session name
-                <input id="session-name" value="benchmark-session-001">
-              </label>
-              <label>Take
-                <input id="session-take" type="number" min="1" max="100" value="20">
-              </label>
-              <label>Sessions
-                <select id="session-select"></select>
-              </label>
-            </div>
-            <label>Notes
-              <textarea id="session-notes" rows="5" placeholder="Benchmark notes, provider conditions, quota issues, selected models..."></textarea>
-            </label>
-            <div class="action-row">
-              <button id="session-open" type="button" class="secondary">Open Selected</button>
-              <button id="session-export-json" type="button" class="secondary">Export Opened Session</button>
-              <button id="session-copy-summary-tsv" type="button" class="secondary">Copy Session Summary TSV</button>
-              <button id="session-copy-detail-tsv" type="button" class="secondary">Copy Session Detail TSV</button>
-            </div>
-            <details class="details-block" open>
-              <summary>Session detail</summary>
-              <pre id="session-json" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-        <div class="panel-grid panel-grid--overview">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Reporting</p>
-                <h3>Cost summary dashboard</h3>
+            <form id="prompt-form" class="stack-form">
+              <div class="grid grid--3">
+                <label>Prompt key<select id="prompt-key" name="key"></select></label>
+                <label>Version<input id="prompt-version" name="version"></label>
+                <label>Active
+                  <select id="prompt-active" name="isActive">
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                  </select>
+                </label>
               </div>
+              <label>Description<input id="prompt-description" name="description"></label>
+              <label>System prompt<textarea id="prompt-system" name="systemPrompt" rows="10"></textarea></label>
+              <label>User prompt<textarea id="prompt-user" name="userPrompt" rows="16"></textarea></label>
               <div class="action-row">
-                <button id="summary-load-history" type="button">Load Summary</button>
-                <button id="summary-export-json" type="button" class="secondary">Export Summary JSON</button>
-                <button id="summary-copy-tsv" type="button" class="secondary">Copy Summary TSV</button>
+                <button type="submit">Save prompt</button>
               </div>
-            </div>
-            <div id="summary-overview-cards" class="summary-grid"></div>
-            <details class="details-block" open>
-              <summary>Summary by function + model</summary>
-              <div class="table-wrap">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Function</th>
-                      <th>Model Summary</th>
-                      <th>Runs</th>
-                      <th>Input Tok</th>
-                      <th>Output Tok</th>
-                      <th>Total Tok</th>
-                      <th>Total Cost</th>
-                      <th>Avg Cost</th>
-                      <th>Avg Latency</th>
-                    </tr>
-                  </thead>
-                  <tbody id="summary-table-body"></tbody>
-                </table>
-              </div>
-            </details>
+            </form>
             <details class="details-block">
-              <summary>Summary raw JSON</summary>
-              <pre id="summary-json" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-        <div class="panel-grid panel-grid--overview">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Benchmark</p>
-                <h3>Batch preset runner</h3>
-              </div>
-            </div>
-            <div class="grid grid--3">
-              <label>Function
-                <select id="batch-function">
-                  <option value="gatekeeper">gatekeeper</option>
-                  <option value="extracted">extracted</option>
-                  <option value="embedding">embedding</option>
-                  <option value="generation">generation</option>
-                  <option value="mentor">mentor</option>
-                  <option value="ingestion">ingestion</option>
-                </select>
-              </label>
-              <label>Max presets
-                <input id="batch-max-count" type="number" min="1" max="50" value="10">
-              </label>
-              <label>Retry count
-                <input id="runner-retry-count" type="number" min="0" max="10" value="2">
-              </label>
-              <label>Base delay (ms)
-                <input id="runner-retry-delay-ms" type="number" min="0" max="60000" value="3000">
-              </label>
-              <div class="action-row">
-                <button id="batch-run-presets" type="button">Run Presets</button>
-                <button id="batch-export-json" type="button" class="secondary">Export Batch JSON</button>
-                <button id="batch-copy-tsv" type="button" class="secondary">Copy Batch TSV</button>
-              </div>
-            </div>
-            <details class="details-block" open>
-              <summary>Batch parsed result</summary>
-              <div id="batch-results-parsed" class="card-stack"></div>
-            </details>
-            <details class="details-block">
-              <summary>Batch raw JSON</summary>
-              <pre id="batch-results-json" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-        <div class="panel-grid panel-grid--overview">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Benchmark</p>
-                <h3>Model matrix runner</h3>
-              </div>
-            </div>
-            <div class="grid grid--3">
-              <label>Function
-                <select id="matrix-function">
-                  <option value="gatekeeper">gatekeeper</option>
-                  <option value="extracted">extracted</option>
-                  <option value="embedding">embedding</option>
-                  <option value="generation">generation</option>
-                  <option value="mentor">mentor</option>
-                  <option value="ingestion">ingestion</option>
-                </select>
-              </label>
-              <label>Matrix target
-                <select id="matrix-target"></select>
-              </label>
-              <label>Provider filter
-                <select id="matrix-provider-filter">
-                  <option value="">all</option>
-                </select>
-              </label>
-            </div>
-            <label>Model list (one per line)
-              <textarea id="matrix-model-list" rows="8" placeholder="gpt-4o&#10;gemini-2.5-flash&#10;command-r7b-12-2024"></textarea>
-            </label>
-            <div class="action-row">
-              <button id="matrix-fill-models" type="button" class="secondary">Fill From Provider Catalog</button>
-              <button id="matrix-run" type="button">Run Matrix</button>
-              <button id="matrix-export-json" type="button" class="secondary">Export Matrix JSON</button>
-              <button id="matrix-copy-tsv" type="button" class="secondary">Copy Matrix TSV</button>
-            </div>
-            <details class="details-block" open>
-              <summary>Matrix parsed result</summary>
-              <div id="matrix-results-parsed" class="card-stack"></div>
-            </details>
-            <details class="details-block">
-              <summary>Matrix raw JSON</summary>
-              <pre id="matrix-results-json" class="json-view"></pre>
+              <summary>Prompt JSON</summary>
+              <pre id="prompt-studio-json" class="json-view"></pre>
             </details>
           </section>
         </div>
@@ -258,27 +154,13 @@
                 <p class="panel-kicker">Function 1</p>
                 <h3>AI Gatekeeper</h3>
               </div>
-              <div class="action-row">
-                <button class="secondary" data-source-button data-target="gatekeeper" data-source="prompt">Load Prompt</button>
-                <button class="secondary" data-source-button data-target="gatekeeper" data-source="policy">Load Policy</button>
-                <button class="secondary" data-source-button data-target="gatekeeper" data-source="rubric">Load Rubric</button>
-                <button class="secondary" data-source-button data-target="gatekeeper" data-source="groundTruth">Load Ground Truth</button>
-              </div>
             </div>
-
+            <p class="text-note">Mục đích: xác định tài liệu đầu vào có đúng phạm vi môn học được hệ thống hỗ trợ hay không.</p>
             <form id="gatekeeper-form" class="stack-form">
               <div class="grid grid--3">
-                <label>Preset case
-                  <select id="gatekeeper-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="gatekeeper">Load Preset</button>
-                </div>
                 <label>Upload real file
                   <input id="gatekeeper-upload" type="file">
                 </label>
-              </div>
-              <div class="grid grid--3">
                 <label>User ID<input name="userId" value="user-demo"></label>
                 <label>File name<input name="fileName" value="intro-c-arrays.txt"></label>
                 <label>Subject hint
@@ -313,34 +195,16 @@
                 <h3>Gatekeeper output</h3>
               </div>
               <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="gatekeeper">Copy Summary</button>
+                <button type="button" class="secondary" data-copy-metrics="gatekeeper">Copy Token/Cost</button>
                 <button type="button" class="secondary" data-copy-json="gatekeeper">Copy Raw JSON</button>
                 <button type="button" class="secondary" data-copy-tsv="gatekeeper">Copy TSV Row</button>
                 <button type="button" class="secondary" data-export-json="gatekeeper">Export JSON</button>
               </div>
             </div>
-            <div id="gatekeeper-summary" class="summary-grid"></div>
             <div id="gatekeeper-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Raw JSON</summary>
               <pre id="gatekeeper-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Upload ingest result</summary>
-              <pre id="gatekeeper-upload-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="gatekeeper">Load History</button>
-                <select id="gatekeeper-history-select"></select>
-                <button type="button" class="secondary" data-open-history="gatekeeper">Open Selected</button>
-              </div>
-              <pre id="gatekeeper-history-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Prompt / policy / rubric / ground truth</summary>
-              <pre id="gatekeeper-source" class="json-view"></pre>
             </details>
           </section>
         </div>
@@ -354,27 +218,13 @@
                 <p class="panel-kicker">Function 2</p>
                 <h3>AI Extracted Content</h3>
               </div>
-              <div class="action-row">
-                <button class="secondary" data-source-button data-target="extracted" data-source="prompt">Load Prompt</button>
-                <button class="secondary" data-source-button data-target="extracted" data-source="policy">Load Policy</button>
-                <button class="secondary" data-source-button data-target="extracted" data-source="rubric">Load Rubric</button>
-                <button class="secondary" data-source-button data-target="extracted" data-source="groundTruth">Load Ground Truth</button>
-              </div>
             </div>
-
+            <p class="text-note">Mục đích: trích xuất nội dung đọc được từ text thô hoặc tài liệu có marker hình ảnh/vision.</p>
             <form id="extracted-form" class="stack-form">
               <div class="grid grid--3">
-                <label>Preset case
-                  <select id="extracted-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="extracted">Load Preset</button>
-                </div>
                 <label>Upload real file
                   <input id="extracted-upload" type="file">
                 </label>
-              </div>
-              <div class="grid grid--3">
                 <label>User ID<input name="userId" value="user-demo"></label>
                 <label>File name<input name="fileName" value="java-oop-slide.txt"></label>
                 <label>Subject
@@ -416,37 +266,19 @@ Encapsulation groups state and behavior.
             <div class="panel-head">
               <div>
                 <p class="panel-kicker">Result</p>
-                <h3>Extracted content output</h3>
+                <h3>Extracted output</h3>
               </div>
               <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="extracted">Copy Summary</button>
+                <button type="button" class="secondary" data-copy-metrics="extracted">Copy Token/Cost</button>
                 <button type="button" class="secondary" data-copy-json="extracted">Copy Raw JSON</button>
                 <button type="button" class="secondary" data-copy-tsv="extracted">Copy TSV Row</button>
                 <button type="button" class="secondary" data-export-json="extracted">Export JSON</button>
               </div>
             </div>
-            <div id="extracted-summary" class="summary-grid"></div>
             <div id="extracted-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Raw JSON</summary>
               <pre id="extracted-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Upload ingest result</summary>
-              <pre id="extracted-upload-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="extracted-content">Load History</button>
-                <select id="extracted-content-history-select"></select>
-                <button type="button" class="secondary" data-open-history="extracted-content">Open Selected</button>
-              </div>
-              <pre id="extracted-content-history-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Prompt / policy / rubric / ground truth</summary>
-              <pre id="extracted-source" class="json-view"></pre>
             </details>
           </section>
         </div>
@@ -460,27 +292,13 @@ Encapsulation groups state and behavior.
                 <p class="panel-kicker">Function 3</p>
                 <h3>AI Embedding + Auto Tagging</h3>
               </div>
-              <div class="action-row">
-                <button class="secondary" data-source-button data-target="embedding" data-source="prompt">Load Prompt</button>
-                <button class="secondary" data-source-button data-target="embedding" data-source="policy">Load Policy</button>
-                <button class="secondary" data-source-button data-target="embedding" data-source="rubric">Load Rubric</button>
-                <button class="secondary" data-source-button data-target="embedding" data-source="groundTruth">Load Ground Truth</button>
-              </div>
             </div>
-
+            <p class="text-note">Mục đích: chunk nội dung theo block logic, gắn topic tag, và xuất chunk JSON để đưa sang tab Generation + Review.</p>
             <form id="embedding-form" class="stack-form">
               <div class="grid grid--3">
-                <label>Preset case
-                  <select id="embedding-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="embedding">Load Preset</button>
-                </div>
                 <label>Upload real file
                   <input id="embedding-upload" type="file">
                 </label>
-              </div>
-              <div class="grid grid--3">
                 <label>User ID<input name="userId" value="user-demo"></label>
                 <label>File name<input name="fileName" value="java-oop-ch01.md"></label>
                 <label>Subject
@@ -534,7 +352,6 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <h3>Knowledge chunk output</h3>
               </div>
               <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="embedding">Copy Summary</button>
                 <button type="button" class="secondary" data-copy-metrics="embedding">Copy Token/Cost</button>
                 <button type="button" class="secondary" data-copy-json="embedding">Copy Raw JSON</button>
                 <button type="button" class="secondary" data-copy-tsv="embedding">Copy TSV Row</button>
@@ -542,28 +359,10 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <button type="button" class="secondary" data-export-chunks="embedding">Export Chunks</button>
               </div>
             </div>
-            <div id="embedding-summary" class="summary-grid"></div>
             <div id="embedding-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Raw JSON</summary>
               <pre id="embedding-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Upload ingest result</summary>
-              <pre id="embedding-upload-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="embedding-tagging">Load History</button>
-                <select id="embedding-tagging-history-select"></select>
-                <button type="button" class="secondary" data-open-history="embedding-tagging">Open Selected</button>
-              </div>
-              <pre id="embedding-tagging-history-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Prompt / policy / rubric / ground truth</summary>
-              <pre id="embedding-source" class="json-view"></pre>
             </details>
           </section>
         </div>
@@ -577,23 +376,9 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <p class="panel-kicker">Functions 4-5</p>
                 <h3>Question Generation + Review</h3>
               </div>
-              <div class="action-row">
-                <button class="secondary" data-source-button data-target="generation" data-source="generationPrompt">Load Generator Prompt</button>
-                <button class="secondary" data-source-button data-target="generation" data-source="reviewPrompt">Load Reviewer Prompt</button>
-                <button class="secondary" data-source-button data-target="generation" data-source="rubric">Load Rubric</button>
-                <button class="secondary" data-source-button data-target="generation" data-source="groundTruth">Load Ground Truth</button>
-              </div>
             </div>
-
+            <p class="text-note">Mục đích: AI 1 tạo câu hỏi FE/PE từ chunk JSON, AI 2 review lại. Nếu chọn SameModelDualRole thì A1 và A2 dùng cùng một model.</p>
             <form id="generation-form" class="stack-form">
-              <div class="grid grid--3">
-                <label>Preset case
-                  <select id="generation-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="generation">Load Preset</button>
-                </div>
-              </div>
               <div class="grid grid--3">
                 <label>User ID<input name="userId" value="user-demo"></label>
                 <label>Course ID<input name="courseId" value="course-java-oop"></label>
@@ -665,6 +450,8 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
 ]</textarea>
               </label>
               <div class="action-row">
+                <input id="generation-import-json" type="file" accept=".json,application/json" hidden>
+                <button type="button" class="secondary" id="generation-import-trigger">Import Chunks JSON</button>
                 <button type="submit">Run Generation + Review</button>
                 <button type="button" class="secondary" data-run-export="generation">Run Export Package</button>
               </div>
@@ -678,31 +465,16 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <h3>Generation + review output</h3>
               </div>
               <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="generation">Copy Summary</button>
                 <button type="button" class="secondary" data-copy-metrics="generation">Copy Token/Cost</button>
                 <button type="button" class="secondary" data-copy-json="generation">Copy Raw JSON</button>
                 <button type="button" class="secondary" data-copy-tsv="generation">Copy TSV Row</button>
                 <button type="button" class="secondary" data-export-json="generation">Export JSON</button>
               </div>
             </div>
-            <div id="generation-summary" class="summary-grid"></div>
             <div id="generation-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Raw JSON</summary>
               <pre id="generation-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="generation-review">Load History</button>
-                <select id="generation-review-history-select"></select>
-                <button type="button" class="secondary" data-open-history="generation-review">Open Selected</button>
-              </div>
-              <pre id="generation-review-history-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Prompt / rubric / ground truth</summary>
-              <pre id="generation-source" class="json-view"></pre>
             </details>
           </section>
         </div>
@@ -716,23 +488,9 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <p class="panel-kicker">Function 6</p>
                 <h3>AI Code Mentor</h3>
               </div>
-              <div class="action-row">
-                <button class="secondary" data-source-button data-target="mentor" data-source="prompt">Load Prompt</button>
-                <button class="secondary" data-source-button data-target="mentor" data-source="policy">Load Policy</button>
-                <button class="secondary" data-source-button data-target="mentor" data-source="rubric">Load Rubric</button>
-                <button class="secondary" data-source-button data-target="mentor" data-source="groundTruth">Load Ground Truth</button>
-              </div>
             </div>
-
+            <p class="text-note">Mục đích: đưa bài code vào để AI phân tích lỗi, mức độ ổn định, và gợi ý cải thiện.</p>
             <form id="mentor-form" class="stack-form">
-              <div class="grid grid--3">
-                <label>Preset case
-                  <select id="mentor-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="mentor">Load Preset</button>
-                </div>
-              </div>
               <div class="grid grid--3">
                 <label>Submission ID<input name="submissionId" value="sub-demo-001"></label>
                 <label>User ID<input name="userId" value="user-demo"></label>
@@ -758,7 +516,7 @@ An array stores values in ordered positions. Index starts at 0 and loops are com
                 <textarea name="sourceFiles" rows="16">[
   {
     "fileName": "Main.java",
-    "content": "import java.util.Scanner;\\n\\npublic class Main {\\n    public static void main(String[] args) {\\n        Scanner sc = new Scanner(System.in);\\n        int n = sc.nextInt();\\n        int[] a = new int[n];\\n        int max = 0;\\n        for (int i = 0; i < n; i++) {\\n            a[i] = sc.nextInt();\\n            if (a[i] > max) {\\n                max = a[i];\\n            }\\n        }\\n        System.out.println(max);\\n    }\\n}",
+    "content": "import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        int max = 0;\n        for (int i = 0; i < n; i++) {\n            a[i] = sc.nextInt();\n            if (a[i] > max) {\n                max = a[i];\n            }\n        }\n        System.out.println(max);\n    }\n}",
     "isReadonly": false
   }
 ]</textarea>
@@ -796,250 +554,34 @@ public class Main {
                 <h3>Code mentor output</h3>
               </div>
               <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="mentor">Copy Summary</button>
                 <button type="button" class="secondary" data-copy-metrics="mentor">Copy Token/Cost</button>
                 <button type="button" class="secondary" data-copy-json="mentor">Copy Raw JSON</button>
                 <button type="button" class="secondary" data-copy-tsv="mentor">Copy TSV Row</button>
                 <button type="button" class="secondary" data-export-json="mentor">Export JSON</button>
               </div>
             </div>
-            <div id="mentor-summary" class="summary-grid"></div>
             <div id="mentor-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Raw JSON</summary>
               <pre id="mentor-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="code-mentor">Load History</button>
-                <select id="code-mentor-history-select"></select>
-                <button type="button" class="secondary" data-open-history="code-mentor">Open Selected</button>
-              </div>
-              <pre id="code-mentor-history-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Prompt / policy / rubric / ground truth</summary>
-              <pre id="mentor-source" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-      </section>
-
-      <section id="ingestion-tab" class="tab-panel">
-        <div class="function-layout">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Composite flow</p>
-                <h3>Ingestion</h3>
-              </div>
-            </div>
-            <form id="ingestion-form" class="stack-form">
-              <div class="grid grid--3">
-                <label>Preset case
-                  <select id="ingestion-preset"></select>
-                </label>
-                <div class="action-row">
-                  <button type="button" class="secondary" data-load-preset="ingestion">Load Preset</button>
-                </div>
-              </div>
-              <div class="grid grid--3">
-                <label>User ID<input name="userId" value="user-demo"></label>
-                <label>File name<input name="fileName" value="java-oop-doc.txt"></label>
-                <label>Subject
-                  <select name="subject">
-                    <option value="JAVA_OOP">JAVA_OOP</option>
-                    <option value="C">C</option>
-                    <option value="DSA_JAVA">DSA_JAVA</option>
-                  </select>
-                </label>
-                <label>Language<input name="language" value="en"></label>
-                <label>Mode
-                  <select name="mode">
-                    <option value="TextOnly">TextOnly</option>
-                    <option value="FullMultimodalPage">FullMultimodalPage</option>
-                  </select>
-                </label>
-                <label>Gatekeeper provider
-                  <select name="gatekeeperProvider" data-provider-select data-model-target="ingestion-gatekeeper-model"></select>
-                </label>
-                <label>Gatekeeper model
-                  <select id="ingestion-gatekeeper-model" name="gatekeeperModel"></select>
-                </label>
-                <label>Embedding provider
-                  <select name="embeddingProvider" data-provider-select data-model-target="ingestion-embedding-model"></select>
-                </label>
-                <label>Embedding model
-                  <select id="ingestion-embedding-model" name="embeddingModel"></select>
-                </label>
-                <label>Tagging provider
-                  <select name="taggingProvider" data-provider-select data-model-target="ingestion-tagging-model"></select>
-                </label>
-                <label>Tagging model
-                  <select id="ingestion-tagging-model" name="taggingModel"></select>
-                </label>
-                <label>Vision provider
-                  <select name="visionProvider" data-provider-select data-model-target="ingestion-vision-model"></select>
-                </label>
-                <label>Vision model
-                  <select id="ingestion-vision-model" name="visionModel"></select>
-                </label>
-              </div>
-              <label>Allowed tags<input name="allowedTags" value="class,object,constructor,array,loop,method,encapsulation"></label>
-              <label>Raw content
-                <textarea name="rawContent" rows="12"># Java OOP overview
-Class and object are central to object oriented programming. Arrays store sequences of values and loops are used to traverse them. [image:uml-diagram.png]</textarea>
-              </label>
-              <div class="action-row">
-                <button type="submit">Run Ingestion</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel panel--output">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Result</p>
-                <h3>Ingestion output</h3>
-              </div>
-              <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="ingestion">Copy Summary</button>
-                <button type="button" class="secondary" data-copy-metrics="ingestion">Copy Token/Cost</button>
-                <button type="button" class="secondary" data-copy-json="ingestion">Copy Raw JSON</button>
-                <button type="button" class="secondary" data-copy-tsv="ingestion">Copy TSV Row</button>
-                <button type="button" class="secondary" data-export-json="ingestion">Export JSON</button>
-              </div>
-            </div>
-            <div id="ingestion-summary" class="summary-grid"></div>
-            <div id="ingestion-result" class="result-card"></div>
-            <details class="details-block" open>
-              <summary>Raw JSON</summary>
-              <pre id="ingestion-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="ingestion">Load History</button>
-                <select id="ingestion-history-select"></select>
-                <button type="button" class="secondary" data-open-history="ingestion">Open Selected</button>
-              </div>
-              <pre id="ingestion-history-json" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-      </section>
-
-      <section id="pipeline-tab" class="tab-panel">
-        <div class="function-layout">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Composite flow</p>
-                <h3>Full pipeline</h3>
-              </div>
-            </div>
-            <form id="pipeline-form" class="stack-form">
-              <p class="text-note">This route submits the current ingestion form and generation-review form together.</p>
-              <div class="action-row">
-                <button type="submit">Run Full Pipeline</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel panel--output">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Result</p>
-                <h3>Full pipeline output</h3>
-              </div>
-              <div class="action-row">
-                <button type="button" class="secondary" data-copy-summary="pipeline">Copy Summary</button>
-                <button type="button" class="secondary" data-copy-metrics="pipeline">Copy Token/Cost</button>
-                <button type="button" class="secondary" data-copy-json="pipeline">Copy Raw JSON</button>
-                <button type="button" class="secondary" data-copy-tsv="pipeline">Copy TSV Row</button>
-                <button type="button" class="secondary" data-export-json="pipeline">Export JSON</button>
-              </div>
-            </div>
-            <div id="pipeline-summary" class="summary-grid"></div>
-            <div id="pipeline-result" class="result-card"></div>
-            <details class="details-block" open>
-              <summary>Raw JSON</summary>
-              <pre id="pipeline-json" class="json-view"></pre>
-            </details>
-            <details class="details-block">
-              <summary>Run History</summary>
-              <div class="action-row">
-                <button type="button" class="secondary" data-load-history="full-pipeline">Load History</button>
-                <select id="full-pipeline-history-select"></select>
-                <button type="button" class="secondary" data-open-history="full-pipeline">Open Selected</button>
-              </div>
-              <pre id="full-pipeline-history-json" class="json-view"></pre>
-            </details>
-          </section>
-        </div>
-      </section>
-
-      <section id="prompts-tab" class="tab-panel">
-        <div class="function-layout">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Config</p>
-                <h3>Prompt studio</h3>
-              </div>
-              <div class="action-row">
-                <button id="prompt-reload-action" class="secondary">Reload prompts</button>
-                <button id="prompt-refresh-action" class="secondary">Refresh selected</button>
-              </div>
-            </div>
-            <form id="prompt-form" class="stack-form">
-              <div class="grid grid--3">
-                <label>Prompt key<select id="prompt-key" name="key"></select></label>
-                <label>Version<input id="prompt-version" name="version"></label>
-                <label>Active
-                  <select id="prompt-active" name="isActive">
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                </label>
-              </div>
-              <label>Description<input id="prompt-description" name="description"></label>
-              <label>System prompt<textarea id="prompt-system" name="systemPrompt" rows="10"></textarea></label>
-              <label>User prompt<textarea id="prompt-user" name="userPrompt" rows="16"></textarea></label>
-              <div class="action-row">
-                <button type="submit">Save prompt</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel panel--output">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Source</p>
-                <h3>Prompt payload</h3>
-              </div>
-            </div>
-            <details class="details-block" open>
-              <summary>Prompt JSON</summary>
-              <pre id="prompt-studio-json" class="json-view"></pre>
             </details>
           </section>
         </div>
       </section>
 
       <section id="history-tab" class="tab-panel">
-        <div class="function-layout">
+        <div class="function-layout history-layout">
           <section class="panel">
             <div class="panel-head">
               <div>
                 <p class="panel-kicker">Evidence</p>
-                <h3>Run history browser</h3>
+                <h3>Run History</h3>
               </div>
               <div class="action-row">
                 <button type="button" class="secondary" id="history-refresh-all">Refresh</button>
               </div>
             </div>
+            <p class="text-note">Lọc danh sách run ở đây, sau đó bấm trực tiếp vào card để xem parsed detail ở khung bên phải.</p>
             <div class="grid grid--3">
               <label>Function
                 <select id="history-function">
@@ -1057,7 +599,6 @@ Class and object are central to object oriented programming. Arrays store sequen
               </label>
               <div class="action-row history-actions">
                 <button type="button" id="history-load-list">Load List</button>
-                <button type="button" class="secondary" id="history-open-selected">Open Selected</button>
               </div>
             </div>
             <div class="grid grid--3">
@@ -1091,109 +632,31 @@ Class and object are central to object oriented programming. Arrays store sequen
                 <button type="button" class="secondary" id="history-clear-filters">Clear Filters</button>
               </div>
             </div>
-            <label>Runs
-              <select id="history-run-select" size="12"></select>
-            </label>
+            <div id="history-list-parsed" class="card-stack stack-scroll"></div>
           </section>
 
           <section class="panel panel--output">
             <div class="panel-head">
               <div>
-                <p class="panel-kicker">Snapshot</p>
-                <h3>Selected run detail</h3>
+                <p class="panel-kicker">Selected run</p>
+                <h3>Run detail</h3>
               </div>
               <div class="action-row">
                 <button type="button" class="secondary" id="history-copy-json">Copy Raw JSON</button>
                 <button type="button" class="secondary" id="history-copy-tsv">Copy TSV Row</button>
-                <button type="button" class="secondary" id="history-copy-tsv-list">Copy TSV List</button>
-                <button type="button" class="secondary" id="history-export-list-json">Export Filtered JSON</button>
-                <button type="button" class="secondary" id="history-export-list-tsv">Export Filtered TSV</button>
                 <button type="button" class="secondary" id="history-export-json">Export JSON</button>
+                <button type="button" class="secondary" id="history-export-list-json">Export Filtered JSON</button>
               </div>
             </div>
-            <div id="history-summary" class="summary-grid"></div>
-            <details class="details-block" open>
-              <summary>History list parsed</summary>
-              <div id="history-list-parsed" class="card-stack"></div>
-            </details>
-            <details class="details-block">
-              <summary>History list JSON</summary>
-              <pre id="history-list-json" class="json-view"></pre>
-            </details>
             <div id="history-detail-result" class="result-card"></div>
             <details class="details-block" open>
               <summary>Run detail JSON</summary>
               <pre id="history-detail-json" class="json-view"></pre>
             </details>
-          </section>
-        </div>
-      </section>
-
-      <section id="compare-tab" class="tab-panel">
-        <div class="function-layout">
-          <section class="panel">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Benchmark</p>
-                <h3>Compare 2 models side by side</h3>
-              </div>
-            </div>
-            <form id="compare-form" class="stack-form">
-              <div class="grid grid--3">
-                <label>Function
-                  <select id="compare-function" name="functionName">
-                    <option value="gatekeeper">gatekeeper</option>
-                    <option value="extracted">extracted</option>
-                    <option value="embedding">embedding</option>
-                    <option value="generation">generation</option>
-                    <option value="mentor">mentor</option>
-                    <option value="ingestion">ingestion</option>
-                  </select>
-                </label>
-                <label>Provider A
-                  <select id="compare-provider-a" data-provider-select data-model-target="compare-model-a"></select>
-                </label>
-                <label>Model A
-                  <select id="compare-model-a" name="modelA"></select>
-                </label>
-                <label>Provider B
-                  <select id="compare-provider-b" data-provider-select data-model-target="compare-model-b"></select>
-                </label>
-                <label>Model B
-                  <select id="compare-model-b" name="modelB"></select>
-                </label>
-                <label>Compare target
-                  <select id="compare-target" name="compareTarget"></select>
-                </label>
-              </div>
-              <p id="compare-help" class="text-note">Uses the current payload from the corresponding function form. Only the selected model field is swapped.</p>
-              <div class="action-row">
-                <button type="submit">Run Compare</button>
-                <button type="button" class="secondary" id="compare-copy-tsv">Copy Compare TSV</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel panel--output">
-            <div class="panel-head">
-              <div>
-                <p class="panel-kicker">Side by side</p>
-                <h3>Compare result</h3>
-              </div>
-            </div>
-            <div id="compare-summary" class="summary-grid"></div>
-            <div class="compare-grid">
-              <div class="compare-col">
-                <h4>Model A</h4>
-                <div id="compare-a-result" class="result-card"></div>
-                <pre id="compare-a-json" class="json-view"></pre>
-              </div>
-              <div class="compare-col">
-                <h4>Model B</h4>
-                <div id="compare-b-result" class="result-card"></div>
-                <pre id="compare-b-json" class="json-view"></pre>
-              </div>
-            </div>
+            <details class="details-block">
+              <summary>Filtered list JSON</summary>
+              <pre id="history-list-json" class="json-view"></pre>
+            </details>
           </section>
         </div>
       </section>
