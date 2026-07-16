@@ -1,26 +1,26 @@
 # src-dotnet
 
-Thu muc nay chua prototype `.NET` dang active cua AI module.
+Thư mục này chứa prototype `.NET` đang active của AI module.
 
-Day la khoi duoc uu tien de:
+Đây là khối được ưu tiên để:
 
 - benchmark
 - production testing
-- so sanh model/cost/output
-- lam base merge vao BE that sau nay
+- so sánh model / cost / output
+- làm nền để merge vào BE thật sau này
 
 ## Entry points
 
 - solution: `Ape.AiModule.slnx`
 - web app: `Ape.AiModule.Api`
 
-## Tai lieu lien quan
+## Tài liệu liên quan
 
 - `../Docs/AI_Module_Run_Guide.md`
 - `../Docs/AI_Module_6_Functions_Summary.md`
 - `../Docs/AI_Module_API_Routes_Summary.md`
 
-## Ghi chu
+## Ghi chú
 
-- `Prototype_Document` da duoc bo de tranh trung lap voi `../Docs/`.
-- Neu can docs, xem `../Docs/` la source chinh.
+- `Prototype_Document` đã được bỏ để tránh trùng lặp với `../Docs/`.
+- Nếu cần tài liệu, xem `../Docs/` là nguồn chính.

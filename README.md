@@ -1,44 +1,44 @@
 # Benchmark AI Cost
 
-Repo nay hien co 2 khoi tach ro:
+Repo này hiện có 2 khối được tách rõ ràng:
 
-1. prototype `.NET` dang active
+1. prototype `.NET` đang active
 2. benchmark NodeJS legacy
 
-Trang thai hien tai:
+## Trạng thái hiện tại
 
-- khoi `.NET` la huong chinh dang tiep tuc phat trien
-- khoi nay dung de benchmark, production test harness, va lam base ghep vao BE that sau nay
-- khoi NodeJS chi giu lai de tham chieu benchmark cu
+- khối `.NET` là hướng chính đang tiếp tục phát triển
+- khối này dùng để benchmark, production test harness, và làm nền để ghép vào BE thật sau này
+- khối NodeJS chỉ giữ lại để tham chiếu benchmark cũ, tránh nhầm với phần active
 
-## Cau truc chinh
+## Cấu trúc chính
 
 - `src-dotnet/`
-  - solution `.NET` hien tai
-  - chua API, operator UI, contracts, services
+  - solution `.NET` hiện tại
+  - chứa API, operator UI, contracts, services
 - `Docs/`
-  - tai lieu thiet ke, route, run guide, DB-ready collections
+  - tài liệu hướng dẫn, route, run guide, DB-ready collections
 - `legacy-node-benchmark/`
-  - benchmark NodeJS/React cu
-  - tach rieng de tranh nham voi kho `.NET`
+  - benchmark NodeJS/React cũ
+  - đã được tách riêng để tránh nhầm với khối `.NET`
 
-## Entry point hien tai
+## Điểm vào chính hiện tại
 
-Neu ban can chay module AI dang dung hien tai, di theo huong `.NET`:
+Nếu cần chạy module AI đang dùng hiện tại, đi theo hướng `.NET`:
 
 - solution: `src-dotnet/Ape.AiModule.slnx`
 - web app: `src-dotnet/Ape.AiModule.Api`
 
-Tai lieu can doc truoc:
+## Tài liệu nên đọc trước
 
 1. [Run Guide](Docs/AI_Module_Run_Guide.md)
 2. [6 Functions Summary](Docs/AI_Module_6_Functions_Summary.md)
 3. [API Routes Summary](Docs/AI_Module_API_Routes_Summary.md)
 4. [Operator UI](Docs/AI_Module_Operator_UI.md)
 
-## Chay nhanh module `.NET`
+## Chạy nhanh module `.NET`
 
-Yeu cau:
+Yêu cầu:
 
 - `.NET SDK 10`
 - file `.env` trong `src-dotnet/Ape.AiModule.Api`
@@ -55,10 +55,10 @@ Run:
 dotnet run --project .\src-dotnet\Ape.AiModule.Api
 ```
 
-Sau khi app chay:
+Sau khi app chạy:
 
-- mo URL local do ASP.NET Core in ra
-- UI operator se duoc serve truc tiep tu `wwwroot`
+- mở URL local do ASP.NET Core in ra
+- UI operator sẽ được serve trực tiếp từ `wwwroot`
 
 ## Provider config `.NET`
 
@@ -66,7 +66,7 @@ File:
 
 - `src-dotnet/Ape.AiModule.Api/.env`
 
-Mau key:
+Mẫu key:
 
 ```env
 AIProviders__OpenAI__ApiKey=...
@@ -79,13 +79,13 @@ AIProviders__Cohere__ApiKey=...
 AIProviders__Cohere__BaseUrl=...
 ```
 
-Co the reload config sau khi sua `.env` bang route:
+Có thể reload config sau khi sửa `.env` bằng route:
 
 ```http
 POST /api/ai-module/providers/reload
 ```
 
-## Cac tinh nang chinh cua module `.NET`
+## Các tính năng chính của module `.NET`
 
 6 function AI:
 
@@ -96,33 +96,33 @@ POST /api/ai-module/providers/reload
 5. `AI Review Result of AI Question Generation`
 6. `AI Code Mentor`
 
-Them cac flow tong hop:
+Các flow tổng hợp:
 
 - `Ingestion`
 - `Full Pipeline`
 - `Generation + Review`
 
-## Diem ky thuat hien tai
+## Điểm kỹ thuật hiện tại
 
-Module `.NET` hien tai da co:
+Module `.NET` hiện tại đã có:
 
 - provider auto load models
 - prompt/policy/rubric/ground truth file-backed
 - run history file-backed
 - benchmark sessions
-- raw usage capture neu provider tra usage that
+- raw usage capture nếu provider trả usage thật
 - `usage_source = raw | estimated | mixed`
-- normalized error catalog o muc runtime
-- parser `pdf` that qua `PdfPig`
-- parser `docx/pptx` bang OpenXML text + media extraction muc prototype
+- normalized error catalog ở mức runtime
+- parser `pdf` thật qua `PdfPig`
+- parser `docx/pptx` bằng OpenXML text + media extraction ở mức prototype
 
-## Noi luu du lieu runtime
+## Nơi lưu dữ liệu runtime
 
-Thu muc:
+Thư mục:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data`
 
-Trong do co:
+Trong đó có:
 
 - `ai-prompts.json`
 - `*-policy.json`
@@ -131,7 +131,7 @@ Trong do co:
 - `run-history/...`
 - `uploads/...`
 
-## API chinh
+## API chính
 
 Provider:
 
@@ -150,10 +150,10 @@ Main runtime:
 - `POST /api/ai-module/ingestion`
 - `POST /api/ai-module/full-pipeline`
 
-Luu y:
+Lưu ý:
 
-- `full-pipeline` hien gom `ingestion + generation/review`
-- chua bao gom `code mentor`
+- `full-pipeline` hiện gồm `ingestion + generation/review`
+- chưa bao gồm `code mentor`
 
 Upload:
 
@@ -171,19 +171,19 @@ Sessions:
 - `GET /api/ai-module/benchmark-sessions`
 - `GET /api/ai-module/benchmark-sessions/{sessionId}`
 
-## Legacy NodeJS benchmark
+## Khối benchmark NodeJS legacy
 
-Huong legacy hien nam trong:
+Phần legacy hiện nằm trong:
 
 - `legacy-node-benchmark/`
 
-Khoi nay chua:
+Khối này chứa:
 
 - `legacy-node-benchmark/backend/`
 - `legacy-node-benchmark/frontend/`
 - `legacy-node-benchmark/package.json`
 
-Neu can chay ban cu:
+Nếu cần chạy lại bản cũ:
 
 ```bash
 cd legacy-node-benchmark
@@ -192,10 +192,10 @@ npm run dev:backend
 npm run dev:frontend
 ```
 
-Nhung hien tai, huong duoc uu tien de tiep tuc phat trien la `src-dotnet/`.
+Tuy nhiên, hướng được ưu tiên để tiếp tục phát triển là `src-dotnet/`.
 
-## Ghi chu
+## Ghi chú
 
-- Prototype `.NET` nay la base de merge vao BE tong sau nay.
-- Hien tai no van la file-backed thay vi Mongo-backed.
-- Khi chuyen vao production BE, se can noi repository that, Judge0, va storage that.
+- Prototype `.NET` này là nền để merge vào BE tổng sau này.
+- Hiện tại nó vẫn là file-backed thay vì Mongo-backed.
+- Khi chuyển vào production BE, sẽ cần nối repository thật, Judge0, và storage thật.
