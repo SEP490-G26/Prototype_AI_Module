@@ -23,7 +23,7 @@ export const mentorFeature = {
       language: form.language.value,
       problem: form.problem.value,
       code: form.code.value || null,
-      sourceFiles: parseJsonInput(form.sourceFiles.value, []),
+      sourceFiles: normalizeSourceFiles(parseJsonInput(form.sourceFiles.value, [])),
       mentorModel: form.mentorModel.value
     };
   },
@@ -55,3 +55,37 @@ export const mentorFeature = {
   },
   init() {}
 };
+
+function normalizeSourceFiles(payload) {
+  const files = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.sourceFiles)
+      ? payload.sourceFiles
+      : Array.isArray(payload?.SourceFiles)
+        ? payload.SourceFiles
+        : [];
+
+  return files
+    .map((file, index) => normalizeSourceFileItem(file, index))
+    .filter(Boolean);
+}
+
+function normalizeSourceFileItem(file, index) {
+  if (!file || typeof file !== 'object') {
+    return null;
+  }
+
+  const fileName = file.fileName ?? file.FileName ?? file.filename ?? file.Filename ?? `file-${index + 1}.txt`;
+  const content = file.content ?? file.Content ?? '';
+  const isReadonly = file.isReadonly ?? file.IsReadonly ?? file.is_readonly ?? false;
+
+  if (!String(content).trim()) {
+    return null;
+  }
+
+  return {
+    fileName: String(fileName),
+    content: String(content),
+    isReadonly: Boolean(isReadonly)
+  };
+}
