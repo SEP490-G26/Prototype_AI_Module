@@ -136,6 +136,11 @@ public sealed class DemoAiProviderGateway : IAiProviderGateway
 
     public Task<IReadOnlyList<GeneratedQuestion>> GenerateQuestionsAsync(QuestionGenerationRequest request, CancellationToken cancellationToken)
     {
+        if (request.Chunks is null || request.Chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Question generation requires at least one chunk.");
+        }
+
         var questions = new List<GeneratedQuestion>();
         for (var i = 0; i < request.Count; i++)
         {

@@ -332,6 +332,11 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
     public async Task<QuestionGenerationResult> RunQuestionGenerationAsync(QuestionGenerationRequest request, CancellationToken cancellationToken)
     {
+        if (request.Chunks is null || request.Chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Question generation requires at least one chunk. Import chunk JSON from Embedding + Tagging or provide a non-empty chunks array.");
+        }
+
         var questions = await _aiProviderGateway.GenerateQuestionsAsync(request, cancellationToken);
         var schemaMapping = await EnrichSchemaMappingWithRepositoryDuplicatesAsync(
             request.CourseId,
@@ -414,6 +419,11 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
     public async Task<GenerationReviewResult> RunGenerationReviewAsync(GenerationReviewRequest request, CancellationToken cancellationToken)
     {
+        if (request.Chunks is null || request.Chunks.Count == 0)
+        {
+            throw new InvalidOperationException("Generation + Review requires at least one chunk. Import chunk JSON from Embedding + Tagging or provide a non-empty chunks array.");
+        }
+
         var stageLogs = new List<PipelineStageLog>();
         var usageLogs = new List<AIUsageLogEntry>();
         IReadOnlyList<GeneratedQuestion> questions = [];
@@ -425,7 +435,12 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         IReadOnlyList<GeneratedQuestion>? previousQuestions = null;
         var attemptsUsed = 0;
         var pipelineRunId = $"genrev-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..40];
-        var reviewerModel = request.Mode == GenerationReviewMode.SingleAgent ? request.GeneratorModel : request.ReviewerModel;
+        var reviewerModel = request.Mode switch
+        {
+            GenerationReviewMode.SingleAgent => request.GeneratorModel,
+            GenerationReviewMode.SameModelDualRole => request.GeneratorModel,
+            _ => request.ReviewerModel
+        };
 
         for (var attempt = 1; attempt <= attemptsToUse; attempt++)
         {
