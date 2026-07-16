@@ -107,27 +107,65 @@ function syncReviewerState() {
 }
 
 function normalizeChunks(payload) {
-  if (Array.isArray(payload)) {
-    return payload;
+  const rawChunks = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.chunks)
+      ? payload.chunks
+      : Array.isArray(payload?.Chunks)
+        ? payload.Chunks
+        : Array.isArray(payload?.document?.chunks)
+          ? payload.document.chunks
+          : Array.isArray(payload?.Document?.Chunks)
+            ? payload.Document.Chunks
+            : [];
+
+  return rawChunks
+    .map((chunk, index) => normalizeChunkItem(chunk, index))
+    .filter(Boolean);
+}
+
+function normalizeChunkItem(chunk, index) {
+  if (!chunk || typeof chunk !== 'object') {
+    return null;
   }
 
-  if (Array.isArray(payload?.chunks)) {
-    return payload.chunks;
+  const chunkId = chunk.chunkId ?? chunk.ChunkId ?? chunk.id ?? chunk.Id ?? `chunk-${index + 1}`;
+  const contentText = chunk.contentText
+    ?? chunk.ContentText
+    ?? chunk.normalizedText
+    ?? chunk.NormalizedText
+    ?? chunk.markdownText
+    ?? chunk.MarkdownText
+    ?? chunk.rawText
+    ?? chunk.RawText
+    ?? '';
+  const topicTags = Array.isArray(chunk.topicTags)
+    ? chunk.topicTags
+    : Array.isArray(chunk.TopicTags)
+      ? chunk.TopicTags
+      : Array.isArray(chunk.topic_tags)
+        ? chunk.topic_tags
+        : [];
+  const sectionTitle = chunk.sectionTitle
+    ?? chunk.SectionTitle
+    ?? chunk.section_title
+    ?? chunk.chunkType
+    ?? chunk.ChunkType
+    ?? chunk.chunk_type
+    ?? null;
+  const language = chunk.language ?? chunk.Language ?? 'en';
+
+  if (!String(contentText).trim()) {
+    return null;
   }
 
-  if (Array.isArray(payload?.Chunks)) {
-    return payload.Chunks;
-  }
-
-  if (Array.isArray(payload?.document?.chunks)) {
-    return payload.document.chunks;
-  }
-
-  if (Array.isArray(payload?.Document?.Chunks)) {
-    return payload.Document.Chunks;
-  }
-
-  return [];
+  return {
+    chunkId: String(chunkId),
+    contentText: String(contentText),
+    topicTags: topicTags.map((item) => String(item)).filter(Boolean),
+    sectionTitle: sectionTitle ? String(sectionTitle) : null,
+    language: String(language)
+  };
 }
 
 function renderQuestionBlocks(questions) {
