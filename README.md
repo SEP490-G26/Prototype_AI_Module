@@ -1,14 +1,15 @@
 # Benchmark AI Cost
 
-Workspace nay hien co 2 huong code:
+Repo nay hien co 2 khoi tach ro:
 
-1. prototype NodeJS cu
-2. prototype `.NET` moi cho `AI core module`
+1. prototype `.NET` dang active
+2. benchmark NodeJS legacy
 
 Trang thai hien tai:
 
-- huong `.NET` la huong chinh dang tiep tuc phat trien
-- huong nay dung de benchmark, production test harness, va lam base ghep vao BE that sau nay
+- khoi `.NET` la huong chinh dang tiep tuc phat trien
+- khoi nay dung de benchmark, production test harness, va lam base ghep vao BE that sau nay
+- khoi NodeJS chi giu lai de tham chieu benchmark cu
 
 ## Cau truc chinh
 
@@ -17,10 +18,9 @@ Trang thai hien tai:
   - chua API, operator UI, contracts, services
 - `Docs/`
   - tai lieu thiet ke, route, run guide, DB-ready collections
-- `backend/`
-  - benchmark NodeJS cu
-- `frontend/`
-  - frontend benchmark NodeJS cu
+- `legacy-node-benchmark/`
+  - benchmark NodeJS/React cu
+  - tach rieng de tranh nham voi kho `.NET`
 
 ## Entry point hien tai
 
@@ -31,10 +31,10 @@ Neu ban can chay module AI dang dung hien tai, di theo huong `.NET`:
 
 Tai lieu can doc truoc:
 
-1. [Run Guide](D:/1_Tailieuhoctap%20REAL%20Reborn/Ky9%20%20-%20Final/Benchmark%20AI%20Cost/Docs/AI_Module_Run_Guide.md)
-2. [6 Functions Summary](D:/1_Tailieuhoctap%20REAL%20Reborn/Ky9%20%20-%20Final/Benchmark%20AI%20Cost/Docs/AI_Module_6_Functions_Summary.md)
-3. [API Routes Summary](D:/1_Tailieuhoctap%20REAL%20Reborn/Ky9%20%20-%20Final/Benchmark%20AI%20Cost/Docs/AI_Module_API_Routes_Summary.md)
-4. [Operator UI](D:/1_Tailieuhoctap%20REAL%20Reborn/Ky9%20%20-%20Final/Benchmark%20AI%20Cost/Docs/AI_Module_Operator_UI.md)
+1. [Run Guide](Docs/AI_Module_Run_Guide.md)
+2. [6 Functions Summary](Docs/AI_Module_6_Functions_Summary.md)
+3. [API Routes Summary](Docs/AI_Module_API_Routes_Summary.md)
+4. [Operator UI](Docs/AI_Module_Operator_UI.md)
 
 ## Chay nhanh module `.NET`
 
@@ -173,11 +173,20 @@ Sessions:
 
 ## Legacy NodeJS benchmark
 
-Huong `backend/` + `frontend/` van con trong repo de tham chieu benchmark cu.
+Huong legacy hien nam trong:
+
+- `legacy-node-benchmark/`
+
+Khoi nay chua:
+
+- `legacy-node-benchmark/backend/`
+- `legacy-node-benchmark/frontend/`
+- `legacy-node-benchmark/package.json`
 
 Neu can chay ban cu:
 
 ```bash
+cd legacy-node-benchmark
 npm install
 npm run dev:backend
 npm run dev:frontend
