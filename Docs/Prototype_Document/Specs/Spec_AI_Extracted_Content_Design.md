@@ -7,6 +7,8 @@
 - nhận nội dung tài liệu đã được đưa vào module
 - chuyển nội dung thành markdown sạch để dùng cho chunking và embedding
 - nếu có image marker và có vision model, mở rộng nội dung ảnh thành markdown
+- tạo ra bản nháp trung gian để human review trước khi sang embedding
+- hỗ trợ BYOS bằng cách lưu trạng thái và chi phí xử lý để tránh gọi OCR/vision lặp lại
 
 ## Scope hiện tại
 
@@ -70,6 +72,35 @@ Output extraction hiện tại gồm:
 - `detectedImageReferences`
 - `warnings`
 
+Trong production flow nên chuẩn hoá thêm các trường nghiệp vụ để lưu vào 2 collection:
+
+- `DocumentExtractionDrafts`
+- `DocumentExtractionDraftContents`
+
+Nhóm trường cấp tài liệu:
+
+- `cleanMarkdown`
+- `approvedMarkdown`
+- `reviewStatus`
+- `reviewedBy`
+- `reviewedAt`
+- `visionExpansions`
+- `sourceChecksum`
+- `chunkingReady`
+
+Nhóm trường cấp segment:
+
+- `segmentIndex`
+- `sourcePageFrom`
+- `sourcePageTo`
+- `rawText`
+- `cleanMarkdown`
+- `approvedMarkdown`
+- `visionExpansions`
+- `wordCount`
+- `tokenCount`
+- `extractionCostUsd`
+
 `uploads/ingest` còn trả thêm:
 
 - `savedPath`
@@ -94,6 +125,36 @@ Chức năng này chỉ nên làm:
 
 - chuyển nội dung về dạng markdown sử dụng được
 - báo rõ warning nếu chất lượng input kém
+- dừng ở trạng thái `needs_review` để human kiểm tra và duyệt
+
+### Collection nghiệp vụ đề nghị
+
+Để phục vụ production và BYOS, bước này nên lưu vào:
+
+- `DocumentExtractionDrafts`
+- `DocumentExtractionDraftContents`
+
+Schema chi tiết:
+
+- `Docs/Prototype_Document/DB_Resources/DocumentExtractionDrafts.md`
+- `Docs/Prototype_Document/DB_Resources/DocumentExtractionDraftContents.md`
+
+### Ý nghĩa với BYOS và pricing
+
+Với tài liệu cá nhân do sinh viên tải lên, hệ thống có thể tính credit dựa trên:
+
+- độ lớn file
+- số trang
+- số từ ước lượng
+- số ảnh cần vision
+- token thực tế của extraction/vision
+- chi phí USD thực tế hoặc estimate
+
+Hai collection trên chính là nơi lưu snapshot để:
+
+- tránh xử lý lại cùng một tài liệu
+- audit tại sao một lần BYOS ingestion bị trừ từng ấy credit
+- làm căn cứ set pricing theo độ lớn và độ phức tạp tài liệu
 
 Nó không nên kiêm nhiệm:
 

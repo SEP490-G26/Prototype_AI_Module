@@ -42,11 +42,118 @@ public sealed record ExtractedContent(
     IReadOnlyList<string> DetectedImageReferences,
     IReadOnlyList<string> Warnings);
 
+public sealed record ExtractionDraft(
+    string DraftId,
+    string? CourseId,
+    string DocumentId,
+    string UserId,
+    string SourceType,
+    string SourceName,
+    string? SourceStoragePath,
+    long SourceSizeBytes,
+    string SourceChecksum,
+    string Language,
+    string SubjectCode,
+    string OwnershipType,
+    string IngestParser,
+    string IngestParserVersion,
+    string ExtractionMode,
+    string? VisionProvider,
+    string? VisionModel,
+    int TotalPages,
+    int TotalSegments,
+    int ApprovedSegments,
+    int RejectedSegments,
+    IReadOnlyList<string> DetectedImageReferences,
+    int EmbeddedImageCount,
+    IReadOnlyList<string> CleanupWarnings,
+    string? HumanNotes,
+    string? RawTextPreview,
+    string? CleanMarkdownPreview,
+    string? ApprovedMarkdownPreview,
+    string ReviewStatus,
+    string? ReviewedBy,
+    DateTimeOffset? ReviewedAt,
+    int ApprovalVersion,
+    long ExtractionInputTokens,
+    long ExtractionOutputTokens,
+    decimal ExtractionCostUsd,
+    decimal ExtractionLatencyMs,
+    string CreditChargeStatus,
+    decimal CreditChargeAmount,
+    string? PricingPlanCode,
+    ExtractionPricingBasisSnapshot PricingBasisSnapshot,
+    bool ChunkingReady,
+    int ChunkCount,
+    string? LastEmbeddingRunId,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record ExtractionPricingBasisSnapshot(
+    long SourceSizeBytes,
+    int TotalPages,
+    int TotalWordsEstimate,
+    int EmbeddedImageCount,
+    long ExtractionInputTokens,
+    long ExtractionOutputTokens,
+    decimal ExtractionCostUsd);
+
+public sealed record ExtractionVisionExpansion(
+    string ImageRef,
+    string PlacementHint,
+    int? PageNumber,
+    string DescriptionMarkdown,
+    string? Provider,
+    string? Model,
+    long InputTokens,
+    long OutputTokens,
+    decimal CostUsd,
+    decimal LatencyMs,
+    string Status);
+
+public sealed record ExtractionDraftContent(
+    string ContentId,
+    string ExtractionDraftId,
+    string DocumentId,
+    string UserId,
+    string? CourseId,
+    int SegmentIndex,
+    string SegmentType,
+    string? SectionTitle,
+    int SourcePageFrom,
+    int SourcePageTo,
+    string? SourceLocator,
+    string RawText,
+    string CleanMarkdown,
+    string? ApprovedMarkdown,
+    IReadOnlyList<string> DetectedImageReferences,
+    IReadOnlyList<ExtractionVisionExpansion> VisionExpansions,
+    IReadOnlyList<string> CleanupWarnings,
+    string ReviewStatus,
+    string? ReviewedBy,
+    DateTimeOffset? ReviewedAt,
+    int ApprovalVersion,
+    int WordCount,
+    int TokenCount,
+    int CharCount,
+    long ExtractionInputTokens,
+    long ExtractionOutputTokens,
+    decimal ExtractionCostUsd,
+    decimal ExtractionLatencyMs,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record ExtractionDraftEnvelope(
+    ExtractionDraft Draft,
+    IReadOnlyList<ExtractionDraftContent> Contents);
+
 public sealed record KnowledgeChunk(
     string Id,
     string? CourseId,
     string DocumentId,
     string UserId,
+    string? ExtractionDraftId,
+    string? ExtractionContentId,
     int ChunkIndex,
     string ChunkingStrategy,
     string ChunkType,
@@ -214,12 +321,16 @@ public sealed record GatekeeperDebugResult(
 
 public sealed record ExtractedContentResult(
     ExtractedContent Extracted,
+    ExtractionDraft Draft,
+    IReadOnlyList<ExtractionDraftContent> Contents,
     IReadOnlyList<PipelineStageLog> StageLogs,
     IReadOnlyList<AIUsageLogEntry> UsageLogs,
     TokenCostBreakdown Totals);
 
 public sealed record ExtractedContentDebugResult(
     ExtractedContent Extracted,
+    ExtractionDraft Draft,
+    IReadOnlyList<ExtractionDraftContent> Contents,
     IReadOnlyDictionary<string, object> Policy,
     IReadOnlyDictionary<string, object> Rubric,
     IReadOnlyDictionary<string, object>? GroundTruth,
@@ -227,8 +338,16 @@ public sealed record ExtractedContentDebugResult(
     IReadOnlyList<AIUsageLogEntry> UsageLogs,
     TokenCostBreakdown Totals);
 
+public sealed record ExtractionDraftReviewResult(
+    ExtractionDraft Draft,
+    IReadOnlyList<ExtractionDraftContent> Contents,
+    IReadOnlyList<PipelineStageLog> StageLogs,
+    IReadOnlyList<AIUsageLogEntry> UsageLogs,
+    TokenCostBreakdown Totals);
+
 public sealed record EmbeddingTaggingResult(
     string DocumentId,
+    string? ExtractionDraftId,
     IReadOnlyList<KnowledgeChunk> Chunks,
     TokenCostBreakdown EmbeddingTotals,
     TokenCostBreakdown TaggingTotals,
@@ -238,6 +357,7 @@ public sealed record EmbeddingTaggingResult(
 
 public sealed record EmbeddingTaggingDebugResult(
     string DocumentId,
+    string? ExtractionDraftId,
     IReadOnlyList<KnowledgeChunk> Chunks,
     IReadOnlyDictionary<string, object> Policy,
     IReadOnlyDictionary<string, object> Rubric,

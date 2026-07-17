@@ -97,11 +97,12 @@ function bindFeature(feature) {
 async function runFeature(feature, endpoint) {
   const form = document.getElementById(feature.formId);
   const payload = feature.buildPayload(form);
-  setJson(feature.jsonId, { status: 'running', endpoint, payload });
+  const resolvedEndpoint = feature.resolveEndpoint?.(form, endpoint, payload) ?? endpoint;
+  setJson(feature.jsonId, { status: 'running', endpoint: resolvedEndpoint, payload });
   setHtml(feature.resultId, '<div class="placeholder">Running...</div>');
 
   try {
-    const result = await postJson(endpoint, payload);
+    const result = await postJson(resolvedEndpoint, payload);
     state.lastResults[feature.key] = result;
     setJson(feature.jsonId, result);
     setHtml(feature.resultId, feature.renderResult(result));

@@ -19,6 +19,18 @@ export const embeddingFeature = {
   resultId: 'embedding-result',
   jsonId: 'embedding-json',
   buildPayload(form) {
+    const draftId = form.extractionDraftId.value.trim();
+    if (draftId) {
+      return {
+        userId: form.userId.value.trim(),
+        extractionDraftId: draftId,
+        embeddingModel: form.embeddingModel.value,
+        taggingModel: form.taggingModel.value,
+        allowedTags: parseCsvList(form.allowedTags.value),
+        approvedOnly: true
+      };
+    }
+
     return {
       userId: form.userId.value.trim(),
       fileName: form.fileName.value.trim(),
@@ -31,6 +43,11 @@ export const embeddingFeature = {
       allowedTags: parseCsvList(form.allowedTags.value)
     };
   },
+  resolveEndpoint(form, endpoint) {
+    return form.extractionDraftId.value.trim()
+      ? (endpoint.includes('/debug') ? '/api/ai-module/embedding-tagging/from-draft/debug' : '/api/ai-module/embedding-tagging/from-draft')
+      : endpoint;
+  },
   renderResult(data) {
     const chunks = data?.chunks ?? data?.Chunks ?? [];
     return `
@@ -38,6 +55,7 @@ export const embeddingFeature = {
         <h4>Chunking result</h4>
         <div class="summary-grid">
           <article class="summary-card"><span class="summary-label">Document ID</span><strong class="summary-value">${escapeHtml(data?.documentId ?? data?.DocumentId ?? '')}</strong></article>
+          <article class="summary-card"><span class="summary-label">Draft ID</span><strong class="summary-value">${escapeHtml(data?.extractionDraftId ?? data?.ExtractionDraftId ?? '')}</strong></article>
           <article class="summary-card"><span class="summary-label">Chunks</span><strong class="summary-value">${escapeHtml(String(chunks.length))}</strong></article>
           <article class="summary-card"><span class="summary-label">Embedding cost</span><strong class="summary-value">${escapeHtml(formatCost(data?.embeddingTotals ?? data?.EmbeddingTotals))}</strong></article>
           <article class="summary-card"><span class="summary-label">Tagging cost</span><strong class="summary-value">${escapeHtml(formatCost(data?.taggingTotals ?? data?.TaggingTotals))}</strong></article>
@@ -65,9 +83,22 @@ export const embeddingFeature = {
         const result = await uploadFile(file);
         form.fileName.value = result.fileName ?? file.name;
         form.mode.value = result.suggestedMode ?? form.mode.value;
+        form.extractionDraftId.value = '';
         form.content.value = result.suggestedRawContent ?? await readFileText(file);
       });
     }
+
+    document.getElementById('embedding-use-last-draft')?.addEventListener('click', () => {
+      const latest = window.ApeUi?.state?.lastResults?.extracted;
+      const draft = latest?.draft ?? latest?.Draft;
+      const draftId = draft?.draftId ?? draft?.DraftId;
+      if (!draftId || !form) {
+        return;
+      }
+
+      form.extractionDraftId.value = draftId;
+      form.fileName.value = draft.sourceName ?? draft.SourceName ?? form.fileName.value;
+    });
 
     document.getElementById('embedding-export-chunks')?.addEventListener('click', () => {
       const payload = window.ApeUi?.state?.lastResults?.embedding;

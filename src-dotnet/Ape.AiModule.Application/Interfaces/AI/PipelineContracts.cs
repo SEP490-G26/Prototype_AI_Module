@@ -23,6 +23,14 @@ public interface IDocumentParser
     Task<ExtractedContent> ParseAsync(ExtractedContentRequest request, CancellationToken cancellationToken);
 }
 
+public interface IExtractionDraftStore
+{
+    Task<ExtractionDraftEnvelope> SaveAsync(ExtractionDraft draft, IReadOnlyList<ExtractionDraftContent> contents, CancellationToken cancellationToken);
+    Task<ExtractionDraftEnvelope?> GetAsync(string draftId, CancellationToken cancellationToken);
+    Task<ExtractionDraftEnvelope> ApproveAsync(string draftId, ApproveExtractionDraftRequest request, CancellationToken cancellationToken);
+    Task<ExtractionDraftEnvelope> UpdateEmbeddingAsync(string draftId, int chunkCount, string pipelineRunId, CancellationToken cancellationToken);
+}
+
 public interface IChunkingService
 {
     IReadOnlyList<string> BuildChunks(string normalizedMarkdown, PipelineMode mode);
@@ -183,8 +191,12 @@ public interface IAiPipelineOrchestrator
     Task<GatekeeperDebugResult> RunGatekeeperDebugAsync(GatekeeperRequest request, CancellationToken cancellationToken);
     Task<ExtractedContentResult> RunExtractedContentAsync(ExtractedContentRequest request, CancellationToken cancellationToken);
     Task<ExtractedContentDebugResult> RunExtractedContentDebugAsync(ExtractedContentRequest request, CancellationToken cancellationToken);
+    Task<ExtractionDraftEnvelope?> GetExtractionDraftAsync(string draftId, CancellationToken cancellationToken);
+    Task<ExtractionDraftReviewResult> ApproveExtractionDraftAsync(string draftId, ApproveExtractionDraftRequest request, CancellationToken cancellationToken);
     Task<EmbeddingTaggingResult> RunEmbeddingTaggingAsync(EmbeddingTaggingRequest request, CancellationToken cancellationToken);
     Task<EmbeddingTaggingDebugResult> RunEmbeddingTaggingDebugAsync(EmbeddingTaggingRequest request, CancellationToken cancellationToken);
+    Task<EmbeddingTaggingResult> RunEmbeddingTaggingFromDraftAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken);
+    Task<EmbeddingTaggingDebugResult> RunEmbeddingTaggingFromDraftDebugAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken);
     Task<QuestionGenerationResult> RunQuestionGenerationAsync(QuestionGenerationRequest request, CancellationToken cancellationToken);
     Task<ReviewDecision> RunQuestionReviewAsync(QuestionReviewRequest request, CancellationToken cancellationToken);
     Task<IngestionResult> RunIngestionAsync(IngestionRequest request, CancellationToken cancellationToken);

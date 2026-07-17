@@ -41,6 +41,10 @@
             <input name="fileName" value="input.txt">
           </label>
         </div>
+        <input type="hidden" name="courseId" value="">
+        <input type="hidden" name="ownershipType" value="byos">
+        <input type="hidden" name="sourceStoragePath" value="">
+        <input type="hidden" name="sourceSizeBytes" value="">
         <label>Upload file
           <input id="extracted-upload" type="file" accept=".txt,.md,.json,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp">
         </label>
@@ -52,6 +56,8 @@
           <button type="button" class="secondary" data-run-debug="extracted">Run Debug</button>
           <button type="button" class="secondary" data-copy-json="extracted">Copy JSON</button>
           <button type="button" class="secondary" data-export-json="extracted">Export JSON</button>
+          <button type="button" class="secondary" id="extracted-approve-draft">Approve Draft</button>
+          <button type="button" class="secondary" id="extracted-load-to-embedding">Load Approved Draft To Embedding</button>
         </div>
       </form>
     </section>

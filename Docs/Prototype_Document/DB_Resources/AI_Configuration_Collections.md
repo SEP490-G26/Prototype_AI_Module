@@ -2,11 +2,13 @@
 
 ## Mục tiêu
 
-Tài liệu này chốt khung collection để đưa vào DB thật cho nhóm cấu hình AI:
+Tài liệu này chốt khung collection để đưa vào DB thật cho nhóm cấu hình AI và collection nghiệp vụ hỗ trợ pipeline tài liệu:
 
 - `AI_Rubrics`
 - `AI_GroundTruth_Sets`
 - `AI_Prompt_Versions`
+- `DocumentExtractionDrafts`
+- `DocumentExtractionDraftContents`
 
 Mục tiêu là:
 
@@ -193,6 +195,21 @@ Trả lời câu hỏi:
 
 - agent này được test hoặc chấm dựa trên bộ dữ liệu chuẩn nào
 
+## 4A. DocumentExtractionDrafts và DocumentExtractionDraftContents
+
+Hai collection này không phải cấu hình AI, nhưng là collection nghiệp vụ cần có để pipeline tài liệu chạy đúng trong production.
+
+### Vai trò
+
+- `DocumentExtractionDrafts`: giữ metadata cấp tài liệu, trạng thái pipeline, cost, credit, preview
+- `DocumentExtractionDraftContents`: giữ nội dung dài theo từng segment để human review và approve
+- tránh upload lại tài liệu và tránh gọi OCR/vision lặp lại không cần thiết
+
+### Tài liệu schema chi tiết
+
+- `Docs/Prototype_Document/DB_Resources/DocumentExtractionDrafts.md`
+- `Docs/Prototype_Document/DB_Resources/DocumentExtractionDraftContents.md`
+
 ## 5. Collection nào liên quan tới chức năng nào
 
 ### Question Generation / Review
@@ -218,12 +235,16 @@ Trả lời câu hỏi:
 - cần `AI_Prompt_Versions`
 - thường không cần rubric học thuật
 - có thể có test set quality riêng nếu cần
+- production nên đi kèm:
+  - `DocumentExtractionDrafts`
+  - `DocumentExtractionDraftContents`
 
 ### Embedding
 
 - thường không cần prompt
 - không cần rubric
 - có thể cần benchmark dataset, nhưng không nhất thiết vào `AI_GroundTruth_Sets` nếu chỉ tính cost
+- production nên đọc từ `DocumentExtractionDraftContents.approved_markdown` thay vì nhận file thô trực tiếp
 
 ### Auto Tagging
 

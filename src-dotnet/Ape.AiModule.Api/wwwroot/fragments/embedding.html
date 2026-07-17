@@ -46,10 +46,16 @@
           <label>File name
             <input name="fileName" value="input.txt">
           </label>
+          <label>Extraction draft ID
+            <input name="extractionDraftId" placeholder="draft-...">
+          </label>
         </div>
         <label>Upload file
           <input id="embedding-upload" type="file" accept=".txt,.md,.json,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp">
         </label>
+        <div class="action-row">
+          <button type="button" class="secondary" id="embedding-use-last-draft">Use Last Extracted Draft</button>
+        </div>
         <label>Allowed tags (comma separated)
           <textarea name="allowedTags" rows="3">array, pointer, loop, condition, class, object, inheritance, recursion, sorting, tree, linked-list, stack, queue</textarea>
         </label>

@@ -96,6 +96,17 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetExtractedContentGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetExtractedContentGroundTruthAsync(cancellationToken));
 
+    [HttpGet("extraction-drafts/{draftId}")]
+    public async Task<IActionResult> GetExtractionDraftAsync(string draftId, CancellationToken cancellationToken)
+    {
+        var draft = await _orchestrator.GetExtractionDraftAsync(draftId, cancellationToken);
+        return draft is null ? NotFound(new { error = $"Extraction draft '{draftId}' was not found." }) : Ok(draft);
+    }
+
+    [HttpPost("extraction-drafts/{draftId}/approve")]
+    public async Task<IActionResult> ApproveExtractionDraftAsync(string draftId, [FromBody] ApproveExtractionDraftRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("extraction-drafts", "extraction-draft-approve", new { draftId, request }, () => _orchestrator.ApproveExtractionDraftAsync(draftId, request, cancellationToken), cancellationToken));
+
     [HttpPost("embedding-tagging")]
     public async Task<IActionResult> RunEmbeddingTaggingAsync([FromBody] EmbeddingTaggingRequest request, CancellationToken cancellationToken)
         => Ok(await ExecuteWithHistoryAsync("embedding-tagging", "embedding-tagging", request, () => _orchestrator.RunEmbeddingTaggingAsync(request, cancellationToken), cancellationToken));
@@ -115,6 +126,14 @@ public sealed class AIModuleController : ControllerBase
     [HttpGet("embedding-tagging/ground-truth")]
     public async Task<IActionResult> GetEmbeddingTaggingGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetEmbeddingTaggingGroundTruthAsync(cancellationToken));
+
+    [HttpPost("embedding-tagging/from-draft")]
+    public async Task<IActionResult> RunEmbeddingTaggingFromDraftAsync([FromBody] EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("embedding-tagging", "embedding-tagging-from-draft", request, () => _orchestrator.RunEmbeddingTaggingFromDraftAsync(request, cancellationToken), cancellationToken));
+
+    [HttpPost("embedding-tagging/from-draft/debug")]
+    public async Task<IActionResult> RunEmbeddingTaggingFromDraftDebugAsync([FromBody] EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("embedding-tagging", "embedding-tagging-from-draft-debug", request, () => _orchestrator.RunEmbeddingTaggingFromDraftDebugAsync(request, cancellationToken), cancellationToken));
 
     [HttpPost("ingestion")]
     public async Task<IActionResult> RunIngestionAsync([FromBody] IngestionRequest request, CancellationToken cancellationToken)

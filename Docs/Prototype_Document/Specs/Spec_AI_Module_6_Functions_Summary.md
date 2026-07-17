@@ -18,6 +18,14 @@ Tài liệu này tổng hợp toàn bộ 6 chức năng AI đã được mô hì
 5. `AI Review Result of AI Question Generation`
 6. `AI Code Mentor`
 
+Lưu ý:
+
+- trong flow production mới, `AI Extracted Content` và `AI Embedding + Auto Tagging` vẫn là 2 năng lực AI tách biệt
+- nhưng ở mức nghiệp vụ tài liệu, chúng phải đi qua 2 collection trung gian:
+  - `DocumentExtractionDrafts`
+  - `DocumentExtractionDraftContents`
+  để hỗ trợ `human in the loop` và BYOS pricing
+
 ## Kiến trúc tổng quát
 
 Pipeline tổng quát hiện tại:
@@ -129,6 +137,10 @@ Mục tiêu của prototype:
 - `pdf` đã dùng parser `PdfPig`
 - `docx/pptx` đã bóc được media từ package và chèn image marker
 - chưa phải parser/OCR production-final
+- production nên lưu output vào:
+  - `DocumentExtractionDrafts` ở cấp tài liệu
+  - `DocumentExtractionDraftContents` ở cấp segment
+  trước khi sang embedding
 
 ## 3. AI Embedding + Auto Tagging
 
@@ -138,6 +150,7 @@ Mục tiêu của prototype:
 - chia chunk
 - embedding từng chunk
 - gắn topic tags cho từng chunk
+- trong production nên chỉ chạy trên `approved_markdown` đã qua human review ở `DocumentExtractionDraftContents`
 
 ### Contract `KnowledgeChunk`
 
@@ -206,6 +219,7 @@ Mục tiêu của prototype:
 - đã có taxonomy policy
 - đã có debug route
 - đã đủ để benchmark cost và xem xét chất lượng tagging
+- production nên nhận input từ `DocumentExtractionDraftContents` thay vì nhận file thô trực tiếp
 
 ## 4. AI Question Generation
 

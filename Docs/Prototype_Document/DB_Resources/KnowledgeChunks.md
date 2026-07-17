@@ -4,6 +4,8 @@
   course_id: ObjectId,             // ID môn học mà chunk này thuộc về; có thể null nếu là tài liệu BYOS chưa gắn môn
   document_id: ObjectId,           // ID tài liệu gốc sinh ra chunk này
   user_id: ObjectId,               // ID người sở hữu tài liệu/chunk; dùng để phân biệt dữ liệu hệ thống và dữ liệu BYOS
+  extraction_draft_id: ObjectId,   // ID bản nháp extraction cấp tài liệu mà chunk này sinh ra từ đó
+  extraction_content_id: ObjectId, // ID segment nội dung đã approved mà chunk này được cắt ra từ đó
 
   chunk_index: Number,             // Thứ tự của chunk trong cùng một document, dùng để truy vết và lấy chunk lân cận
   chunking_strategy: String,       // Chiến lược chia chunk: logical_block | page_block | fixed_words
@@ -42,3 +44,14 @@
   created_at: DateTime,            // Thời điểm tạo bản ghi chunk
   updated_at: DateTime             // Thời điểm cập nhật gần nhất của bản ghi chunk
 }
+
+## Ghi chú quan hệ
+
+- `extraction_draft_id` -> `DocumentExtractionDrafts._id`
+- `extraction_content_id` -> `DocumentExtractionDraftContents._id`
+
+Hai trường này giúp truy vết:
+
+- chunk này sinh ra từ tài liệu nào
+- từ bản approved nào
+- và cụ thể từ segment nội dung nào

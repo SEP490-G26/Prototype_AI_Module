@@ -10,6 +10,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
     private readonly IAiProviderGateway _aiProviderGateway;
     private readonly IDocumentParser _documentParser;
     private readonly IChunkingService _chunkingService;
+    private readonly IExtractionDraftStore _extractionDraftStore;
     private readonly IModuleRepository _moduleRepository;
     private readonly IQuestionSchemaService _questionSchemaService;
     private readonly IQuestionPersistenceMapper _questionPersistenceMapper;
@@ -25,6 +26,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         IAiProviderGateway aiProviderGateway,
         IDocumentParser documentParser,
         IChunkingService chunkingService,
+        IExtractionDraftStore extractionDraftStore,
         IModuleRepository moduleRepository,
         IQuestionSchemaService questionSchemaService,
         IQuestionPersistenceMapper questionPersistenceMapper,
@@ -39,6 +41,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         _aiProviderGateway = aiProviderGateway;
         _documentParser = documentParser;
         _chunkingService = chunkingService;
+        _extractionDraftStore = extractionDraftStore;
         _moduleRepository = moduleRepository;
         _questionSchemaService = questionSchemaService;
         _questionPersistenceMapper = questionPersistenceMapper;
@@ -112,13 +115,16 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
     {
         var extracted = await _documentParser.ParseAsync(request, cancellationToken);
         var cost = ResolveStageCost("extract-content", request.VisionModel ?? "parser", request.RawContent.Length, extracted.NormalizedMarkdown.Length, "extract-content");
+        var draftEnvelope = await BuildAndStoreExtractionDraftAsync(request, extracted, cost, cancellationToken);
         var stageLogs = new List<PipelineStageLog>
         {
             CreateStageLog("extract-content", InferStageStatus(cost), cost, new Dictionary<string, string>
             {
                 ["parser"] = extracted.ParserName,
                 ["embedded_images"] = extracted.EmbeddedImageCount.ToString(),
-                ["words"] = extracted.WordCount.ToString()
+                ["words"] = extracted.WordCount.ToString(),
+                ["draft_id"] = draftEnvelope.Draft.DraftId,
+                ["segments"] = draftEnvelope.Draft.TotalSegments.ToString()
             }, InferProvider(request.VisionModel ?? extracted.ParserName), request.VisionModel ?? extracted.ParserName)
         };
         var usageLogs = new List<AIUsageLogEntry>
@@ -140,10 +146,10 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     null,
                     "completed",
                     new { request.FileName, request.Language, request.Mode, request.RawContent },
-                    extracted))
+                    new { extracted, draftEnvelope.Draft, draftEnvelope.Contents }))
         };
 
-        return new ExtractedContentResult(extracted, stageLogs, usageLogs, cost);
+        return new ExtractedContentResult(extracted, draftEnvelope.Draft, draftEnvelope.Contents, stageLogs, usageLogs, cost);
     }
 
     public async Task<ExtractedContentDebugResult> RunExtractedContentDebugAsync(ExtractedContentRequest request, CancellationToken cancellationToken)
@@ -155,12 +161,35 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
         return new ExtractedContentDebugResult(
             result.Extracted,
+            result.Draft,
+            result.Contents,
             policy,
             rubric,
             groundTruth,
             result.StageLogs,
             result.UsageLogs,
             result.Totals);
+    }
+
+    public Task<ExtractionDraftEnvelope?> GetExtractionDraftAsync(string draftId, CancellationToken cancellationToken)
+        => _extractionDraftStore.GetAsync(draftId, cancellationToken);
+
+    public async Task<ExtractionDraftReviewResult> ApproveExtractionDraftAsync(string draftId, ApproveExtractionDraftRequest request, CancellationToken cancellationToken)
+    {
+        var envelope = await _extractionDraftStore.ApproveAsync(draftId, request, cancellationToken);
+        var cost = new TokenCostBreakdown(0, 0, 0, 0, 0, 0);
+        var stageLogs = new List<PipelineStageLog>
+        {
+            CreateStageLog("extraction-review", RunStatus.Completed, cost, new Dictionary<string, string>
+            {
+                ["draft_id"] = envelope.Draft.DraftId,
+                ["review_status"] = envelope.Draft.ReviewStatus,
+                ["approved_segments"] = envelope.Draft.ApprovedSegments.ToString(),
+                ["rejected_segments"] = envelope.Draft.RejectedSegments.ToString()
+            }, "human", "human-review")
+        };
+        var usageLogs = new List<AIUsageLogEntry>();
+        return new ExtractionDraftReviewResult(envelope.Draft, envelope.Contents, stageLogs, usageLogs, cost);
     }
 
     public async Task<EmbeddingTaggingResult> RunEmbeddingTaggingAsync(EmbeddingTaggingRequest request, CancellationToken cancellationToken)
@@ -207,6 +236,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 null,
                 documentId,
                 request.UserId,
+                null,
+                null,
                 index,
                 chunkingStrategy,
                 chunkType,
@@ -302,6 +333,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
         return new EmbeddingTaggingResult(
             documentId,
+            null,
             chunks,
             SumCosts(embeddingCosts),
             SumCosts(taggingCosts),
@@ -319,6 +351,196 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
         return new EmbeddingTaggingDebugResult(
             result.DocumentId,
+            result.ExtractionDraftId,
+            result.Chunks,
+            policy,
+            rubric,
+            groundTruth,
+            result.EmbeddingTotals,
+            result.TaggingTotals,
+            result.StageLogs,
+            result.UsageLogs,
+            result.Totals);
+    }
+
+    public async Task<EmbeddingTaggingResult> RunEmbeddingTaggingFromDraftAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
+    {
+        var envelope = await _extractionDraftStore.GetAsync(request.ExtractionDraftId, cancellationToken)
+            ?? throw new InvalidOperationException($"Extraction draft '{request.ExtractionDraftId}' was not found.");
+
+        var selectedContents = envelope.Contents
+            .Where(content => !request.ApprovedOnly || string.Equals(content.ReviewStatus, "approved", StringComparison.OrdinalIgnoreCase))
+            .Where(content => !string.IsNullOrWhiteSpace(content.ApprovedMarkdown ?? content.CleanMarkdown))
+            .OrderBy(static item => item.SegmentIndex)
+            .ToList();
+
+        if (selectedContents.Count == 0)
+        {
+            throw new InvalidOperationException("No approved extraction segments are available for embedding.");
+        }
+
+        var policy = await _embeddingTaggingPolicyService.GetPolicyAsync(cancellationToken);
+        var stageLogs = new List<PipelineStageLog>();
+        var usageLogs = new List<AIUsageLogEntry>();
+        var chunks = new List<KnowledgeChunk>();
+        var embeddingCosts = new List<TokenCostBreakdown>();
+        var taggingCosts = new List<TokenCostBreakdown>();
+        var pipelineRunId = BuildPipelineRunId("embedtag");
+        var sourceType = DetectSourceType(envelope.Draft.SourceName);
+        var subjectCode = NormalizeSubjectCode(envelope.Draft.SubjectCode);
+        var chunkingStrategy = "logical_block";
+        var retrievalEnabled = TryReadBool(policy, "chunk_defaults", "retrieval_enabled") ?? true;
+        var defaultStatus = TryReadString(policy, "chunk_defaults", "default_status") ?? "active";
+        var fallbackChunkType = TryReadString(policy, "tagging_rules", "fallback_chunk_type") ?? "paragraph";
+        var fallbackSectionTitle = TryReadString(policy, "tagging_rules", "fallback_section_title") ?? "Untitled Section";
+        var chunkIndex = 0;
+
+        foreach (var content in selectedContents)
+        {
+            var contentText = content.ApprovedMarkdown ?? content.CleanMarkdown;
+            var chunkTexts = _chunkingService.BuildChunks(contentText, PipelineMode.TextOnly);
+            foreach (var chunkText in chunkTexts)
+            {
+                var embedding = await _aiProviderGateway.CreateEmbeddingAsync(chunkText, request.EmbeddingModel, cancellationToken);
+                var tags = await _aiProviderGateway.CreateTagsAsync(chunkText, envelope.Draft.SubjectCode, envelope.Draft.Language, request.AllowedTags, request.TaggingModel, cancellationToken);
+                var embeddingCost = ResolveStageCost("embedding", request.EmbeddingModel, chunkText.Length, 0, "embedding");
+                var taggingCost = ResolveStageCost("auto-tagging", request.TaggingModel, chunkText.Length, tags.Sum(static item => item.Length), "auto-tagging");
+                embeddingCosts.Add(embeddingCost);
+                taggingCosts.Add(taggingCost);
+                var normalizedText = NormalizeChunkText(chunkText);
+                var markdownText = chunkText;
+                var sectionTitle = content.SectionTitle ?? DetectSectionTitle(chunkText) ?? fallbackSectionTitle;
+                var chunkType = DetectChunkType(chunkText, fallbackChunkType);
+                var now = DateTimeOffset.UtcNow;
+                var wordCount = CountWords(normalizedText);
+                var tokenCount = (int)Math.Max(1, Math.Ceiling(normalizedText.Length / 4.0));
+                var charCount = normalizedText.Length;
+
+                var chunk = new KnowledgeChunk(
+                    $"chunk-{chunkIndex + 1:D4}",
+                    envelope.Draft.CourseId,
+                    envelope.Draft.DocumentId,
+                    envelope.Draft.UserId,
+                    envelope.Draft.DraftId,
+                    content.ContentId,
+                    chunkIndex,
+                    chunkingStrategy,
+                    chunkType,
+                    sectionTitle,
+                    sourceType,
+                    envelope.Draft.SourceName,
+                    content.SourcePageFrom,
+                    content.SourcePageTo,
+                    envelope.Draft.Language,
+                    subjectCode,
+                    chunkText,
+                    normalizedText,
+                    markdownText,
+                    tags,
+                    embedding,
+                    InferProvider(request.EmbeddingModel),
+                    request.EmbeddingModel,
+                    embedding.Count,
+                    InferProvider(request.TaggingModel),
+                    request.TaggingModel,
+                    wordCount,
+                    tokenCount,
+                    charCount,
+                    retrievalEnabled,
+                    defaultStatus,
+                    now,
+                    now);
+
+                chunks.Add(chunk);
+                stageLogs.Add(CreateStageLog(
+                    $"segment-{content.SegmentIndex + 1}-chunk-{chunkIndex + 1}-embedding",
+                    InferStageStatus(embeddingCost),
+                    embeddingCost,
+                    new Dictionary<string, string>
+                    {
+                        ["chunk_id"] = chunk.Id,
+                        ["draft_id"] = envelope.Draft.DraftId,
+                        ["content_id"] = content.ContentId
+                    },
+                    InferProvider(request.EmbeddingModel),
+                    request.EmbeddingModel));
+                stageLogs.Add(CreateStageLog(
+                    $"segment-{content.SegmentIndex + 1}-chunk-{chunkIndex + 1}-auto-tagging",
+                    InferStageStatus(taggingCost),
+                    taggingCost,
+                    new Dictionary<string, string>
+                    {
+                        ["chunk_id"] = chunk.Id,
+                        ["content_id"] = content.ContentId,
+                        ["tags"] = string.Join(", ", chunk.TopicTags)
+                    },
+                    InferProvider(request.TaggingModel),
+                    request.TaggingModel));
+
+                usageLogs.Add(CreateUsageLog(
+                    triggeredBy: request.UserId,
+                    agentId: "AI_Embedding",
+                    pipelineRunId: pipelineRunId,
+                    stageName: "embedding",
+                    attemptIndex: chunkIndex + 1,
+                    provider: InferProvider(request.EmbeddingModel),
+                    modelName: request.EmbeddingModel,
+                    cost: embeddingCost,
+                    status: "embedded",
+                    payloadData: new AIUsageLogPayload(
+                        "embedding_tagging",
+                        envelope.Draft.SubjectCode,
+                        null,
+                        null,
+                        "embedded",
+                        new { envelope.Draft.DraftId, content.ContentId, chunk.Id, chunk.RawText },
+                        new { chunk.Id, chunk.EmbeddingDim })));
+
+                usageLogs.Add(CreateUsageLog(
+                    triggeredBy: request.UserId,
+                    agentId: "AI_AutoTagging",
+                    pipelineRunId: pipelineRunId,
+                    stageName: "auto_tagging",
+                    attemptIndex: chunkIndex + 1,
+                    provider: InferProvider(request.TaggingModel),
+                    modelName: request.TaggingModel,
+                    cost: taggingCost,
+                    status: "tagged",
+                    payloadData: new AIUsageLogPayload(
+                        "embedding_tagging",
+                        envelope.Draft.SubjectCode,
+                        null,
+                        null,
+                        "tagged",
+                        new { envelope.Draft.DraftId, content.ContentId, request.AllowedTags, chunk.Id, chunk.RawText },
+                        new { chunk.Id, chunk.TopicTags })));
+
+                chunkIndex++;
+            }
+        }
+
+        await _extractionDraftStore.UpdateEmbeddingAsync(envelope.Draft.DraftId, chunks.Count, pipelineRunId, cancellationToken);
+        return new EmbeddingTaggingResult(
+            envelope.Draft.DocumentId,
+            envelope.Draft.DraftId,
+            chunks,
+            SumCosts(embeddingCosts),
+            SumCosts(taggingCosts),
+            stageLogs,
+            usageLogs,
+            SumCosts(stageLogs.Select(static item => item.Cost)));
+    }
+
+    public async Task<EmbeddingTaggingDebugResult> RunEmbeddingTaggingFromDraftDebugAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
+    {
+        var result = await RunEmbeddingTaggingFromDraftAsync(request, cancellationToken);
+        var policy = await _embeddingTaggingPolicyService.GetPolicyAsync(cancellationToken);
+        var rubric = await _rubricCatalogService.GetEmbeddingTaggingRubricAsync(cancellationToken);
+        var groundTruth = await TryGetEmbeddingTaggingGroundTruthAsync(cancellationToken);
+
+        return new EmbeddingTaggingDebugResult(
+            result.DocumentId,
+            result.ExtractionDraftId,
             result.Chunks,
             policy,
             rubric,
@@ -397,7 +619,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
     {
         var gatekeeperResult = await RunGatekeeperAsync(new GatekeeperRequest(request.UserId, request.FileName, request.Subject, request.Language, request.RawContent, request.GatekeeperModel), cancellationToken);
         var extractedResult = await RunExtractedContentAsync(new ExtractedContentRequest(request.UserId, request.FileName, request.Subject, request.Language, request.RawContent, request.Mode, request.VisionModel), cancellationToken);
-        var embeddingResult = await RunEmbeddingTaggingAsync(new EmbeddingTaggingRequest(request.UserId, request.FileName, request.Subject, request.Language, extractedResult.Extracted.NormalizedMarkdown, request.Mode, request.EmbeddingModel, request.TaggingModel, request.AllowedTags), cancellationToken);
+        await ApproveExtractionDraftAsync(extractedResult.Draft.DraftId, new ApproveExtractionDraftRequest(request.UserId, request.UserId, true, "Auto-approved by ingestion pipeline.", null), cancellationToken);
+        var embeddingResult = await RunEmbeddingTaggingFromDraftAsync(new EmbeddingFromDraftRequest(request.UserId, extractedResult.Draft.DraftId, request.EmbeddingModel, request.TaggingModel, request.AllowedTags), cancellationToken);
 
         var storedDocument = new StoredDocument(
             embeddingResult.DocumentId,
@@ -1231,6 +1454,179 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         }
 
         return fallbackChunkType;
+    }
+
+    private async Task<ExtractionDraftEnvelope> BuildAndStoreExtractionDraftAsync(
+        ExtractedContentRequest request,
+        ExtractedContent extracted,
+        TokenCostBreakdown cost,
+        CancellationToken cancellationToken)
+    {
+        var documentId = $"doc-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..32];
+        var draftId = $"draft-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..40];
+        var now = DateTimeOffset.UtcNow;
+        var subjectCode = NormalizeSubjectCode(request.Subject);
+        var sourceType = DetectSourceType(request.FileName);
+        var sourceChecksum = request.SourceChecksum ?? ComputeStableHash(request.RawContent);
+        var segments = _chunkingService.BuildChunks(extracted.NormalizedMarkdown, request.Mode);
+        var totalInputTokens = cost.InputTokens;
+        var totalOutputTokens = cost.OutputTokens;
+        var totalChars = Math.Max(1, segments.Sum(static item => item.Length));
+        var contents = new List<ExtractionDraftContent>();
+
+        for (var index = 0; index < segments.Count; index++)
+        {
+            var segment = segments[index];
+            var ratio = (decimal)segment.Length / totalChars;
+            var inputTokens = (long)Math.Max(0, Math.Round(totalInputTokens * ratio, MidpointRounding.AwayFromZero));
+            var outputTokens = (long)Math.Max(0, Math.Round(totalOutputTokens * ratio, MidpointRounding.AwayFromZero));
+            var segmentCost = Math.Round(cost.TotalCostUsd * ratio, 6);
+            var segmentLatency = Math.Round(cost.LatencyMs * ratio, 2);
+            var normalized = NormalizeChunkText(segment);
+            var contentId = $"{draftId}-seg-{index + 1:D4}";
+
+            contents.Add(new ExtractionDraftContent(
+                contentId,
+                draftId,
+                documentId,
+                request.UserId,
+                request.CourseId,
+                index,
+                request.Mode == PipelineMode.FullMultimodalPage ? "page_block" : "logical_block",
+                DetectSectionTitle(segment),
+                index + 1,
+                index + 1,
+                request.Mode == PipelineMode.FullMultimodalPage ? $"page_{index + 1}" : $"segment_{index + 1}",
+                segment,
+                normalized,
+                null,
+                ExtractImageReferences(segment),
+                BuildVisionExpansions(segment, request.VisionModel),
+                ExtractCleanupWarnings(segment, extracted.Warnings),
+                "needs_review",
+                null,
+                null,
+                0,
+                CountWords(normalized),
+                (int)Math.Max(1, Math.Ceiling(normalized.Length / 4.0)),
+                normalized.Length,
+                inputTokens,
+                outputTokens,
+                segmentCost,
+                segmentLatency,
+                now,
+                now));
+        }
+
+        var draft = new ExtractionDraft(
+            draftId,
+            request.CourseId,
+            documentId,
+            request.UserId,
+            sourceType,
+            request.FileName,
+            request.SourceStoragePath,
+            request.SourceSizeBytes ?? request.RawContent.Length,
+            sourceChecksum,
+            request.Language,
+            subjectCode,
+            string.IsNullOrWhiteSpace(request.CourseId) ? request.OwnershipType : "system_seeded",
+            extracted.ParserName,
+            "v1",
+            extracted.ExtractionMode,
+            string.IsNullOrWhiteSpace(request.VisionModel) ? null : InferProvider(request.VisionModel),
+            request.VisionModel,
+            contents.Count,
+            contents.Count,
+            0,
+            0,
+            extracted.DetectedImageReferences,
+            extracted.EmbeddedImageCount,
+            extracted.Warnings,
+            null,
+            BuildPreview(extracted.RawText),
+            BuildPreview(extracted.NormalizedMarkdown),
+            null,
+            "needs_review",
+            null,
+            null,
+            0,
+            totalInputTokens,
+            totalOutputTokens,
+            cost.TotalCostUsd,
+            cost.LatencyMs,
+            "pending",
+            0,
+            null,
+            new ExtractionPricingBasisSnapshot(
+                request.SourceSizeBytes ?? request.RawContent.Length,
+                contents.Count,
+                extracted.WordCount,
+                extracted.EmbeddedImageCount,
+                totalInputTokens,
+                totalOutputTokens,
+                cost.TotalCostUsd),
+            false,
+            0,
+            null,
+            now,
+            now);
+
+        return await _extractionDraftStore.SaveAsync(draft, contents, cancellationToken);
+    }
+
+    private static IReadOnlyList<ExtractionVisionExpansion> BuildVisionExpansions(string segment, string? visionModel)
+    {
+        var imageRefs = ExtractImageReferences(segment);
+        return imageRefs.Select((imageRef, index) => new ExtractionVisionExpansion(
+            imageRef,
+            "inline_after_marker",
+            index + 1,
+            $"### Vision Extracted From Image `{imageRef}`",
+            string.IsNullOrWhiteSpace(visionModel) ? null : InferProvider(visionModel),
+            visionModel,
+            0,
+            0,
+            0,
+            0,
+            string.IsNullOrWhiteSpace(visionModel) ? "skipped" : "completed")).ToList();
+    }
+
+    private static IReadOnlyList<string> ExtractImageReferences(string content)
+    {
+        return System.Text.RegularExpressions.Regex.Matches(content, @"\[(image|img|figure):([^\]]+)\]", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            .Select(match => match.Groups[2].Value.Trim())
+            .Where(static item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> ExtractCleanupWarnings(string segment, IReadOnlyList<string> rootWarnings)
+    {
+        var warnings = new HashSet<string>(rootWarnings, StringComparer.OrdinalIgnoreCase);
+        if (segment.Length < 40)
+        {
+            warnings.Add("Segment is short and may not carry enough learning context.");
+        }
+
+        return warnings.ToList();
+    }
+
+    private static string ComputeStableHash(string content)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(bytes);
+    }
+
+    private static string? BuildPreview(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var normalized = NormalizeChunkText(content);
+        return normalized.Length <= 400 ? normalized : normalized[..400];
     }
 
     private static string BuildPromptKey(string role, string subject, string questionType)

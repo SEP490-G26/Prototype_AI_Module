@@ -24,7 +24,25 @@ public sealed record ExtractedContentRequest(
     string Language,
     string RawContent,
     PipelineMode Mode,
-    string? VisionModel);
+    string? VisionModel,
+    string? CourseId = null,
+    string OwnershipType = "byos",
+    string? SourceStoragePath = null,
+    long? SourceSizeBytes = null,
+    string? SourceChecksum = null);
+
+public sealed record ExtractionDraftContentPatch(
+    string ContentId,
+    string? ApprovedMarkdown,
+    string? ReviewStatus,
+    string? ReviewerId);
+
+public sealed record ApproveExtractionDraftRequest(
+    string UserId,
+    string? ReviewerId,
+    bool ApproveAll,
+    string? HumanNotes,
+    IReadOnlyList<ExtractionDraftContentPatch>? Segments);
 
 public sealed record EmbeddingTaggingRequest(
     string UserId,
@@ -36,6 +54,14 @@ public sealed record EmbeddingTaggingRequest(
     string EmbeddingModel,
     string TaggingModel,
     IReadOnlyList<string> AllowedTags);
+
+public sealed record EmbeddingFromDraftRequest(
+    string UserId,
+    string ExtractionDraftId,
+    string EmbeddingModel,
+    string TaggingModel,
+    IReadOnlyList<string> AllowedTags,
+    bool ApprovedOnly = true);
 
 public sealed record IngestionRequest(
     string UserId,
