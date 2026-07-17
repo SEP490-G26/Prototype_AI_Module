@@ -101,6 +101,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            model = NormalizeProviderModelId(model);
             var lowered = model.ToLowerInvariant();
             if (lowered.Contains("text-embedding") || lowered.Contains("openai"))
             {
@@ -125,6 +126,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            model = NormalizeProviderModelId(model);
             var policy = await _embeddingTaggingPolicyService.GetPolicyAsync(cancellationToken);
             var rendered = await _promptTemplateService.RenderAsync("auto_tagging", new Dictionary<string, string>
             {
@@ -162,6 +164,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            model = NormalizeProviderModelId(model);
             var rendered = await _promptTemplateService.RenderAsync("extract_content_vision", new Dictionary<string, string>
             {
                 ["image_ref"] = imageReference
@@ -189,27 +192,47 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            var generatorModel = NormalizeProviderModelId(request.GeneratorModel);
+            var rubric = await _rubricCatalogService.GetQuestionReviewRubricAsync(request.Subject, request.QuestionType, cancellationToken);
             var rendered = await _promptTemplateService.RenderAsync("question_generation", new Dictionary<string, string>
             {
                 ["subject"] = request.Subject,
                 ["difficulty"] = request.Difficulty,
                 ["question_type"] = request.QuestionType,
                 ["count"] = request.Count.ToString(),
+                ["rubric_json"] = JsonSerializer.Serialize(rubric),
+                ["subject_focus"] = BuildQuestionSubjectFocus(request.Subject, request.QuestionType),
                 ["chunks_json"] = JsonSerializer.Serialize(request.Chunks),
                 ["revision_feedback"] = request.RevisionFeedback ?? "none",
                 ["previous_questions_json"] = JsonSerializer.Serialize(request.PreviousQuestions ?? Array.Empty<GeneratedQuestion>())
             }, cancellationToken);
 
-            var response = await GenerateTextAsync(request.GeneratorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-generation", cancellationToken);
+            var response = await GenerateTextAsync(generatorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-generation", cancellationToken);
             var json = ExtractJsonArray(response);
             var questions = DeserializeQuestions(json);
             var normalizedQuestions = NormalizeQuestions(questions, request);
-            return normalizedQuestions.Count > 0 ? normalizedQuestions : await _fallbackGateway.GenerateQuestionsAsync(request, cancellationToken);
+            if (normalizedQuestions.Count > 0)
+            {
+                return normalizedQuestions;
+            }
+
+            if (ShouldAllowDemoFallback(generatorModel))
+            {
+                return await _fallbackGateway.GenerateQuestionsAsync(request, cancellationToken);
+            }
+
+            throw new InvalidOperationException($"Question generation returned no valid questions after normalization for model '{generatorModel}'.");
         }
         catch (Exception ex)
         {
-            RecordErrorSnapshot("question-generation", request.GeneratorModel, ex);
-            return await _fallbackGateway.GenerateQuestionsAsync(request, cancellationToken);
+            var generatorModel = NormalizeProviderModelId(request.GeneratorModel);
+            RecordErrorSnapshot("question-generation", generatorModel, ex);
+            if (ShouldAllowDemoFallback(generatorModel))
+            {
+                return await _fallbackGateway.GenerateQuestionsAsync(request, cancellationToken);
+            }
+
+            throw;
         }
     }
 
@@ -217,17 +240,19 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            var reviewerModel = NormalizeProviderModelId(request.ReviewerModel);
             var rubric = await _rubricCatalogService.GetQuestionReviewRubricAsync(request.Subject, request.QuestionType, cancellationToken);
             var rendered = await _promptTemplateService.RenderAsync("question_review", new Dictionary<string, string>
             {
                 ["subject"] = request.Subject,
                 ["question_type"] = request.QuestionType,
+                ["subject_focus"] = BuildQuestionSubjectFocus(request.Subject, request.QuestionType),
                 ["rubric_json"] = JsonSerializer.Serialize(rubric),
                 ["chunks_json"] = JsonSerializer.Serialize(request.Chunks),
                 ["questions_json"] = JsonSerializer.Serialize(request.Questions)
             }, cancellationToken);
 
-            var response = await GenerateTextAsync(request.ReviewerModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-review", cancellationToken);
+            var response = await GenerateTextAsync(reviewerModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-review", cancellationToken);
             using var document = JsonDocument.Parse(ExtractJsonObject(response));
             var root = document.RootElement;
             return new ReviewDecision(
@@ -242,12 +267,18 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
                 root.TryGetProperty("schemaValid", out var schemaValidElement) && schemaValidElement.ValueKind is JsonValueKind.True or JsonValueKind.False ? schemaValidElement.GetBoolean() : false,
                 root.TryGetProperty("contentGrounded", out var groundedElement) && groundedElement.ValueKind is JsonValueKind.True or JsonValueKind.False ? groundedElement.GetBoolean() : false,
                 root.TryGetProperty("needsRevision", out var revisionElement) && revisionElement.ValueKind is JsonValueKind.True or JsonValueKind.False ? revisionElement.GetBoolean() : true,
-                request.ReviewerModel);
+                reviewerModel);
         }
         catch (Exception ex)
         {
-            RecordErrorSnapshot("question-review", request.ReviewerModel, ex);
-            return await _fallbackGateway.ReviewQuestionsAsync(request, cancellationToken);
+            var reviewerModel = NormalizeProviderModelId(request.ReviewerModel);
+            RecordErrorSnapshot("question-review", reviewerModel, ex);
+            if (ShouldAllowDemoFallback(reviewerModel))
+            {
+                return await _fallbackGateway.ReviewQuestionsAsync(request, cancellationToken);
+            }
+
+            throw;
         }
     }
 
@@ -255,6 +286,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         try
         {
+            var mentorModel = NormalizeProviderModelId(request.MentorModel);
             var policy = await _codeMentorPolicyService.GetPolicyAsync(cancellationToken);
             var rubric = await _rubricCatalogService.GetCodeMentorRubricAsync(cancellationToken);
             var combinedCode = CombineSourceFiles(request.SourceFiles, request.Code);
@@ -269,7 +301,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
                 ["source_files_json"] = JsonSerializer.Serialize(request.SourceFiles ?? Array.Empty<CodeFile>())
             }, cancellationToken);
 
-            var response = await GenerateTextAsync(request.MentorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "code-mentor", cancellationToken);
+            var response = await GenerateTextAsync(mentorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "code-mentor", cancellationToken);
             using var document = JsonDocument.Parse(ExtractJsonObject(response));
             var root = document.RootElement;
             return new MentorFeedback(
@@ -290,11 +322,11 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
                     ? confidence
                     : 0.6m,
                 root.TryGetProperty("complexity", out var complexityElement) ? complexityElement.GetString() : null,
-                request.MentorModel);
+                mentorModel);
         }
         catch (Exception ex)
         {
-            RecordErrorSnapshot("code-mentor", request.MentorModel, ex);
+            RecordErrorSnapshot("code-mentor", NormalizeProviderModelId(request.MentorModel), ex);
             return await _fallbackGateway.MentorCodeAsync(request, cancellationToken);
         }
     }
@@ -663,6 +695,11 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             return null;
         }
 
+        if (LooksLikePlaceholderQuestion(title, description))
+        {
+            return null;
+        }
+
         if (type.Equals("FE", StringComparison.OrdinalIgnoreCase))
         {
             var options = question.Options?
@@ -678,6 +715,11 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             var explanation = SanitizeNullableText(question.Explanation);
 
             if (options.Count < 2)
+            {
+                return null;
+            }
+
+            if (options.Any(LooksLikePlaceholderOption))
             {
                 return null;
             }
@@ -786,6 +828,38 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     private static string NormalizeQuestionType(string questionType)
         => questionType.Trim().Equals("PE", StringComparison.OrdinalIgnoreCase) ? "PE" : "FE";
 
+    private static string NormalizeProviderModelId(string model)
+    {
+        var value = model?.Trim() ?? string.Empty;
+        if (value.StartsWith("models/", StringComparison.OrdinalIgnoreCase))
+        {
+            value = value["models/".Length..];
+        }
+
+        return value;
+    }
+
+    private static string BuildQuestionSubjectFocus(string subject, string questionType)
+    {
+        var normalizedType = NormalizeQuestionType(questionType);
+        return subject.Trim().ToUpperInvariant() switch
+        {
+            "C" when normalizedType == "FE" => "Stay within introductory C programming only. Prioritize variables, data types, operators, conditions, loops, arrays, functions, basic pointers, input-output, and direct code tracing only when those concepts appear in the chunks.",
+            "C" => "Stay within introductory C practical programming only. Generate implementation tasks about loops, conditions, arrays, functions, strings, simple validation, and basic pointers only when grounded in the chunks. Do not drift into Java, OOP, frameworks, or system programming.",
+            "JAVA_OOP" when normalizedType == "FE" => "Stay within Java OOP fundamentals only. Prioritize class, object, constructor, field, method, encapsulation, inheritance, polymorphism, access modifiers, and short code tracing only when grounded in the chunks.",
+            "JAVA_OOP" => "Stay within Java OOP practical tasks only. Generate coding tasks about class design, constructors, fields, methods, object state, encapsulation, inheritance basics, and method behavior only when grounded in the chunks. Do not drift into frameworks, databases, web APIs, or advanced libraries.",
+            "DSA_JAVA" when normalizedType == "FE" => "Stay within data structures and algorithms in Java only. Prioritize arrays, linked lists, stacks, queues, recursion, trees, graphs, searching, sorting, traversal, complexity reasoning, and operation tracing only when grounded in the chunks.",
+            "DSA_JAVA" => "Stay within DSA in Java practical tasks only. Generate coding tasks about data-structure operations, traversal, searching, sorting, recursion, and standard algorithmic reasoning only when grounded in the chunks. Do not drift into unrelated enterprise Java or unsupported advanced topics.",
+            _ when normalizedType == "FE" => "Stay strictly inside the concepts explicitly present in the chunks and keep the item academically precise.",
+            _ => "Stay strictly inside the implementation concepts explicitly present in the chunks and keep the task academically precise."
+        };
+    }
+
+    private static bool ShouldAllowDemoFallback(string model)
+        => model.Contains("demo", StringComparison.OrdinalIgnoreCase)
+           || model.Contains("mock", StringComparison.OrdinalIgnoreCase)
+           || model.Contains("test-only", StringComparison.OrdinalIgnoreCase);
+
     private static string SanitizeText(string? value)
         => (value ?? string.Empty).Trim();
 
@@ -793,6 +867,26 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
     {
         var sanitized = SanitizeText(value);
         return string.IsNullOrWhiteSpace(sanitized) ? null : sanitized;
+    }
+
+    private static bool LooksLikePlaceholderQuestion(string title, string description)
+    {
+        var normalizedTitle = title.Trim();
+        var normalizedDescription = description.Trim();
+        return normalizedTitle.StartsWith("FE Question", StringComparison.OrdinalIgnoreCase)
+            || normalizedTitle.StartsWith("PE Question", StringComparison.OrdinalIgnoreCase)
+            || normalizedTitle.StartsWith("Question ", StringComparison.OrdinalIgnoreCase)
+            || normalizedDescription.StartsWith("Based on the chunk content", StringComparison.OrdinalIgnoreCase)
+            || normalizedDescription.Contains("select the best explanation", StringComparison.OrdinalIgnoreCase)
+            || normalizedDescription.Contains("based on the provided chunk", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool LooksLikePlaceholderOption(string option)
+    {
+        var normalized = option.Trim();
+        return normalized.Contains("distractor option", StringComparison.OrdinalIgnoreCase)
+            || normalized.Contains("correct statement about", StringComparison.OrdinalIgnoreCase)
+            || normalized.EndsWith("placeholder", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string? ReadString(JsonElement element, string propertyName)

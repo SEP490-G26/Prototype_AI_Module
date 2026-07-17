@@ -169,17 +169,33 @@ public sealed class ProviderCatalogService : IProviderCatalogService
         return data.EnumerateArray()
             .Select(model =>
             {
-                var id = model.TryGetProperty("name", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
-                var baseModelId = model.TryGetProperty("baseModelId", out var baseIdElement) ? baseIdElement.GetString() ?? id : id;
+                var rawName = model.TryGetProperty("name", out var idElement) ? idElement.GetString() ?? string.Empty : string.Empty;
+                var baseModelId = model.TryGetProperty("baseModelId", out var baseIdElement) ? baseIdElement.GetString() ?? rawName : rawName;
                 var capabilities = model.TryGetProperty("supportedActions", out var actions) && actions.ValueKind == JsonValueKind.Array
                     ? actions.EnumerateArray().Select(static action => action.GetString() ?? string.Empty).Where(static action => !string.IsNullOrWhiteSpace(action)).ToList()
                     : [];
+                var id = NormalizeGeminiModelId(baseModelId);
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    id = NormalizeGeminiModelId(rawName);
+                }
 
                 return new ProviderModelInfo(id, baseModelId, capabilities);
             })
             .Where(static model => !string.IsNullOrWhiteSpace(model.Id))
             .OrderBy(static model => model.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static string NormalizeGeminiModelId(string? model)
+    {
+        var value = model?.Trim() ?? string.Empty;
+        if (value.StartsWith("models/", StringComparison.OrdinalIgnoreCase))
+        {
+            value = value["models/".Length..];
+        }
+
+        return value;
     }
 
     private static IReadOnlyList<ProviderModelInfo> ParseCohereModels(string payload)

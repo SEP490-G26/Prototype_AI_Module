@@ -647,6 +647,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             throw new InvalidOperationException("Generation + Review requires at least one chunk. Import chunk JSON from Embedding + Tagging or provide a non-empty chunks array.");
         }
 
+        var questionRubric = await _rubricCatalogService.GetQuestionReviewRubricAsync(request.Subject, request.QuestionType, cancellationToken);
         var stageLogs = new List<PipelineStageLog>();
         var usageLogs = new List<AIUsageLogEntry>();
         IReadOnlyList<GeneratedQuestion> questions = [];
@@ -774,6 +775,17 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 };
             }
 
+            var ruleBasedReview = BuildRuleBasedQuestionReview(
+                request.Subject,
+                request.QuestionType,
+                request.Difficulty,
+                questions,
+                request.Chunks,
+                questionRubric,
+                schemaMapping,
+                difficultyAlignment);
+            review = MergeReviewDecisions(review, ruleBasedReview);
+
             var reviewCost = request.Mode == GenerationReviewMode.SingleAgent
                 ? new TokenCostBreakdown(0, 0, 0, 0, 0, 0)
                 : ResolveStageCost("question-review", reviewerModel, JsonSerializer.Serialize(questions).Length, JsonSerializer.Serialize(review).Length, "question-review");
@@ -814,9 +826,48 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                             request.Mode,
                             request.Chunks,
                             questions
-                        },
+                    },
                         review)));
             }
+            var ruleReviewCost = new TokenCostBreakdown(0, 0, 0, 0, 0, 0);
+            stageLogs.Add(CreateStageLog(
+                $"question-rule-review-attempt-{attempt}",
+                RunStatus.Completed,
+                ruleReviewCost,
+                new Dictionary<string, string>
+                {
+                    ["review_status"] = ruleBasedReview.ReviewStatus,
+                    ["issues_count"] = ruleBasedReview.Issues.Count.ToString(),
+                    ["score"] = ruleBasedReview.Score.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["schema_valid"] = ruleBasedReview.SchemaValid.ToString(),
+                    ["content_grounded"] = ruleBasedReview.ContentGrounded.ToString()
+                },
+                "system",
+                "rule-based"));
+            usageLogs.Add(CreateUsageLog(
+                triggeredBy: request.UserId,
+                agentId: "AI_RuleReviewer",
+                pipelineRunId: pipelineRunId,
+                stageName: "question_rule_review",
+                attemptIndex: attempt,
+                provider: "system",
+                modelName: "rule-based",
+                cost: ruleReviewCost,
+                status: ruleBasedReview.ReviewStatus,
+                payloadData: new AIUsageLogPayload(
+                    "generation_review_rule_based",
+                    request.Subject,
+                    request.QuestionType,
+                    request.Difficulty,
+                    ruleBasedReview.ReviewStatus,
+                    new
+                    {
+                        request.Mode,
+                        request.Chunks,
+                        questions,
+                        rubric = questionRubric
+                    },
+                    ruleBasedReview)));
 
             if (!review.NeedsRevision && review.ReviewStatus.Equals("accepted", StringComparison.OrdinalIgnoreCase))
             {
@@ -1057,6 +1108,372 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
         var usageLogs = ingestion.UsageLogs.Concat(generationReview.UsageLogs).ToList();
         return new FullPipelineResult(ingestion, generationReview, usageLogs, SumCosts([ingestion.Totals, generationReview.Totals]));
+    }
+
+    private static ReviewDecision MergeReviewDecisions(ReviewDecision baseReview, ReviewDecision ruleBasedReview)
+    {
+        var issues = baseReview.Issues
+            .Concat(ruleBasedReview.Issues.Select(static issue => $"[RuleBased] {issue}"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var suggestions = baseReview.Suggestions
+            .Concat(ruleBasedReview.Suggestions.Select(static item => $"[RuleBased] {item}"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var schemaValid = baseReview.SchemaValid && ruleBasedReview.SchemaValid;
+        var contentGrounded = baseReview.ContentGrounded && ruleBasedReview.ContentGrounded;
+        var needsRevision = baseReview.NeedsRevision || ruleBasedReview.NeedsRevision;
+        var accepted = !needsRevision && schemaValid && contentGrounded
+            && baseReview.ReviewStatus.Equals("accepted", StringComparison.OrdinalIgnoreCase)
+            && ruleBasedReview.ReviewStatus.Equals("accepted", StringComparison.OrdinalIgnoreCase);
+
+        return baseReview with
+        {
+            ReviewStatus = accepted ? "accepted" : "needs_revision",
+            Issues = issues,
+            Suggestions = suggestions,
+            Score = Math.Min(baseReview.Score, ruleBasedReview.Score),
+            SchemaValid = schemaValid,
+            ContentGrounded = contentGrounded,
+            NeedsRevision = needsRevision
+        };
+    }
+
+    private static ReviewDecision BuildRuleBasedQuestionReview(
+        string subject,
+        string questionType,
+        string requestedDifficulty,
+        IReadOnlyList<GeneratedQuestion> questions,
+        IReadOnlyList<ChunkContextDto> chunks,
+        IReadOnlyDictionary<string, object> rubric,
+        QuestionSchemaMappingResult schemaMapping,
+        DifficultyAlignmentResult difficultyAlignment)
+    {
+        var issues = new List<string>();
+        var suggestions = new List<string>();
+        var expectedType = questionType.Trim().Equals("PE", StringComparison.OrdinalIgnoreCase) ? "PE" : "FE";
+        var chunkById = chunks.ToDictionary(static chunk => chunk.ChunkId, StringComparer.OrdinalIgnoreCase);
+        var normalizedTitles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var normalizedDescriptions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (questions.Count == 0)
+        {
+            issues.Add("No questions were produced.");
+        }
+
+        if (!schemaMapping.IsValid)
+        {
+            issues.AddRange(schemaMapping.Issues.Select(static item => item.Message));
+        }
+
+        for (var index = 0; index < questions.Count; index++)
+        {
+            var question = questions[index];
+            var prefix = $"Question {index + 1}";
+            var titleKey = NormalizeComparableText(question.Title);
+            var descriptionKey = NormalizeComparableText(question.Description);
+            if (!normalizedTitles.Add(titleKey))
+            {
+                issues.Add($"{prefix}: duplicated title detected.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(descriptionKey) && !normalizedDescriptions.Add(descriptionKey))
+            {
+                issues.Add($"{prefix}: duplicated description detected.");
+            }
+
+            if (!string.Equals(question.Type, expectedType, StringComparison.OrdinalIgnoreCase))
+            {
+                issues.Add($"{prefix}: question type '{question.Type}' does not match requested type '{expectedType}'.");
+            }
+
+            if (LooksLikePlaceholder(question.Title) || LooksLikePlaceholder(question.Description))
+            {
+                issues.Add($"{prefix}: title or description still looks template-based instead of chunk-based.");
+            }
+
+            var sourceChunkIds = question.SourceChunkIds?
+                .Where(static item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList() ?? [];
+            if (sourceChunkIds.Count == 0)
+            {
+                issues.Add($"{prefix}: source_chunk_ids must not be empty.");
+                continue;
+            }
+
+            var sourceChunks = sourceChunkIds
+                .Where(chunkById.ContainsKey)
+                .Select(id => chunkById[id])
+                .ToList();
+            if (sourceChunks.Count != sourceChunkIds.Count)
+            {
+                issues.Add($"{prefix}: some source_chunk_ids do not exist in the provided chunk set.");
+            }
+
+            var sourceText = string.Join("\n", sourceChunks.Select(static chunk => $"{chunk.SectionTitle} {chunk.ContentText}".Trim()));
+            var sourceTags = sourceChunks.SelectMany(static chunk => chunk.TopicTags).Where(static tag => !string.IsNullOrWhiteSpace(tag)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var questionTags = question.TopicTags.Where(static tag => !string.IsNullOrWhiteSpace(tag)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (questionTags.Count > 0 && sourceTags.Count > 0 && !questionTags.Overlaps(sourceTags))
+            {
+                issues.Add($"{prefix}: topic_tags do not overlap with the cited chunk tags.");
+            }
+
+            var groundingSignal = MeasureGroundingSignal(question, expectedType, sourceText, sourceTags);
+            if (!groundingSignal.IsGrounded)
+            {
+                issues.Add($"{prefix}: weak grounding to the cited chunks. Shared chunk-specific keywords were too low.");
+                suggestions.Add($"{prefix}: anchor the item to explicit terms, behaviors, or examples that appear in the cited chunks.");
+            }
+
+            if (ContainsSubjectLeakage(subject, question, sourceText))
+            {
+                issues.Add($"{prefix}: content appears to drift into another subject or language ecosystem not supported by the cited chunks.");
+            }
+
+            if (expectedType == "FE")
+            {
+                ValidateFeQuestion(question, prefix, issues, suggestions);
+            }
+            else
+            {
+                ValidatePeQuestion(subject, question, prefix, issues, suggestions);
+            }
+        }
+
+        if (!difficultyAlignment.IsAligned)
+        {
+            issues.Add($"Difficulty mismatch: requested '{requestedDifficulty}' but rule-based alignment estimated '{difficultyAlignment.EstimatedDifficulty}'.");
+        }
+
+        if (issues.Count == 0 && TryReadArrayStrings(rubric, "acceptance_rules").Count == 0)
+        {
+            suggestions.Add("No rubric acceptance rules were loaded; rely on schema, grounding, and difficulty checks.");
+        }
+
+        var score = Math.Max(0.05m, Math.Min(1.0m, 1.0m - (issues.Count * 0.12m) - (suggestions.Count * 0.03m)));
+        var accepted = issues.Count == 0;
+        return new ReviewDecision(
+            accepted ? "accepted" : "needs_revision",
+            issues,
+            suggestions.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            score,
+            accepted && schemaMapping.IsValid,
+            accepted,
+            !accepted,
+            "rule-based");
+    }
+
+    private static void ValidateFeQuestion(GeneratedQuestion question, string prefix, List<string> issues, List<string> suggestions)
+    {
+        var options = question.Options?.Where(static item => !string.IsNullOrWhiteSpace(item)).ToList() ?? [];
+        if (options.Count != 4)
+        {
+            issues.Add($"{prefix}: FE must contain exactly 4 options.");
+        }
+
+        var normalizedBodies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var validLabels = new HashSet<string>(["A", "B", "C", "D"], StringComparer.OrdinalIgnoreCase);
+        foreach (var option in options)
+        {
+            var parts = option.Split('.', 2, StringSplitOptions.TrimEntries);
+            if (parts.Length < 2 || !validLabels.Contains(parts[0]))
+            {
+                issues.Add($"{prefix}: FE options must use labels A-D.");
+                continue;
+            }
+
+            if (!normalizedBodies.Add(NormalizeComparableText(parts[1])))
+            {
+                issues.Add($"{prefix}: FE contains duplicated option bodies.");
+            }
+
+            if (LooksLikePlaceholder(option))
+            {
+                issues.Add($"{prefix}: FE contains placeholder option text.");
+            }
+        }
+
+        var answers = question.CorrectAnswer?.Where(static item => !string.IsNullOrWhiteSpace(item)).ToList() ?? [];
+        if (answers.Count != 1)
+        {
+            issues.Add($"{prefix}: FE must contain exactly one correct answer label.");
+        }
+        else if (!validLabels.Contains(answers[0]))
+        {
+            issues.Add($"{prefix}: FE correct_answer must contain labels only, for example A or B.");
+        }
+
+        if (string.IsNullOrWhiteSpace(question.Explanation) || question.Explanation.Trim().Length < 24)
+        {
+            issues.Add($"{prefix}: FE explanation is too short to justify the answer.");
+            suggestions.Add($"{prefix}: explain why the correct option is supported by the chunk and why the distractors are wrong.");
+        }
+    }
+
+    private static void ValidatePeQuestion(string subject, GeneratedQuestion question, string prefix, List<string> issues, List<string> suggestions)
+    {
+        var skeleton = question.SkeletonCode?.Where(static item => !string.IsNullOrWhiteSpace(item.FileName) && !string.IsNullOrWhiteSpace(item.Content)).ToList() ?? [];
+        var solution = question.SolutionCode?.Where(static item => !string.IsNullOrWhiteSpace(item.FileName) && !string.IsNullOrWhiteSpace(item.Content)).ToList() ?? [];
+        var testCases = question.TestCases?.ToList() ?? [];
+
+        if (skeleton.Count == 0)
+        {
+            issues.Add($"{prefix}: PE must contain skeleton_code.");
+        }
+
+        if (solution.Count == 0)
+        {
+            issues.Add($"{prefix}: PE must contain solution_code.");
+        }
+
+        if (testCases.Count < 2)
+        {
+            issues.Add($"{prefix}: PE should contain at least 2 test cases.");
+        }
+
+        if (!testCases.Any(static item => !item.IsHidden))
+        {
+            issues.Add($"{prefix}: PE should contain at least one visible test case.");
+        }
+
+        if (!HasExpectedFileExtension(subject, skeleton) || !HasExpectedFileExtension(subject, solution))
+        {
+            issues.Add($"{prefix}: code file extensions do not match the subject language expectations.");
+        }
+
+        if (skeleton.Count > 0 && solution.Count > 0)
+        {
+            var combinedSkeleton = string.Join("\n", skeleton.Select(static item => item.Content));
+            var combinedSolution = string.Join("\n", solution.Select(static item => item.Content));
+            if (NormalizeComparableText(combinedSkeleton) == NormalizeComparableText(combinedSolution))
+            {
+                issues.Add($"{prefix}: skeleton_code and solution_code are effectively identical.");
+            }
+        }
+
+        if (!question.Description.Contains("input", StringComparison.OrdinalIgnoreCase)
+            && !question.Description.Contains("output", StringComparison.OrdinalIgnoreCase)
+            && !question.Description.Contains("return", StringComparison.OrdinalIgnoreCase)
+            && !question.Description.Contains("write a program", StringComparison.OrdinalIgnoreCase)
+            && !question.Description.Contains("implement", StringComparison.OrdinalIgnoreCase))
+        {
+            suggestions.Add($"{prefix}: make the PE description more explicit about the required program behavior.");
+        }
+    }
+
+    private static bool HasExpectedFileExtension(string subject, IReadOnlyList<CodeFile> files)
+    {
+        if (files.Count == 0)
+        {
+            return false;
+        }
+
+        return subject.Trim().ToUpperInvariant() switch
+        {
+            "C" => files.All(static file => file.FileName.EndsWith(".c", StringComparison.OrdinalIgnoreCase) || file.FileName.EndsWith(".h", StringComparison.OrdinalIgnoreCase)),
+            _ => files.All(static file => file.FileName.EndsWith(".java", StringComparison.OrdinalIgnoreCase))
+        };
+    }
+
+    private static (bool IsGrounded, int SharedKeywordCount) MeasureGroundingSignal(
+        GeneratedQuestion question,
+        string expectedType,
+        string sourceText,
+        IReadOnlySet<string> sourceTags)
+    {
+        var questionText = expectedType == "FE"
+            ? string.Join(" ", new[]
+            {
+                question.Title,
+                question.Description,
+                string.Join(" ", question.Options ?? []),
+                question.Explanation ?? string.Empty,
+                string.Join(" ", question.TopicTags)
+            })
+            : string.Join(" ", new[]
+            {
+                question.Title,
+                question.Description,
+                string.Join(" ", question.TopicTags),
+                string.Join(" ", question.TestCases?.Select(static item => $"{item.Input} {item.ExpectedOutput}") ?? [])
+            });
+
+        var questionKeywords = ExtractKeywords(questionText);
+        var sourceKeywords = ExtractKeywords($"{sourceText} {string.Join(" ", sourceTags)}");
+        var shared = questionKeywords.Intersect(sourceKeywords, StringComparer.OrdinalIgnoreCase).Count();
+        var minimumShared = expectedType == "FE" ? 2 : 3;
+        var topicOverlap = question.TopicTags.Any(tag => sourceTags.Contains(tag));
+        return (topicOverlap || shared >= minimumShared, shared);
+    }
+
+    private static bool ContainsSubjectLeakage(string subject, GeneratedQuestion question, string sourceText)
+    {
+        var combined = $"{question.Title} {question.Description} {string.Join(" ", question.Options ?? [])} {string.Join(" ", question.TopicTags)}".ToLowerInvariant();
+        var sourceLower = sourceText.ToLowerInvariant();
+        return subject.Trim().ToUpperInvariant() switch
+        {
+            "C" => ContainsUnexpectedAny(combined, sourceLower, ["class", "object", "extends", "implements", "system.out", "println", "arraylist", "linkedlist"]),
+            "JAVA_OOP" => ContainsUnexpectedAny(combined, sourceLower, ["#include", "printf", "scanf", "malloc", "free", "pointer arithmetic", "->"]),
+            "DSA_JAVA" => ContainsUnexpectedAny(combined, sourceLower, ["#include", "printf", "scanf", "malloc", "free", "pointer arithmetic", "struct "]),
+            _ => false
+        };
+    }
+
+    private static bool ContainsUnexpectedAny(string candidateText, string sourceText, IReadOnlyList<string> tokens)
+        => tokens.Any(token => candidateText.Contains(token, StringComparison.OrdinalIgnoreCase)
+                               && !sourceText.Contains(token, StringComparison.OrdinalIgnoreCase));
+
+    private static bool LooksLikePlaceholder(string? text)
+    {
+        var value = text?.Trim() ?? string.Empty;
+        return string.IsNullOrWhiteSpace(value)
+            || value.StartsWith("FE Question", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("PE Question", StringComparison.OrdinalIgnoreCase)
+            || value.StartsWith("Question ", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("based on the chunk content", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("distractor option", StringComparison.OrdinalIgnoreCase)
+            || value.Contains("correct statement about", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeComparableText(string? value)
+    {
+        var raw = value?.Trim().ToLowerInvariant() ?? string.Empty;
+        return string.Concat(raw.Select(ch => char.IsLetterOrDigit(ch) || char.IsWhiteSpace(ch) ? ch : ' '))
+            .Replace("  ", " ", StringComparison.Ordinal)
+            .Trim();
+    }
+
+    private static HashSet<string> ExtractKeywords(string text)
+    {
+        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "the", "and", "that", "with", "from", "this", "which", "into", "about", "there", "their", "would",
+            "should", "could", "while", "using", "where", "what", "when", "your", "have", "has", "had",
+            "into", "than", "them", "then", "true", "false", "null", "void", "main", "program", "question",
+            "write", "based", "chunk", "content", "best", "select", "correct", "option", "answer", "explain"
+        };
+
+        var normalized = new string(text.Select(ch => char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : ' ').ToArray());
+        return normalized
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(token => token.Length >= 3 && !stopWords.Contains(token))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static IReadOnlyList<string> TryReadArrayStrings(IReadOnlyDictionary<string, object> source, string key)
+    {
+        if (!source.TryGetValue(key, out var value) || value is null)
+        {
+            return [];
+        }
+
+        return value switch
+        {
+            JsonElement element when element.ValueKind == JsonValueKind.Array => element.EnumerateArray().Select(static item => item.ToString()).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList(),
+            IEnumerable<object> items => items.Select(static item => item?.ToString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList(),
+            _ => []
+        };
     }
 
     private static TokenCostBreakdown SumCosts(IEnumerable<TokenCostBreakdown> items)
