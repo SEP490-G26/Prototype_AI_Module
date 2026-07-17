@@ -1,0 +1,191 @@
+{
+  "Summary": {
+    "RunId": "gatekeeper-20260716102227680-7b9525a3e2f34d7f820594a2acf729a",
+    "FunctionName": "gatekeeper",
+    "RouteKey": "gatekeeper",
+    "RecordedAt": "2026-07-16T10:22:27.6804412+00:00",
+    "RequestType": "GatekeeperRequest",
+    "ResponseType": "GatekeeperResult",
+    "Status": "unsupported",
+    "ModelSummary": "Model=gpt-5.4-mini",
+    "ModelFields": {
+      "Provider": "openai",
+      "PrimaryModel": "gpt-5.4-mini",
+      "GeneratorModel": null,
+      "ReviewerModel": null,
+      "EmbeddingModel": null,
+      "TaggingModel": null,
+      "VisionModel": null,
+      "MentorModel": null
+    },
+    "UsageSource": "estimated",
+    "Error": null,
+    "Totals": {
+      "InputTokens": 1886,
+      "OutputTokens": 97,
+      "InputCostUsd": 0.000283,
+      "OutputCostUsd": 0.000058,
+      "TotalCostUsd": 0.000341,
+      "LatencyMs": 3569.4,
+      "UsageCapture": {
+        "UsageSource": "estimated",
+        "CacheInputTokens": null,
+        "CacheReadTokens": null,
+        "ReasoningTokens": null,
+        "RawUsageJson": null
+      },
+      "Error": null
+    },
+    "FileName": "gatekeeper-20260716102227680-7b9525a3e2f34d7f820594a2acf729a.json"
+  },
+  "Request": {
+    "UserId": "user-demo",
+    "FileName": "Overall Design Report - APE Project.docx",
+    "Subject": "C",
+    "Language": "en",
+    "RawContent": "B\u1EA2N THI\u1EBET K\u1EBE T\u1ED4NG TH\u1EC2 D\u1EF0 \u00C1N (MASTER BLUEPRINT V3.2)\nT\u00EAn d\u1EF1 \u00E1n: AI-POWERED EXAMINATION AND PROGRAMMING PRACTICE PLATFORM FOR FPT UNIVERSITY (ExamHub)\nT\u00E0i li\u1EC7u n\u00E0y d\u00E0nh cho: System Architects, Developers, H\u1ED9i \u0111\u1ED3ng Ph\u1EA3n bi\u1EC7n, v\u00E0 c\u1EA5p Context cho AI Agents.\nPH\u1EA6N 1: T\u1ED4NG QUAN D\u1EF0 \u00C1N \u0026 V\u1EA4N \u0110\u1EC0 C\u1EA6N GI\u1EA2I QUY\u1EBET\nV\u1EA5n \u0111\u1EC1 th\u1EF1c tr\u1EA1ng: Sinh vi\u00EAn FPT thi\u1EBFu n\u1EC1n t\u1EA3ng \u00F4n luy\u1EC7n k\u1EBFt h\u1EE3p PE (Th\u1EF1c h\u00E0nh Code) v\u00E0 FE (Tr\u1EAFc nghi\u1EC7m). C\u00E1c h\u1EC7 th\u1ED1ng hi\u1EC7n t\u1EA1i (CMS, PEA) ch\u1EC9 t\u1EADp trung v\u00E0o \u0022Ch\u1EA5m \u0110i\u1EC3m\u0022 (Scoring), kh\u00F4ng ch\u1EC9 ra \u0111\u01B0\u1EE3c l\u1ED7 h\u1ED5ng t\u01B0 duy v\u00E0 thi\u1EBFu t\u00EDnh h\u01B0\u1EDBng d\u1EABn.\nGi\u1EA3i ph\u00E1p (ExamHub): M\u1ED9t h\u1EC7 sinh th\u00E1i EdTech s\u1EED d\u1EE5ng AI l\u00E0m l\u00F5i. Chuy\u1EC3n d\u1ECBch t\u1EEB vi\u1EC7c \u0022Ch\u1EA5m \u0111i\u1EC3m\u0022 sang \u0022Ph\u00E2n t\u00EDch S\u01B0 ph\u1EA1m\u0022 (Pedagogical Analysis), cung c\u1EA5p m\u00F4i tr\u01B0\u1EDDng th\u1EF1c h\u00E0nh kh\u00E9p k\u00EDn, c\u00E1 nh\u00E2n h\u00F3a t\u00E0i li\u1EC7u v\u00E0 Gamification.\nPH\u1EA6N 2: CHI TI\u1EBET C\u00C1C LU\u1ED2NG NGHI\u1EC6P V\u1EE4 AI (AI PIPELINES)\n2.1. Quy tr\u00ECnh N\u1EA1p d\u1EEF li\u1EC7u (Data Ingestion \u0026 Tagging)\nNhi\u1EC7m v\u1EE5: X\u1EED l\u00FD t\u00E0i li\u1EC7u (Syllabus chung c\u1EE7a tr\u01B0\u1EDDng ho\u1EB7c t\u00E0i li\u1EC7u c\u00E1 nh\u00E2n c\u1EE7a sinh vi\u00EAn).\nC\u01A1 ch\u1EBF: AI ph\u00E2n t\u00EDch ng\u1EEF ngh\u0129a, b\u0103m nh\u1ECF t\u00E0i li\u1EC7u (Chunking), t\u1EF1 \u0111\u1ED9ng d\u00E1n nh\u00E3n (Auto-tagging: vd #Array, #Pointer) v\u00E0 bi\u1EBFn \u0111\u1ED5i th\u00E0nh vector (Embedding) \u0111\u1EC3 l\u01B0u v\u00E0o Vector Database.\n2.2. Quy tr\u00ECnh AI Sinh \u0110\u1EC1 PE (PE Generation - Hybrid Validation)\n\u00C1p d\u1EE5ng c\u01A1 ch\u1EBF Validation b\u1EB1ng Judge0 (H\u1EC7 th\u1ED1ng ch\u1EA5m t\u1EF1 \u0111\u1ED9ng) \u0111\u1EC3 tr\u00E1nh AI t\u00EDnh sai Output. C\u00F3 2 tr\u01B0\u1EDDng h\u1EE3p sinh \u0111\u1EC1:\nTH 1 - S\u1EED d\u1EE5ng d\u1EEF li\u1EC7u H\u1EC7 th\u1ED1ng: AI query v\u00E0o Vector DB chung. Sinh ra JSON (\u0110\u1EC1 b\u00E0i, Skeleton, Solution, Test Cases). Backend \u0111\u1EA9y Solution v\u00E0 Input v\u00E0o API c\u1EE7a Judge0 ch\u1EA1y th\u1EED. Output kh\u1EDBp -\u003E L\u01B0u DB. L\u1ED7i -\u003E B\u1EAFt AI sinh l\u1EA1i.\nTH 2 - S\u1EED d\u1EE5ng t\u00E0i li\u1EC7u C\u00E1 nh\u00E2n (BYOS): AI query v\u00E0o Vector DB c\u00E1 nh\u00E2n c\u1EE7a user. Qu\u00E1 tr\u00ECnh sinh \u0111\u1EC1 t\u01B0\u01A1ng t\u1EF1, k\u1EBFt qu\u1EA3 l\u01B0u v\u1EDBi c\u1EDD visibility: \u0022Private\u0022.\n2.3. Quy tr\u00ECnh AI Sinh \u0110\u1EC1 FE (FE Generation - Self-Correction)\nV\u1EA5n \u0111\u1EC1: AI d\u1EC5 b\u1ECB \u0022\u1EA3o gi\u00E1c\u0022, sinh \u0111\u00E1p \u00E1n m\u01A1 h\u1ED3.\nGi\u1EA3i ph\u00E1p 3 L\u1EDBp: 1. RAG Strictness: \u00C9p AI ch\u1EC9 d\u00F9ng ki\u1EBFn th\u1EE9c trong Vector DB. 2. Actor-Critic Model: Agent 1 sinh c\u00E2u h\u1ECFi, Agent 2 ph\u1EA3n bi\u1EC7n r\u00E0 so\u00E1t \u0111\u1ED9 nhi\u1EC5u c\u1EE7a \u0111\u00E1p \u00E1n sai. 3. Structured Output: Tr\u1EA3 v\u1EC1 JSON chu\u1EA9n k\u00E8m gi\u1EA3i th\u00EDch.\n2.4. Quy tr\u00ECnh AI Code Mentor (T\u1ED3n t\u1EA1i song song c\u00F9ng M\u00E1y Ch\u1EA5m)\nQuy tr\u00ECnh Song song:\nKhi sinh vi\u00EAn b\u1EA5m \u0022Run Code\u0022 ho\u1EB7c \u0022Submit\u0022, h\u1EC7 th\u1ED1ng m\u00E1y ch\u1EA5m Judge0 l\u1EADp t\u1EE9c th\u1EF1c thi code, tr\u1EA3 v\u1EC1 \u0111i\u1EC3m s\u1ED1 v\u00E0 Log l\u1ED7i th\u00F4 (stderr). Sinh vi\u00EAn nh\u00ECn th\u1EA5y k\u1EBFt qu\u1EA3 Pass/Fail ngay l\u1EADp t\u1EE9c.\nN\u1EBFu Judge0 b\u00E1o Fail, h\u1EC7 th\u1ED1ng k\u00EDch ho\u1EA1t lu\u1ED3ng ph\u1EE5: \u0110\u1EA9y [Code \u002B Log L\u1ED7i Judge0 \u002B \u0110\u1EC1 b\u00E0i] cho AI Mentor.\n\u0110\u1EA7u ra: C\u1EA5m AI \u0111\u01B0a code gi\u1EA3i. AI \u0111\u00F3ng vai \u0022M\u00E1y ph\u00E1t hi\u1EC7n t\u01B0 duy sai\u0022, d\u1EF1a v\u00E0o Log c\u1EE7a Judge0 \u0111\u1EC3 ph\u00E2n t\u00EDch logic, ch\u1EC9 ra d\u00F2ng l\u1ED7i v\u00E0 \u0111\u1EB7t c\u00E2u h\u1ECFi g\u1EE3i m\u1EDF cho sinh vi\u00EAn.\n2.5. Quy tr\u00ECnh AI Deep Analytics (Ph\u00E2n t\u00EDch L\u1ED7 h\u1ED5ng)\nC\u01A1 ch\u1EBF: AI KH\u00D4NG \u0111\u1ECDc d\u1EEF li\u1EC7u r\u00E1c. H\u00E0ng \u0111\u00EAm, script th\u1ED1ng k\u00EA gom c\u1EE5m c\u00E1c b\u1EA3n ghi n\u1ED9p b\u00E0i cu\u1ED1i c\u00F9ng (final_submissions) th\u00E0nh c\u00E1c con s\u1ED1 th\u00F4 (vd: M\u1EA3ng Array - Winrate 40%).\n\u0110\u1EA7u ra: AI \u0111\u1ECDc th\u00F4ng s\u1ED1 th\u00F4 n\u00E0y v\u00E0 sinh ra b\u00E1o c\u00E1o c\u00E1 nh\u00E2n h\u00F3a k\u00E8m N\u00FAt h\u00E0nh \u0111\u1ED9ng (Call-to-Action) h\u01B0\u1EDBng d\u1EABn h\u1ECDc t\u1EADp.\nPH\u1EA6N 3: C\u00C1C CH\u1EBE \u0110\u1ED8 LUY\u1EC6N T\u1EACP (LEARNING MODES \u0026 WORKFLOWS)\n3.1. Ph\u00E2n h\u1EC7 PE (Th\u1EF1c h\u00E0nh Code)\nMode 1 - Practice (\u00D4n 1 c\u00E2u l\u1EBB t\u1EF1 do): Ch\u1ECDn 1 c\u00E2u l\u00E0m ngay. L\u01B0u nh\u00E1p b\u1EB1ng LocalStorage tr\u00ECnh duy\u1EC7t. B\u1EA5m Submit l\u01B0u th\u1EB3ng v\u00E0o Submissions.\nMode 2 - Practice Playlist (Nh\u00F3m nhi\u1EC1u c\u00E2u): Ch\u1ECDn nhi\u1EC1u c\u00E2u th\u00E0nh Tabs. Kh\u00F4ng t\u00EDnh gi\u1EDD. L\u01B0u nh\u00E1p ng\u1EA7m (Auto-save) v\u00E0o DB m\u1ED7i 30s \u0111\u1EC3 ch\u1ED1ng r\u1EDBt m\u1EA1ng. N\u1ED9p t\u1EEBng b\u00E0i ri\u00EAng l\u1EBB.\nMode 3 - Mock Test (Thi th\u1EED): \u0110\u1EC1 c\u00F3 c\u1EA5u tr\u00FAc, c\u00F3 \u0111\u1ED3ng h\u1ED3 \u0111\u1EBFm ng\u01B0\u1EE3c. H\u1EBFt gi\u1EDD -\u003E T\u1EF1 \u0111\u1ED9ng ch\u1ED1t b\u00E0i n\u1ED9p cu\u1ED1i c\u00F9ng c\u1EE7a t\u1EEBng c\u00E2u \u0111\u1EC3 t\u00EDnh \u0111i\u1EC3m t\u1ED5ng.\n3.2. Ph\u00E2n h\u1EC7 FE (Tr\u1EAFc nghi\u1EC7m - Giao di\u1EC7n UX/UI chu\u1EA9n Quizlet)\nNgu\u1ED3n d\u1EEF li\u1EC7u: C\u00E2u h\u1ECFi \u0111\u01B0\u1EE3c l\u1EA5y t\u1EEB QuestionsBank (do AI t\u1EA1o, Admin import, ho\u1EB7c Sinh vi\u00EAn t\u1EF1 n\u1EA1p) v\u00E0 gom th\u00E0nh c\u00E1c B\u1ED9 th\u1EBB (Study Sets).\nMode 1 - Flashcards (H\u1ECDc \u0026 Ghi nh\u1EDB):\nUX: Giao di\u1EC7n l\u1EADt th\u1EBB. M\u1EB7t tr\u01B0\u1EDBc l\u00E0 c\u00E2u h\u1ECFi, m\u1EB7t sau l\u00E0 \u0111\u00E1p \u00E1n v\u00E0 explanation. B\u00EAn d\u01B0\u1EDBi l\u00E0 list hi\u1EC3n th\u1ECB to\u00E0n b\u1ED9 c\u00E2u h\u1ECFi trong b\u1ED9 Set \u0111\u00F3.\nTracking: Kh\u00F4ng l\u01B0u \u0111i\u1EC3m s\u1ED1 kh\u1EAFt khe. H\u1EC7 th\u1ED1ng ch\u1EC9 tracking tr\u1EA1ng th\u00E1i c\u1EE7a t\u1EEBng th\u1EBB (v\u00ED d\u1EE5: Still learning hay Mastered) \u0111\u1EC3 x\u00E1c \u0111\u1ECBnh sinh vi\u00EAn \u0111\u00E3 h\u1ECDc Flashcard t\u1EDBi \u0111\u00E2u.\nMode 2 - Custom Test (Thi\u1EBFt l\u1EADp b\u00E0i thi t\u00F9y ch\u1EC9nh):\nUX: B\u1EA5m n\u00FAt \u0022Test\u0022, hi\u1EC3n th\u1ECB Popup Setup cho ph\u00E9p sinh vi\u00EAn t\u1EF1 do ch\u1ECDn S\u1ED1 l\u01B0\u1EE3ng c\u00E2u h\u1ECFi v\u00E0 D\u1EA1ng c\u00E2u h\u1ECFi (Multiple Choice, True/False...).\nLogic DB: H\u1EC7 th\u1ED1ng tr\u1ED9n \u0111\u1EC1 v\u00E0 hi\u1EC3n th\u1ECB theo setup c\u1EE7a sinh vi\u00EAn. Tr\u1EAFc nghi\u1EC7m xong b\u00E1o k\u1EBFt qu\u1EA3 ngay. TUY\u1EC6T \u0110\u1ED0I KH\u00D4NG l\u01B0u l\u1ECBch s\u1EED c\u00E1c b\u00E0i Test FE n\u00E0y v\u00E0o b\u1EA3ng Submissions \u0111\u1EC3 tr\u00E1nh r\u00E1c Database. Vi\u1EC7c test nh\u01B0 th\u1EBF n\u00E0o, \u0111\u01B0\u1EE3c bao nhi\u00EAu \u0111i\u1EC3m l\u00E0 quy\u1EC1n t\u1EF1 do t\u1EF1 ki\u1EC3m tra c\u1EE7a sinh vi\u00EAn.\nPH\u1EA6N 4: T\u00CDNH C\u00C1 NH\u00C2N H\u00D3A (BRING YOUR OWN SYLLABUS - BYOS)\nS\u1EF1 kh\u00E1c bi\u1EC7t c\u1ED1t l\u00F5i v\u1EDBi NotebookLM:\nNotebookLM ch\u1EC9 l\u00E0 n\u1EC1n t\u1EA3ng H\u1ECFi-\u0110\u00E1p Text thu\u1EA7n t\u00FAy. ExamHub cung c\u1EA5p t\u00EDnh n\u0103ng Personal Workspace: Khi sinh vi\u00EAn upload slide c\u1EE7a l\u1EDBp m\u00ECnh l\u00EAn, h\u1EC7 th\u1ED1ng c\u00F4 l\u1EADp d\u1EEF li\u1EC7u (Data Isolation). T\u1EEB t\u00E0i li\u1EC7u \u0111\u00F3, h\u1EC7 th\u1ED1ng sinh ra m\u00F4i tr\u01B0\u1EDDng th\u1EF1c h\u00E0nh kh\u00E9p k\u00EDn (c\u00F3 IDE g\u00F5 code qua Judge0, c\u00F3 Test cases \u1EA9n, Flashcards tr\u1EAFc nghi\u1EC7m) v\u00E0 t\u00EDnh \u0111i\u1EC3m Gamification -\u003E NotebookLM kh\u00F4ng th\u1EC3 l\u00E0m \u0111\u01B0\u1EE3c.\nPH\u1EA6N 5: KI\u1EBEN TR\u00DAC K\u1EF8 THU\u1EACT \u0026 DATABASE (TECH STACK)\nTech Stack: Frontend (React/Next.js \u002B Monaco Editor), Backend (Node.js/C# .NET).\nCore Execution Engine: S\u1EED d\u1EE5ng Judge0 (M\u00E3 ngu\u1ED3n m\u1EDF ch\u1EA1y tr\u00EAn Docker) \u0111\u1EC3 l\u00E0m l\u00F5i ch\u1EA5m code (Auto-Grader). \u0110\u1EA3m nh\u1EADn vi\u1EC7c compile, run, handle timeout, memory limits m\u1ED9t c\u00E1ch b\u1EA3o m\u1EADt v\u00E0 c\u00F4 l\u1EADp.\nDatabase (MongoDB - L\u00F5i NoSQL):\nKnowledgeChunks (Vector Search), Users (Profile, Gamification).\nQuestionsBank (B\u1EA3ng \u0111a h\u00ECnh: Ch\u1EE9a c\u1EA3 PE v\u00E0 FE. PE l\u01B0u d\u1EA1ng m\u1EA3ng \u0111a file cho Java).\nExams (V\u1ECF b\u1ECDc \u0110\u1EC1 thi PE. C\u00F3 created_by v\u00E0 visibility).\nExamSessions (Phi\u00EAn l\u00E0m b\u00E0i PE. C\u00F3 m\u1EA3ng final_submissions ch\u1ED1t s\u1ED5).\nSubmissions (Ch\u1EC9 t\u1EADp trung l\u01B0u l\u1ECBch s\u1EED l\u00E0m b\u00E0i PE. L\u01B0u c\u1EE9ng total_test_cases_snapshot v\u00E0 copy exam_id v\u00E0o th\u1EB3ng b\u1EA3ng \u0111\u1EC3 truy v\u1EA5n \u0111i\u1EC3m O(1)).\nUserAnalytics (L\u01B0u bi\u1EC3u \u0111\u1ED3 m\u1EA1ng nh\u1EC7n v\u00E0 AI Advice h\u1EB1ng \u0111\u00EAm).\nPH\u1EA6N 6: B\u00C0I TO\u00C1N KINH T\u1EBE, CHI PH\u00CD V\u00C0 \u0110\u1ED8 PH\u1EE8C T\u1EA0P (FEASIBILITY)\n1. \u0110\u00E1nh gi\u00E1 \u0111\u1ED9 ph\u1EE9c t\u1EA1p:\n\u0110\u00F2i h\u1ECFi k\u1EF9 thu\u1EADt cao trong vi\u1EC7c \u00E9p AI tr\u1EA3 v\u1EC1 chu\u1EA9n JSON (Structured Outputs) v\u00E0 thi\u1EBFt l\u1EADp API k\u1EBFt n\u1ED1i m\u01B0\u1EE3t m\u00E0 v\u1EDBi Judge0 \u0111\u1EC3 qu\u1EA3n l\u00FD ti\u1EBFn tr\u00ECnh ch\u1EA5m b\u00E0i.\n2. L\u1EF1a ch\u1ECDn M\u00F4 h\u00ECnh (Model Routing) \u0026 Chi ph\u00ED Token:\nH\u1EC7 th\u1ED1ng KH\u00D4NG d\u00F9ng 1 lo\u1EA1i AI cho m\u1ECDi vi\u1EC7c, m\u00E0 \u00E1p d\u1EE5ng c\u01A1 ch\u1EBF \u0111i\u1EC1u h\u01B0\u1EDBng (Routing) \u0111\u1EC3 c\u00E2n b\u1EB1ng gi\u1EEFa S\u1EE9c m\u1EA1nh, T\u1ED1c \u0111\u1ED9 v\u00E0 Chi ph\u00ED:\nT\u00E1c v\u1EE5 T\u1ED1c \u0111\u1ED9 cao \u0026 Chi ph\u00ED r\u1EBB (D\u00F9ng Gemini 1.5 Flash ho\u1EB7c GPT-4o-mini): D\u00F9ng \u0111\u1EC3 Auto-Tagging, b\u0103m nh\u1ECF t\u00E0i li\u1EC7u (Chunking), t\u1EA1o \u0111\u1EC1 FE tr\u1EAFc nghi\u1EC7m. \u01AFu \u0111i\u1EC3m: Ph\u1EA3n h\u1ED3i si\u00EAu t\u1ED1c (\u003C 1s), chi ph\u00ED t\u00EDnh b\u1EB1ng millicents.\nT\u00E1c v\u1EE5 Suy lu\u1EADn s\u00E2u (D\u00F9ng Gemini 1.5 Pro ho\u1EB7c GPT-4o): D\u00F9ng cho AI Code Mentor (Ph\u00E2n t\u00EDch l\u1ED7i logic/syntax c\u1EE7a sinh vi\u00EAn) v\u00E0 Sinh \u0111\u1EC1 PE (Vi\u1EBFt thu\u1EADt to\u00E1n v\u00E0 test inputs). \u0110\u1EA3m b\u1EA3o ch\u1EA5t l\u01B0\u1EE3ng s\u01B0 ph\u1EA1m v\u00E0 code chu\u1EA9n x\u00E1c nh\u1EA5t.\n\u01AF\u1EDBc t\u00EDnh Chi ph\u00ED (Token Economics): M\u1ED9t k\u1ECBch b\u1EA3n h\u1ECDc t\u1EADp \u0111\u1EA7y \u0111\u1EE7 (Sinh 1 \u0111\u1EC1 PE \u002B Xin Hint 2 l\u1EA7n \u002B Ph\u00E2n t\u00EDch \u0111\u00EAm) t\u1ED1n kho\u1EA3ng 5,000 - 8,000 tokens. Trung b\u00ECnh t\u1ED1n ch\u01B0a t\u1EDBi 50 - 100 VN\u0110 / b\u00E0i h\u1ECDc. K\u1EBFt h\u1EE3p v\u1EDBi Semantic Caching (nh\u1EDB c\u00E2u tr\u1EA3 l\u1EDDi c\u0169 c\u1EE7a c\u00E1c user kh\u00E1c), chi ph\u00ED n\u00E0y ti\u1EBFp t\u1EE5c gi\u1EA3m th\u00EAm 40%.\n3. T\u1EF7 l\u1EC7 ch\u00EDnh x\u00E1c th\u1EF1c t\u1EBF:\nPE Gen (~95% nh\u1EDD Judge0 check). FE Gen (~90% nh\u1EDD Multi-Agent). L\u1ED7 h\u1ED5ng nh\u1ECF s\u1EBD \u0111\u01B0\u1EE3c v\u00E1 b\u1EB1ng N\u00FAt Report t\u1EEB user.\n4. M\u00F4 h\u00ECnh kinh doanh (Monetization \u0026 UX Quizlet):\nG\u00F3i Free: Luy\u1EC7n t\u1EADp Flashcards FE mi\u1EC5n ph\u00ED. Ch\u1EA5m b\u00E0i PE b\u1EB1ng Judge0 (0\u0111). Gi\u1EDBi h\u1EA1n s\u1ED1 l\u1EA7n Setup Custom Test FE v\u00E0 gi\u1EDBi h\u1EA1n s\u1ED1 l\u1EA7n xin AI Hint code.\nG\u00F3i Premium (Thu ph\u00ED):\nM\u1EDF kh\u00F3a t\u00EDnh n\u0103ng Unlimited Test cho ph\u00E2n h\u1EC7 FE (Gi\u1ED1ng h\u1EC7t Quizlet Plus).\nM\u1EDF kh\u00F3a AI Code Mentor ph\u00E2n t\u00EDch l\u1ED7i PE kh\u00F4ng gi\u1EDBi h\u1EA1n.\nCho ph\u00E9p BYOS sinh \u0111\u1EC1 c\u00E1 nh\u00E2n v\u00F4 h\u1EA1n.\nBYOK (Bring Your Own Key): H\u1ED7 tr\u1EE3 user t\u1EF1 n\u1EA1p API Key c\u1EE7a h\u1ECD \u0111\u1EC3 d\u00F9ng t\u00EDnh n\u0103ng AI mi\u1EC5n ph\u00ED.",
+    "Model": "gpt-5.4-mini"
+  },
+  "Response": {
+    "Verdict": {
+      "IsSupported": false,
+      "Verdict": "unsupported",
+      "PrimaryDomain": "UNKNOWN",
+      "MatchedSubjects": [],
+      "Confidence": 0.93,
+      "Reason": "The document is a system design / product architecture report for an AI-powered examination platform. It discusses AI pipelines, Judge0 integration, databases, React/Node.js, and business logic, but it does not primarily teach Programming Fundamentals using C, Java OOP, or DSA in Java. Mentions of arrays and pointers are incidental within the platform description, not the main subject.",
+      "RejectionReasonCode": null,
+      "DetectedTopics": [
+        "system design",
+        "AI pipelines",
+        "Judge0",
+        "database architecture",
+        "React",
+        "Node.js",
+        "MongoDB",
+        "software product planning"
+      ],
+      "ModelName": "gpt-5.4-mini"
+    },
+    "StageLogs": [
+      {
+        "StageName": "gatekeeper",
+        "Status": "Completed",
+        "Cost": {
+          "InputTokens": 1886,
+          "OutputTokens": 97,
+          "InputCostUsd": 0.000283,
+          "OutputCostUsd": 0.000058,
+          "TotalCostUsd": 0.000341,
+          "LatencyMs": 3569.4,
+          "UsageCapture": {
+            "UsageSource": "estimated",
+            "CacheInputTokens": null,
+            "CacheReadTokens": null,
+            "ReasoningTokens": null,
+            "RawUsageJson": null
+          },
+          "Error": null
+        },
+        "Metadata": {
+          "supported": "False",
+          "verdict": "unsupported",
+          "domain": "UNKNOWN"
+        },
+        "ModelFields": {
+          "Provider": "openai",
+          "PrimaryModel": "gpt-5.4-mini",
+          "GeneratorModel": null,
+          "ReviewerModel": null,
+          "EmbeddingModel": null,
+          "TaggingModel": null,
+          "VisionModel": null,
+          "MentorModel": null
+        },
+        "Error": null
+      }
+    ],
+    "UsageLogs": [
+      {
+        "UsageLogId": "usage-3ae3f1af79a94305b521",
+        "TriggeredBy": "user-demo",
+        "AgentId": "AI_Gatekeeper",
+        "PipelineRunId": "gatekeeper-20260716102227-bbdd2805dc9a4d",
+        "StageName": "gatekeeper",
+        "AttemptIndex": 1,
+        "Provider": "openai",
+        "ModelName": "gpt-5.4-mini",
+        "CreditsDeducted": 0.3410,
+        "InputTokens": 1886,
+        "OutputTokens": 97,
+        "TokensUsed": 1983,
+        "InputCostUsd": 0.000283,
+        "OutputCostUsd": 0.000058,
+        "CostUsd": 0.000341,
+        "UsageSource": "estimated",
+        "Status": "rejected",
+        "CreatedAt": "2026-07-16T10:22:27.6792099+00:00",
+        "PayloadData": {
+          "PipelineType": "gatekeeper",
+          "Subject": "C",
+          "QuestionType": null,
+          "Difficulty": null,
+          "Result": "unsupported",
+          "Input": {
+            "FileName": "Overall Design Report - APE Project.docx",
+            "Language": "en",
+            "RawContent": "B\u1EA2N THI\u1EBET K\u1EBE T\u1ED4NG TH\u1EC2 D\u1EF0 \u00C1N (MASTER BLUEPRINT V3.2)\nT\u00EAn d\u1EF1 \u00E1n: AI-POWERED EXAMINATION AND PROGRAMMING PRACTICE PLATFORM FOR FPT UNIVERSITY (ExamHub)\nT\u00E0i li\u1EC7u n\u00E0y d\u00E0nh cho: System Architects, Developers, H\u1ED9i \u0111\u1ED3ng Ph\u1EA3n bi\u1EC7n, v\u00E0 c\u1EA5p Context cho AI Agents.\nPH\u1EA6N 1: T\u1ED4NG QUAN D\u1EF0 \u00C1N \u0026 V\u1EA4N \u0110\u1EC0 C\u1EA6N GI\u1EA2I QUY\u1EBET\nV\u1EA5n \u0111\u1EC1 th\u1EF1c tr\u1EA1ng: Sinh vi\u00EAn FPT thi\u1EBFu n\u1EC1n t\u1EA3ng \u00F4n luy\u1EC7n k\u1EBFt h\u1EE3p PE (Th\u1EF1c h\u00E0nh Code) v\u00E0 FE (Tr\u1EAFc nghi\u1EC7m). C\u00E1c h\u1EC7 th\u1ED1ng hi\u1EC7n t\u1EA1i (CMS, PEA) ch\u1EC9 t\u1EADp trung v\u00E0o \u0022Ch\u1EA5m \u0110i\u1EC3m\u0022 (Scoring), kh\u00F4ng ch\u1EC9 ra \u0111\u01B0\u1EE3c l\u1ED7 h\u1ED5ng t\u01B0 duy v\u00E0 thi\u1EBFu t\u00EDnh h\u01B0\u1EDBng d\u1EABn.\nGi\u1EA3i ph\u00E1p (ExamHub): M\u1ED9t h\u1EC7 sinh th\u00E1i EdTech s\u1EED d\u1EE5ng AI l\u00E0m l\u00F5i. Chuy\u1EC3n d\u1ECBch t\u1EEB vi\u1EC7c \u0022Ch\u1EA5m \u0111i\u1EC3m\u0022 sang \u0022Ph\u00E2n t\u00EDch S\u01B0 ph\u1EA1m\u0022 (Pedagogical Analysis), cung c\u1EA5p m\u00F4i tr\u01B0\u1EDDng th\u1EF1c h\u00E0nh kh\u00E9p k\u00EDn, c\u00E1 nh\u00E2n h\u00F3a t\u00E0i li\u1EC7u v\u00E0 Gamification.\nPH\u1EA6N 2: CHI TI\u1EBET C\u00C1C LU\u1ED2NG NGHI\u1EC6P V\u1EE4 AI (AI PIPELINES)\n2.1. Quy tr\u00ECnh N\u1EA1p d\u1EEF li\u1EC7u (Data Ingestion \u0026 Tagging)\nNhi\u1EC7m v\u1EE5: X\u1EED l\u00FD t\u00E0i li\u1EC7u (Syllabus chung c\u1EE7a tr\u01B0\u1EDDng ho\u1EB7c t\u00E0i li\u1EC7u c\u00E1 nh\u00E2n c\u1EE7a sinh vi\u00EAn).\nC\u01A1 ch\u1EBF: AI ph\u00E2n t\u00EDch ng\u1EEF ngh\u0129a, b\u0103m nh\u1ECF t\u00E0i li\u1EC7u (Chunking), t\u1EF1 \u0111\u1ED9ng d\u00E1n nh\u00E3n (Auto-tagging: vd #Array, #Pointer) v\u00E0 bi\u1EBFn \u0111\u1ED5i th\u00E0nh vector (Embedding) \u0111\u1EC3 l\u01B0u v\u00E0o Vector Database.\n2.2. Quy tr\u00ECnh AI Sinh \u0110\u1EC1 PE (PE Generation - Hybrid Validation)\n\u00C1p d\u1EE5ng c\u01A1 ch\u1EBF Validation b\u1EB1ng Judge0 (H\u1EC7 th\u1ED1ng ch\u1EA5m t\u1EF1 \u0111\u1ED9ng) \u0111\u1EC3 tr\u00E1nh AI t\u00EDnh sai Output. C\u00F3 2 tr\u01B0\u1EDDng h\u1EE3p sinh \u0111\u1EC1:\nTH 1 - S\u1EED d\u1EE5ng d\u1EEF li\u1EC7u H\u1EC7 th\u1ED1ng: AI query v\u00E0o Vector DB chung. Sinh ra JSON (\u0110\u1EC1 b\u00E0i, Skeleton, Solution, Test Cases). Backend \u0111\u1EA9y Solution v\u00E0 Input v\u00E0o API c\u1EE7a Judge0 ch\u1EA1y th\u1EED. Output kh\u1EDBp -\u003E L\u01B0u DB. L\u1ED7i -\u003E B\u1EAFt AI sinh l\u1EA1i.\nTH 2 - S\u1EED d\u1EE5ng t\u00E0i li\u1EC7u C\u00E1 nh\u00E2n (BYOS): AI query v\u00E0o Vector DB c\u00E1 nh\u00E2n c\u1EE7a user. Qu\u00E1 tr\u00ECnh sinh \u0111\u1EC1 t\u01B0\u01A1ng t\u1EF1, k\u1EBFt qu\u1EA3 l\u01B0u v\u1EDBi c\u1EDD visibility: \u0022Private\u0022.\n2.3. Quy tr\u00ECnh AI Sinh \u0110\u1EC1 FE (FE Generation - Self-Correction)\nV\u1EA5n \u0111\u1EC1: AI d\u1EC5 b\u1ECB \u0022\u1EA3o gi\u00E1c\u0022, sinh \u0111\u00E1p \u00E1n m\u01A1 h\u1ED3.\nGi\u1EA3i ph\u00E1p 3 L\u1EDBp: 1. RAG Strictness: \u00C9p AI ch\u1EC9 d\u00F9ng ki\u1EBFn th\u1EE9c trong Vector DB. 2. Actor-Critic Model: Agent 1 sinh c\u00E2u h\u1ECFi, Agent 2 ph\u1EA3n bi\u1EC7n r\u00E0 so\u00E1t \u0111\u1ED9 nhi\u1EC5u c\u1EE7a \u0111\u00E1p \u00E1n sai. 3. Structured Output: Tr\u1EA3 v\u1EC1 JSON chu\u1EA9n k\u00E8m gi\u1EA3i th\u00EDch.\n2.4. Quy tr\u00ECnh AI Code Mentor (T\u1ED3n t\u1EA1i song song c\u00F9ng M\u00E1y Ch\u1EA5m)\nQuy tr\u00ECnh Song song:\nKhi sinh vi\u00EAn b\u1EA5m \u0022Run Code\u0022 ho\u1EB7c \u0022Submit\u0022, h\u1EC7 th\u1ED1ng m\u00E1y ch\u1EA5m Judge0 l\u1EADp t\u1EE9c th\u1EF1c thi code, tr\u1EA3 v\u1EC1 \u0111i\u1EC3m s\u1ED1 v\u00E0 Log l\u1ED7i th\u00F4 (stderr). Sinh vi\u00EAn nh\u00ECn th\u1EA5y k\u1EBFt qu\u1EA3 Pass/Fail ngay l\u1EADp t\u1EE9c.\nN\u1EBFu Judge0 b\u00E1o Fail, h\u1EC7 th\u1ED1ng k\u00EDch ho\u1EA1t lu\u1ED3ng ph\u1EE5: \u0110\u1EA9y [Code \u002B Log L\u1ED7i Judge0 \u002B \u0110\u1EC1 b\u00E0i] cho AI Mentor.\n\u0110\u1EA7u ra: C\u1EA5m AI \u0111\u01B0a code gi\u1EA3i. AI \u0111\u00F3ng vai \u0022M\u00E1y ph\u00E1t hi\u1EC7n t\u01B0 duy sai\u0022, d\u1EF1a v\u00E0o Log c\u1EE7a Judge0 \u0111\u1EC3 ph\u00E2n t\u00EDch logic, ch\u1EC9 ra d\u00F2ng l\u1ED7i v\u00E0 \u0111\u1EB7t c\u00E2u h\u1ECFi g\u1EE3i m\u1EDF cho sinh vi\u00EAn.\n2.5. Quy tr\u00ECnh AI Deep Analytics (Ph\u00E2n t\u00EDch L\u1ED7 h\u1ED5ng)\nC\u01A1 ch\u1EBF: AI KH\u00D4NG \u0111\u1ECDc d\u1EEF li\u1EC7u r\u00E1c. H\u00E0ng \u0111\u00EAm, script th\u1ED1ng k\u00EA gom c\u1EE5m c\u00E1c b\u1EA3n ghi n\u1ED9p b\u00E0i cu\u1ED1i c\u00F9ng (final_submissions) th\u00E0nh c\u00E1c con s\u1ED1 th\u00F4 (vd: M\u1EA3ng Array - Winrate 40%).\n\u0110\u1EA7u ra: AI \u0111\u1ECDc th\u00F4ng s\u1ED1 th\u00F4 n\u00E0y v\u00E0 sinh ra b\u00E1o c\u00E1o c\u00E1 nh\u00E2n h\u00F3a k\u00E8m N\u00FAt h\u00E0nh \u0111\u1ED9ng (Call-to-Action) h\u01B0\u1EDBng d\u1EABn h\u1ECDc t\u1EADp.\nPH\u1EA6N 3: C\u00C1C CH\u1EBE \u0110\u1ED8 LUY\u1EC6N T\u1EACP (LEARNING MODES \u0026 WORKFLOWS)\n3.1. Ph\u00E2n h\u1EC7 PE (Th\u1EF1c h\u00E0nh Code)\nMode 1 - Practice (\u00D4n 1 c\u00E2u l\u1EBB t\u1EF1 do): Ch\u1ECDn 1 c\u00E2u l\u00E0m ngay. L\u01B0u nh\u00E1p b\u1EB1ng LocalStorage tr\u00ECnh duy\u1EC7t. B\u1EA5m Submit l\u01B0u th\u1EB3ng v\u00E0o Submissions.\nMode 2 - Practice Playlist (Nh\u00F3m nhi\u1EC1u c\u00E2u): Ch\u1ECDn nhi\u1EC1u c\u00E2u th\u00E0nh Tabs. Kh\u00F4ng t\u00EDnh gi\u1EDD. L\u01B0u nh\u00E1p ng\u1EA7m (Auto-save) v\u00E0o DB m\u1ED7i 30s \u0111\u1EC3 ch\u1ED1ng r\u1EDBt m\u1EA1ng. N\u1ED9p t\u1EEBng b\u00E0i ri\u00EAng l\u1EBB.\nMode 3 - Mock Test (Thi th\u1EED): \u0110\u1EC1 c\u00F3 c\u1EA5u tr\u00FAc, c\u00F3 \u0111\u1ED3ng h\u1ED3 \u0111\u1EBFm ng\u01B0\u1EE3c. H\u1EBFt gi\u1EDD -\u003E T\u1EF1 \u0111\u1ED9ng ch\u1ED1t b\u00E0i n\u1ED9p cu\u1ED1i c\u00F9ng c\u1EE7a t\u1EEBng c\u00E2u \u0111\u1EC3 t\u00EDnh \u0111i\u1EC3m t\u1ED5ng.\n3.2. Ph\u00E2n h\u1EC7 FE (Tr\u1EAFc nghi\u1EC7m - Giao di\u1EC7n UX/UI chu\u1EA9n Quizlet)\nNgu\u1ED3n d\u1EEF li\u1EC7u: C\u00E2u h\u1ECFi \u0111\u01B0\u1EE3c l\u1EA5y t\u1EEB QuestionsBank (do AI t\u1EA1o, Admin import, ho\u1EB7c Sinh vi\u00EAn t\u1EF1 n\u1EA1p) v\u00E0 gom th\u00E0nh c\u00E1c B\u1ED9 th\u1EBB (Study Sets).\nMode 1 - Flashcards (H\u1ECDc \u0026 Ghi nh\u1EDB):\nUX: Giao di\u1EC7n l\u1EADt th\u1EBB. M\u1EB7t tr\u01B0\u1EDBc l\u00E0 c\u00E2u h\u1ECFi, m\u1EB7t sau l\u00E0 \u0111\u00E1p \u00E1n v\u00E0 explanation. B\u00EAn d\u01B0\u1EDBi l\u00E0 list hi\u1EC3n th\u1ECB to\u00E0n b\u1ED9 c\u00E2u h\u1ECFi trong b\u1ED9 Set \u0111\u00F3.\nTracking: Kh\u00F4ng l\u01B0u \u0111i\u1EC3m s\u1ED1 kh\u1EAFt khe. H\u1EC7 th\u1ED1ng ch\u1EC9 tracking tr\u1EA1ng th\u00E1i c\u1EE7a t\u1EEBng th\u1EBB (v\u00ED d\u1EE5: Still learning hay Mastered) \u0111\u1EC3 x\u00E1c \u0111\u1ECBnh sinh vi\u00EAn \u0111\u00E3 h\u1ECDc Flashcard t\u1EDBi \u0111\u00E2u.\nMode 2 - Custom Test (Thi\u1EBFt l\u1EADp b\u00E0i thi t\u00F9y ch\u1EC9nh):\nUX: B\u1EA5m n\u00FAt \u0022Test\u0022, hi\u1EC3n th\u1ECB Popup Setup cho ph\u00E9p sinh vi\u00EAn t\u1EF1 do ch\u1ECDn S\u1ED1 l\u01B0\u1EE3ng c\u00E2u h\u1ECFi v\u00E0 D\u1EA1ng c\u00E2u h\u1ECFi (Multiple Choice, True/False...).\nLogic DB: H\u1EC7 th\u1ED1ng tr\u1ED9n \u0111\u1EC1 v\u00E0 hi\u1EC3n th\u1ECB theo setup c\u1EE7a sinh vi\u00EAn. Tr\u1EAFc nghi\u1EC7m xong b\u00E1o k\u1EBFt qu\u1EA3 ngay. TUY\u1EC6T \u0110\u1ED0I KH\u00D4NG l\u01B0u l\u1ECBch s\u1EED c\u00E1c b\u00E0i Test FE n\u00E0y v\u00E0o b\u1EA3ng Submissions \u0111\u1EC3 tr\u00E1nh r\u00E1c Database. Vi\u1EC7c test nh\u01B0 th\u1EBF n\u00E0o, \u0111\u01B0\u1EE3c bao nhi\u00EAu \u0111i\u1EC3m l\u00E0 quy\u1EC1n t\u1EF1 do t\u1EF1 ki\u1EC3m tra c\u1EE7a sinh vi\u00EAn.\nPH\u1EA6N 4: T\u00CDNH C\u00C1 NH\u00C2N H\u00D3A (BRING YOUR OWN SYLLABUS - BYOS)\nS\u1EF1 kh\u00E1c bi\u1EC7t c\u1ED1t l\u00F5i v\u1EDBi NotebookLM:\nNotebookLM ch\u1EC9 l\u00E0 n\u1EC1n t\u1EA3ng H\u1ECFi-\u0110\u00E1p Text thu\u1EA7n t\u00FAy. ExamHub cung c\u1EA5p t\u00EDnh n\u0103ng Personal Workspace: Khi sinh vi\u00EAn upload slide c\u1EE7a l\u1EDBp m\u00ECnh l\u00EAn, h\u1EC7 th\u1ED1ng c\u00F4 l\u1EADp d\u1EEF li\u1EC7u (Data Isolation). T\u1EEB t\u00E0i li\u1EC7u \u0111\u00F3, h\u1EC7 th\u1ED1ng sinh ra m\u00F4i tr\u01B0\u1EDDng th\u1EF1c h\u00E0nh kh\u00E9p k\u00EDn (c\u00F3 IDE g\u00F5 code qua Judge0, c\u00F3 Test cases \u1EA9n, Flashcards tr\u1EAFc nghi\u1EC7m) v\u00E0 t\u00EDnh \u0111i\u1EC3m Gamification -\u003E NotebookLM kh\u00F4ng th\u1EC3 l\u00E0m \u0111\u01B0\u1EE3c.\nPH\u1EA6N 5: KI\u1EBEN TR\u00DAC K\u1EF8 THU\u1EACT \u0026 DATABASE (TECH STACK)\nTech Stack: Frontend (React/Next.js \u002B Monaco Editor), Backend (Node.js/C# .NET).\nCore Execution Engine: S\u1EED d\u1EE5ng Judge0 (M\u00E3 ngu\u1ED3n m\u1EDF ch\u1EA1y tr\u00EAn Docker) \u0111\u1EC3 l\u00E0m l\u00F5i ch\u1EA5m code (Auto-Grader). \u0110\u1EA3m nh\u1EADn vi\u1EC7c compile, run, handle timeout, memory limits m\u1ED9t c\u00E1ch b\u1EA3o m\u1EADt v\u00E0 c\u00F4 l\u1EADp.\nDatabase (MongoDB - L\u00F5i NoSQL):\nKnowledgeChunks (Vector Search), Users (Profile, Gamification).\nQuestionsBank (B\u1EA3ng \u0111a h\u00ECnh: Ch\u1EE9a c\u1EA3 PE v\u00E0 FE. PE l\u01B0u d\u1EA1ng m\u1EA3ng \u0111a file cho Java).\nExams (V\u1ECF b\u1ECDc \u0110\u1EC1 thi PE. C\u00F3 created_by v\u00E0 visibility).\nExamSessions (Phi\u00EAn l\u00E0m b\u00E0i PE. C\u00F3 m\u1EA3ng final_submissions ch\u1ED1t s\u1ED5).\nSubmissions (Ch\u1EC9 t\u1EADp trung l\u01B0u l\u1ECBch s\u1EED l\u00E0m b\u00E0i PE. L\u01B0u c\u1EE9ng total_test_cases_snapshot v\u00E0 copy exam_id v\u00E0o th\u1EB3ng b\u1EA3ng \u0111\u1EC3 truy v\u1EA5n \u0111i\u1EC3m O(1)).\nUserAnalytics (L\u01B0u bi\u1EC3u \u0111\u1ED3 m\u1EA1ng nh\u1EC7n v\u00E0 AI Advice h\u1EB1ng \u0111\u00EAm).\nPH\u1EA6N 6: B\u00C0I TO\u00C1N KINH T\u1EBE, CHI PH\u00CD V\u00C0 \u0110\u1ED8 PH\u1EE8C T\u1EA0P (FEASIBILITY)\n1. \u0110\u00E1nh gi\u00E1 \u0111\u1ED9 ph\u1EE9c t\u1EA1p:\n\u0110\u00F2i h\u1ECFi k\u1EF9 thu\u1EADt cao trong vi\u1EC7c \u00E9p AI tr\u1EA3 v\u1EC1 chu\u1EA9n JSON (Structured Outputs) v\u00E0 thi\u1EBFt l\u1EADp API k\u1EBFt n\u1ED1i m\u01B0\u1EE3t m\u00E0 v\u1EDBi Judge0 \u0111\u1EC3 qu\u1EA3n l\u00FD ti\u1EBFn tr\u00ECnh ch\u1EA5m b\u00E0i.\n2. L\u1EF1a ch\u1ECDn M\u00F4 h\u00ECnh (Model Routing) \u0026 Chi ph\u00ED Token:\nH\u1EC7 th\u1ED1ng KH\u00D4NG d\u00F9ng 1 lo\u1EA1i AI cho m\u1ECDi vi\u1EC7c, m\u00E0 \u00E1p d\u1EE5ng c\u01A1 ch\u1EBF \u0111i\u1EC1u h\u01B0\u1EDBng (Routing) \u0111\u1EC3 c\u00E2n b\u1EB1ng gi\u1EEFa S\u1EE9c m\u1EA1nh, T\u1ED1c \u0111\u1ED9 v\u00E0 Chi ph\u00ED:\nT\u00E1c v\u1EE5 T\u1ED1c \u0111\u1ED9 cao \u0026 Chi ph\u00ED r\u1EBB (D\u00F9ng Gemini 1.5 Flash ho\u1EB7c GPT-4o-mini): D\u00F9ng \u0111\u1EC3 Auto-Tagging, b\u0103m nh\u1ECF t\u00E0i li\u1EC7u (Chunking), t\u1EA1o \u0111\u1EC1 FE tr\u1EAFc nghi\u1EC7m. \u01AFu \u0111i\u1EC3m: Ph\u1EA3n h\u1ED3i si\u00EAu t\u1ED1c (\u003C 1s), chi ph\u00ED t\u00EDnh b\u1EB1ng millicents.\nT\u00E1c v\u1EE5 Suy lu\u1EADn s\u00E2u (D\u00F9ng Gemini 1.5 Pro ho\u1EB7c GPT-4o): D\u00F9ng cho AI Code Mentor (Ph\u00E2n t\u00EDch l\u1ED7i logic/syntax c\u1EE7a sinh vi\u00EAn) v\u00E0 Sinh \u0111\u1EC1 PE (Vi\u1EBFt thu\u1EADt to\u00E1n v\u00E0 test inputs). \u0110\u1EA3m b\u1EA3o ch\u1EA5t l\u01B0\u1EE3ng s\u01B0 ph\u1EA1m v\u00E0 code chu\u1EA9n x\u00E1c nh\u1EA5t.\n\u01AF\u1EDBc t\u00EDnh Chi ph\u00ED (Token Economics): M\u1ED9t k\u1ECBch b\u1EA3n h\u1ECDc t\u1EADp \u0111\u1EA7y \u0111\u1EE7 (Sinh 1 \u0111\u1EC1 PE \u002B Xin Hint 2 l\u1EA7n \u002B Ph\u00E2n t\u00EDch \u0111\u00EAm) t\u1ED1n kho\u1EA3ng 5,000 - 8,000 tokens. Trung b\u00ECnh t\u1ED1n ch\u01B0a t\u1EDBi 50 - 100 VN\u0110 / b\u00E0i h\u1ECDc. K\u1EBFt h\u1EE3p v\u1EDBi Semantic Caching (nh\u1EDB c\u00E2u tr\u1EA3 l\u1EDDi c\u0169 c\u1EE7a c\u00E1c user kh\u00E1c), chi ph\u00ED n\u00E0y ti\u1EBFp t\u1EE5c gi\u1EA3m th\u00EAm 40%.\n3. T\u1EF7 l\u1EC7 ch\u00EDnh x\u00E1c th\u1EF1c t\u1EBF:\nPE Gen (~95% nh\u1EDD Judge0 check). FE Gen (~90% nh\u1EDD Multi-Agent). L\u1ED7 h\u1ED5ng nh\u1ECF s\u1EBD \u0111\u01B0\u1EE3c v\u00E1 b\u1EB1ng N\u00FAt Report t\u1EEB user.\n4. M\u00F4 h\u00ECnh kinh doanh (Monetization \u0026 UX Quizlet):\nG\u00F3i Free: Luy\u1EC7n t\u1EADp Flashcards FE mi\u1EC5n ph\u00ED. Ch\u1EA5m b\u00E0i PE b\u1EB1ng Judge0 (0\u0111). Gi\u1EDBi h\u1EA1n s\u1ED1 l\u1EA7n Setup Custom Test FE v\u00E0 gi\u1EDBi h\u1EA1n s\u1ED1 l\u1EA7n xin AI Hint code.\nG\u00F3i Premium (Thu ph\u00ED):\nM\u1EDF kh\u00F3a t\u00EDnh n\u0103ng Unlimited Test cho ph\u00E2n h\u1EC7 FE (Gi\u1ED1ng h\u1EC7t Quizlet Plus).\nM\u1EDF kh\u00F3a AI Code Mentor ph\u00E2n t\u00EDch l\u1ED7i PE kh\u00F4ng gi\u1EDBi h\u1EA1n.\nCho ph\u00E9p BYOS sinh \u0111\u1EC1 c\u00E1 nh\u00E2n v\u00F4 h\u1EA1n.\nBYOK (Bring Your Own Key): H\u1ED7 tr\u1EE3 user t\u1EF1 n\u1EA1p API Key c\u1EE7a h\u1ECD \u0111\u1EC3 d\u00F9ng t\u00EDnh n\u0103ng AI mi\u1EC5n ph\u00ED."
+          },
+          "Output": {
+            "IsSupported": false,
+            "Verdict": "unsupported",
+            "PrimaryDomain": "UNKNOWN",
+            "MatchedSubjects": [],
+            "Confidence": 0.93,
+            "Reason": "The document is a system design / product architecture report for an AI-powered examination platform. It discusses AI pipelines, Judge0 integration, databases, React/Node.js, and business logic, but it does not primarily teach Programming Fundamentals using C, Java OOP, or DSA in Java. Mentions of arrays and pointers are incidental within the platform description, not the main subject.",
+            "RejectionReasonCode": null,
+            "DetectedTopics": [
+              "system design",
+              "AI pipelines",
+              "Judge0",
+              "database architecture",
+              "React",
+              "Node.js",
+              "MongoDB",
+              "software product planning"
+            ],
+            "ModelName": "gpt-5.4-mini"
+          }
+        },
+        "ModelFields": {
+          "Provider": "openai",
+          "PrimaryModel": "gpt-5.4-mini",
+          "GeneratorModel": null,
+          "ReviewerModel": null,
+          "EmbeddingModel": null,
+          "TaggingModel": null,
+          "VisionModel": null,
+          "MentorModel": null
+        },
+        "Error": null,
+        "RawUsageJson": null
+      }
+    ],
+    "Totals": {
+      "InputTokens": 1886,
+      "OutputTokens": 97,
+      "InputCostUsd": 0.000283,
+      "OutputCostUsd": 0.000058,
+      "TotalCostUsd": 0.000341,
+      "LatencyMs": 3569.4,
+      "UsageCapture": {
+        "UsageSource": "estimated",
+        "CacheInputTokens": null,
+        "CacheReadTokens": null,
+        "ReasoningTokens": null,
+        "RawUsageJson": null
+      },
+      "Error": null
+    }
+  }
+}

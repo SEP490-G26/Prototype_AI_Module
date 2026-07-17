@@ -81,34 +81,52 @@ public sealed class DifficultyAlignmentService : IDifficultyAlignmentService
         var hiddenTests = question.TestCases?.Count(static testCase => testCase.IsHidden) ?? 0;
         var totalTests = question.TestCases?.Count ?? 0;
         var codeLines = question.SolutionCode?.Sum(static file => file.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length) ?? 0;
+        var sourceChunkCount = question.SourceChunkIds?.Count ?? 0;
 
-        if (descriptionLength > 40)
+        if (descriptionLength > 120)
         {
             score += 2;
-            signals.Add("PE description is long enough to suggest a richer implementation task.");
+            signals.Add("PE description is long enough to suggest a richer multi-step implementation task.");
         }
-
-        if (hiddenTests > 0)
-        {
-            score += 2;
-            signals.Add("PE question includes hidden tests.");
-        }
-
-        if (totalTests >= 3)
+        else if (descriptionLength > 60)
         {
             score += 1;
+            signals.Add("PE description goes beyond a minimal one-step implementation statement.");
         }
 
-        if (codeLines > 18)
+        if (hiddenTests >= 2)
+        {
+            score += 1;
+            signals.Add("PE question includes multiple hidden tests.");
+        }
+
+        if (totalTests >= 4)
+        {
+            score += 1;
+            signals.Add("PE question uses broader test coverage than a trivial exercise.");
+        }
+
+        if (codeLines > 40)
         {
             score += 2;
             signals.Add("PE solution length suggests medium-to-hard implementation effort.");
+        }
+        else if (codeLines > 24)
+        {
+            score += 1;
+            signals.Add("PE solution length suggests more than a direct one-step implementation.");
         }
 
         if (ContainsComplexKeywords(question.Description, ["edge case", "optimize", "design", "multiple", "state", "algorithm"]))
         {
             score += 2;
             signals.Add("PE statement contains algorithmic or multi-step implementation keywords.");
+        }
+
+        if (sourceChunkCount > 1)
+        {
+            score += 1;
+            signals.Add("PE question cites multiple chunks, which can indicate a combined-skill task.");
         }
 
         return score;

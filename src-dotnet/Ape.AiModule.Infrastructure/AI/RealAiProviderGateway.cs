@@ -210,10 +210,22 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             var response = await GenerateTextAsync(generatorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-generation", cancellationToken);
             var json = ExtractJsonArray(response);
             var questions = DeserializeQuestions(json);
-            var normalizedQuestions = NormalizeQuestions(questions, request);
+            var normalizedQuestions = NormalizeQuestions(questions, request, out var normalizationIssues);
             if (normalizedQuestions.Count > 0)
             {
                 return normalizedQuestions;
+            }
+
+            if (questions.Count > 0)
+            {
+                var repairedQuestions = await TryRepairQuestionsAsync(request, rubric, generatorModel, response, normalizationIssues, cancellationToken);
+                var normalizedRepairedQuestions = NormalizeQuestions(repairedQuestions, request, out var repairIssues);
+                if (normalizedRepairedQuestions.Count > 0)
+                {
+                    return normalizedRepairedQuestions;
+                }
+
+                normalizationIssues = normalizationIssues.Concat(repairIssues).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             }
 
             if (ShouldAllowDemoFallback(generatorModel))
@@ -221,7 +233,8 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
                 return await _fallbackGateway.GenerateQuestionsAsync(request, cancellationToken);
             }
 
-            throw new InvalidOperationException($"Question generation returned no valid questions after normalization for model '{generatorModel}'.");
+            var responsePreview = response.Length > 1200 ? response[..1200] + "..." : response;
+            throw new InvalidOperationException($"Question generation returned no valid questions after normalization for model '{generatorModel}'. Deserialized count: {questions.Count}. Issues: {string.Join(" | ", normalizationIssues.DefaultIfEmpty("unknown normalization issue"))}. Raw response preview: {responsePreview}");
         }
         catch (Exception ex)
         {
@@ -602,6 +615,42 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
     private static List<GeneratedQuestion> DeserializeQuestions(string json)
     {
+        using var document = JsonDocument.Parse(json);
+        var rootArray = ResolveQuestionArray(document.RootElement);
+        if (rootArray is not null)
+        {
+            var result = new List<GeneratedQuestion>();
+            foreach (var item in rootArray.Value.EnumerateArray())
+            {
+                result.Add(new GeneratedQuestion(
+                    ReadString(item, "type") ?? ReadString(item, "question_type") ?? string.Empty,
+                    ReadStringArray(item, "topic_tags") ?? ReadStringArray(item, "topicTags") ?? ReadStringArray(item, "tags") ?? [],
+                    ReadString(item, "difficulty") ?? ReadString(item, "level") ?? string.Empty,
+                    ReadString(item, "title") ?? ReadString(item, "name") ?? string.Empty,
+                    ReadString(item, "description") ?? ReadString(item, "prompt") ?? ReadString(item, "question") ?? string.Empty,
+                    ReadStringArray(item, "source_chunk_ids") ?? ReadStringArray(item, "sourceChunkIds") ?? ReadStringArray(item, "chunk_ids"),
+                    ReadCodeFiles(item, "skeleton_code", includeReadonly: true)
+                        ?? ReadCodeFiles(item, "skeletonCode", includeReadonly: true)
+                        ?? ReadCodeFiles(item, "starter_code", includeReadonly: true)
+                        ?? ReadCodeFiles(item, "starterCode", includeReadonly: true),
+                    ReadCodeFiles(item, "solution_code", includeReadonly: false)
+                        ?? ReadCodeFiles(item, "solutionCode", includeReadonly: false)
+                        ?? ReadCodeFiles(item, "answer_code", includeReadonly: false)
+                        ?? ReadCodeFiles(item, "answerCode", includeReadonly: false),
+                    ReadTestCases(item, "test_cases")
+                        ?? ReadTestCases(item, "testCases")
+                        ?? ReadTestCases(item, "tests"),
+                    ReadStringArray(item, "options"),
+                    ReadStringArray(item, "correct_answer") ?? ReadStringArray(item, "correctAnswer") ?? ReadStringArray(item, "answer"),
+                    ReadString(item, "explanation") ?? ReadString(item, "rationale")));
+            }
+
+            if (result.Count > 0)
+            {
+                return result;
+            }
+        }
+
         var serializerOptions = JsonWebOptions();
         var questions = JsonSerializer.Deserialize<List<GeneratedQuestion>>(json, serializerOptions);
         if (questions is not null && questions.Count > 0)
@@ -609,45 +658,82 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             return questions;
         }
 
-        using var document = JsonDocument.Parse(json);
-        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        return [];
+    }
+
+    private static JsonElement? ResolveQuestionArray(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            return root;
+        }
+
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        string[] keys = ["questions", "items", "data", "result", "outputs"];
+        foreach (var key in keys)
+        {
+            if (root.TryGetProperty(key, out var property) && property.ValueKind == JsonValueKind.Array)
+            {
+                return property;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<IReadOnlyList<GeneratedQuestion>> TryRepairQuestionsAsync(
+        QuestionGenerationRequest request,
+        IReadOnlyDictionary<string, object> rubric,
+        string generatorModel,
+        string brokenResponse,
+        IReadOnlyList<string> normalizationIssues,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var rendered = await _promptTemplateService.RenderAsync("question_generation_repair", new Dictionary<string, string>
+            {
+                ["subject"] = request.Subject,
+                ["difficulty"] = request.Difficulty,
+                ["question_type"] = request.QuestionType,
+                ["subject_focus"] = BuildQuestionSubjectFocus(request.Subject, request.QuestionType),
+                ["rubric_json"] = JsonSerializer.Serialize(rubric),
+                ["chunks_json"] = JsonSerializer.Serialize(request.Chunks),
+                ["normalization_issues"] = string.Join("\n", normalizationIssues),
+                ["candidate_response"] = brokenResponse
+            }, cancellationToken);
+
+            var repaired = await GenerateTextAsync(generatorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "question-generation", cancellationToken);
+            return DeserializeQuestions(ExtractJsonArray(repaired));
+        }
+        catch
         {
             return [];
         }
-
-        var result = new List<GeneratedQuestion>();
-        foreach (var item in document.RootElement.EnumerateArray())
-        {
-            result.Add(new GeneratedQuestion(
-                ReadString(item, "type") ?? string.Empty,
-                ReadStringArray(item, "topic_tags") ?? [],
-                ReadString(item, "difficulty") ?? string.Empty,
-                ReadString(item, "title") ?? string.Empty,
-                ReadString(item, "description") ?? string.Empty,
-                ReadStringArray(item, "source_chunk_ids"),
-                ReadCodeFiles(item, "skeleton_code", includeReadonly: true),
-                ReadCodeFiles(item, "solution_code", includeReadonly: false),
-                ReadTestCases(item, "test_cases"),
-                ReadStringArray(item, "options"),
-                ReadStringArray(item, "correct_answer"),
-                ReadString(item, "explanation")));
-        }
-
-        return result;
     }
 
-    private static List<GeneratedQuestion> NormalizeQuestions(IReadOnlyList<GeneratedQuestion> questions, QuestionGenerationRequest request)
+    private static List<GeneratedQuestion> NormalizeQuestions(IReadOnlyList<GeneratedQuestion> questions, QuestionGenerationRequest request, out List<string> issues)
     {
+        issues = [];
         var expectedType = NormalizeQuestionType(request.QuestionType);
         var allowedChunkIds = request.Chunks.Select(static chunk => chunk.ChunkId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var normalized = new List<GeneratedQuestion>();
 
-        foreach (var question in questions)
+        for (var index = 0; index < questions.Count; index++)
         {
-            var candidate = NormalizeQuestion(question, request, expectedType, allowedChunkIds);
+            var question = questions[index];
+            var candidate = NormalizeQuestion(question, request, expectedType, allowedChunkIds, out var reason);
             if (candidate is not null)
             {
                 normalized.Add(candidate);
+            }
+            else if (!string.IsNullOrWhiteSpace(reason))
+            {
+                issues.Add($"item {index + 1}: {reason}");
             }
         }
 
@@ -658,11 +744,14 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
         GeneratedQuestion question,
         QuestionGenerationRequest request,
         string expectedType,
-        HashSet<string> allowedChunkIds)
+        HashSet<string> allowedChunkIds,
+        out string reason)
     {
+        reason = string.Empty;
         var type = string.IsNullOrWhiteSpace(question.Type) ? expectedType : NormalizeQuestionType(question.Type);
         if (!type.Equals(expectedType, StringComparison.OrdinalIgnoreCase))
         {
+            reason = $"question type '{question.Type}' does not match expected '{expectedType}'";
             return null;
         }
 
@@ -692,11 +781,13 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
         var description = SanitizeText(question.Description);
         if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(description))
         {
+            reason = "title or description is empty";
             return null;
         }
 
         if (LooksLikePlaceholderQuestion(title, description))
         {
+            reason = "title or description still looks placeholder-like";
             return null;
         }
 
@@ -716,11 +807,13 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
             if (options.Count < 2)
             {
+                reason = "FE options are missing or too few";
                 return null;
             }
 
             if (options.Any(LooksLikePlaceholderOption))
             {
+                reason = "FE options still contain placeholder wording";
                 return null;
             }
 
@@ -737,6 +830,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
             if (correctAnswer.Count == 0)
             {
+                reason = "FE correct_answer could not be normalized to option labels";
                 return null;
             }
 
@@ -761,6 +855,7 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
         if (skeletonCode.Count == 0 || solutionCode.Count == 0 || testCases.Count == 0)
         {
+            reason = $"PE requires skeleton_code, solution_code, and test_cases. Parsed counts: skeleton={skeletonCode.Count}, solution={solutionCode.Count}, tests={testCases.Count}";
             return null;
         }
 
@@ -920,7 +1015,35 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
     private static List<CodeFile>? ReadCodeFiles(JsonElement element, string propertyName, bool includeReadonly)
     {
-        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Array)
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (property.ValueKind == JsonValueKind.String)
+        {
+            var content = property.GetString();
+            return string.IsNullOrWhiteSpace(content)
+                ? null
+                : [new CodeFile(GuessDefaultCodeFileName(content, includeReadonly), content, includeReadonly && false)];
+        }
+
+        if (property.ValueKind == JsonValueKind.Object)
+        {
+            var fileName = ReadString(property, "filename") ?? ReadString(property, "fileName") ?? GuessDefaultCodeFileName(property.ToString(), includeReadonly);
+            var content = ReadString(property, "content") ?? ReadString(property, "code") ?? ReadString(property, "text") ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return null;
+            }
+
+            var isReadonly = includeReadonly && (
+                property.TryGetProperty("is_readonly", out var readonlyA) && readonlyA.ValueKind is JsonValueKind.True or JsonValueKind.False && readonlyA.GetBoolean()
+                || property.TryGetProperty("isReadonly", out var readonlyB) && readonlyB.ValueKind is JsonValueKind.True or JsonValueKind.False && readonlyB.GetBoolean());
+            return [new CodeFile(fileName, content, isReadonly)];
+        }
+
+        if (property.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
@@ -928,8 +1051,19 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
         var result = new List<CodeFile>();
         foreach (var item in property.EnumerateArray())
         {
-            var fileName = ReadString(item, "filename") ?? ReadString(item, "fileName") ?? string.Empty;
-            var content = ReadString(item, "content") ?? string.Empty;
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                var inlineCode = item.GetString() ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(inlineCode))
+                {
+                    result.Add(new CodeFile(GuessDefaultCodeFileName(inlineCode, includeReadonly), inlineCode, false));
+                }
+
+                continue;
+            }
+
+            var fileName = ReadString(item, "filename") ?? ReadString(item, "fileName") ?? GuessDefaultCodeFileName(item.ToString(), includeReadonly);
+            var content = ReadString(item, "content") ?? ReadString(item, "code") ?? ReadString(item, "text") ?? string.Empty;
             var isReadonly = includeReadonly && item.TryGetProperty("is_readonly", out var readonlyA) && readonlyA.ValueKind is JsonValueKind.True or JsonValueKind.False
                 ? readonlyA.GetBoolean()
                 : includeReadonly && item.TryGetProperty("isReadonly", out var readonlyB) && readonlyB.ValueKind is JsonValueKind.True or JsonValueKind.False
@@ -944,7 +1078,18 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
 
     private static List<QuestionTestCase>? ReadTestCases(JsonElement element, string propertyName)
     {
-        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Array)
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (property.ValueKind == JsonValueKind.Object)
+        {
+            var singleCase = ReadSingleTestCase(property);
+            return singleCase is null ? null : [singleCase];
+        }
+
+        if (property.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
@@ -952,16 +1097,42 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
         var result = new List<QuestionTestCase>();
         foreach (var item in property.EnumerateArray())
         {
-            var input = ReadString(item, "input") ?? string.Empty;
-            var expectedOutput = ReadString(item, "expected_output") ?? ReadString(item, "expectedOutput") ?? string.Empty;
-            var isHidden = item.TryGetProperty("is_hidden", out var hiddenA) && hiddenA.ValueKind is JsonValueKind.True or JsonValueKind.False
-                ? hiddenA.GetBoolean()
-                : item.TryGetProperty("isHidden", out var hiddenB) && hiddenB.ValueKind is JsonValueKind.True or JsonValueKind.False && hiddenB.GetBoolean();
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                continue;
+            }
 
-            result.Add(new QuestionTestCase(input, expectedOutput, isHidden));
+            var testCase = ReadSingleTestCase(item);
+            if (testCase is not null)
+            {
+                result.Add(testCase);
+            }
         }
 
         return result;
+    }
+
+    private static QuestionTestCase? ReadSingleTestCase(JsonElement item)
+    {
+        var input = ReadString(item, "input") ?? ReadString(item, "stdin") ?? string.Empty;
+        var expectedOutput = ReadString(item, "expected_output") ?? ReadString(item, "expectedOutput") ?? ReadString(item, "output") ?? ReadString(item, "stdout") ?? string.Empty;
+        var isHidden = item.TryGetProperty("is_hidden", out var hiddenA) && hiddenA.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? hiddenA.GetBoolean()
+            : item.TryGetProperty("isHidden", out var hiddenB) && hiddenB.ValueKind is JsonValueKind.True or JsonValueKind.False && hiddenB.GetBoolean();
+        return string.IsNullOrWhiteSpace(input) && string.IsNullOrWhiteSpace(expectedOutput)
+            ? null
+            : new QuestionTestCase(input, expectedOutput, isHidden);
+    }
+
+    private static string GuessDefaultCodeFileName(string? code, bool includeReadonly)
+    {
+        var text = code ?? string.Empty;
+        if (text.Contains("#include", StringComparison.OrdinalIgnoreCase) || text.Contains("printf", StringComparison.OrdinalIgnoreCase) || text.Contains("scanf", StringComparison.OrdinalIgnoreCase))
+        {
+            return includeReadonly ? "main.c" : "main.c";
+        }
+
+        return "Main.java";
     }
 
     private static bool ModelLooksLikeGemini(string model)

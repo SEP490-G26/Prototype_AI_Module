@@ -1,4 +1,5 @@
 import {
+  state,
   escapeHtml,
   parseJsonInput,
   exportJsonFile,
@@ -22,6 +23,14 @@ export const generationFeature = {
     const mode = form.mode.value;
     const generatorModel = form.generatorModel.value;
     const reviewerModel = mode === 'SameModelDualRole' ? generatorModel : form.reviewerModel.value;
+    const textareaValue = form.chunks.value;
+    const importedPayload = textareaValue.trim() ? parseJsonInput(textareaValue, []) : null;
+    const fallbackPayload = importedPayload ?? state.lastResults.embedding ?? state.lastResults.extracted ?? null;
+    const chunks = normalizeChunks(fallbackPayload);
+    if (!chunks.length) {
+      throw new Error('Generation + Review requires at least one chunk. Import chunk JSON from Embedding + Tagging, or run Embedding first and keep its result in this session.');
+    }
+
     return {
       userId: form.userId.value.trim(),
       courseId: form.courseId.value.trim() || null,
@@ -35,7 +44,7 @@ export const generationFeature = {
       generatorModel,
       reviewerModel,
       maxAttempts: Number(form.maxAttempts.value || 1),
-      chunks: normalizeChunks(parseJsonInput(form.chunks.value, []))
+      chunks
     };
   },
   renderResult(data) {

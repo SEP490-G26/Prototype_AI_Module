@@ -763,15 +763,23 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             if (!difficultyAlignment.IsAligned)
             {
                 var difficultyIssue = $"Difficulty alignment mismatch: requested '{difficultyAlignment.RequestedDifficulty}' but estimated '{difficultyAlignment.EstimatedDifficulty}'.";
-                var mergedIssues = review.Issues.Concat([difficultyIssue]).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-                var mergedSuggestions = review.Suggestions.Concat(["Adjust the generated question so that the reasoning load matches the requested difficulty."]).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                var isSevereDifficultyMismatch = IsSevereDifficultyMismatch(difficultyAlignment.RequestedDifficulty, difficultyAlignment.EstimatedDifficulty);
+                var mergedIssues = isSevereDifficultyMismatch
+                    ? review.Issues.Concat([difficultyIssue]).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    : review.Issues;
+                var mergedSuggestions = review.Suggestions
+                    .Concat([isSevereDifficultyMismatch
+                        ? "Adjust the generated question so that the reasoning load matches the requested difficulty."
+                        : "Difficulty estimate is slightly above or below the requested level. Consider minor scope tuning if consistency across the bank matters."])
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
                 review = review with
                 {
-                    ReviewStatus = "needs_revision",
+                    ReviewStatus = isSevereDifficultyMismatch ? "needs_revision" : review.ReviewStatus,
                     Issues = mergedIssues,
                     Suggestions = mergedSuggestions,
-                    Score = Math.Min(review.Score, 0.55m),
-                    NeedsRevision = true
+                    Score = Math.Min(review.Score, isSevereDifficultyMismatch ? 0.55m : 0.82m),
+                    NeedsRevision = isSevereDifficultyMismatch || review.NeedsRevision
                 };
             }
 
@@ -785,6 +793,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 schemaMapping,
                 difficultyAlignment);
             review = MergeReviewDecisions(review, ruleBasedReview);
+            review = NormalizeReviewDecisionForMildDifficultyMismatch(review, difficultyAlignment);
 
             var reviewCost = request.Mode == GenerationReviewMode.SingleAgent
                 ? new TokenCostBreakdown(0, 0, 0, 0, 0, 0)
@@ -1192,6 +1201,12 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 issues.Add($"{prefix}: title or description still looks template-based instead of chunk-based.");
             }
 
+            if (ContainsMetaSourceReference(question.Title) || ContainsMetaSourceReference(question.Description))
+            {
+                issues.Add($"{prefix}: question wording refers to the source container such as slide/page/document/chunk instead of being self-contained.");
+                suggestions.Add($"{prefix}: rewrite the wording so the learner can answer without knowing where the content was stored.");
+            }
+
             var sourceChunkIds = question.SourceChunkIds?
                 .Where(static item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -1216,7 +1231,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             var questionTags = question.TopicTags.Where(static tag => !string.IsNullOrWhiteSpace(tag)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (questionTags.Count > 0 && sourceTags.Count > 0 && !questionTags.Overlaps(sourceTags))
             {
-                issues.Add($"{prefix}: topic_tags do not overlap with the cited chunk tags.");
+                suggestions.Add($"{prefix}: topic_tags do not overlap with the cited chunk tags. Consider aligning tags more closely to the cited chunks.");
             }
 
             var groundingSignal = MeasureGroundingSignal(question, expectedType, sourceText, sourceTags);
@@ -1237,13 +1252,21 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             }
             else
             {
-                ValidatePeQuestion(subject, question, prefix, issues, suggestions);
+                ValidatePeQuestion(subject, question, prefix, issues, suggestions, rubric);
             }
         }
 
         if (!difficultyAlignment.IsAligned)
         {
-            issues.Add($"Difficulty mismatch: requested '{requestedDifficulty}' but rule-based alignment estimated '{difficultyAlignment.EstimatedDifficulty}'.");
+            var difficultyMessage = $"Difficulty mismatch: requested '{requestedDifficulty}' but rule-based alignment estimated '{difficultyAlignment.EstimatedDifficulty}'.";
+            if (IsSevereDifficultyMismatch(difficultyAlignment.RequestedDifficulty, difficultyAlignment.EstimatedDifficulty))
+            {
+                issues.Add(difficultyMessage);
+            }
+            else
+            {
+                suggestions.Add(difficultyMessage);
+            }
         }
 
         if (issues.Count == 0 && TryReadArrayStrings(rubric, "acceptance_rules").Count == 0)
@@ -1252,17 +1275,67 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         }
 
         var score = Math.Max(0.05m, Math.Min(1.0m, 1.0m - (issues.Count * 0.12m) - (suggestions.Count * 0.03m)));
+        var hasSchemaErrors = schemaMapping.Issues.Any(issue => issue.Severity.Equals("error", StringComparison.OrdinalIgnoreCase));
         var accepted = issues.Count == 0;
         return new ReviewDecision(
             accepted ? "accepted" : "needs_revision",
             issues,
             suggestions.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
             score,
-            accepted && schemaMapping.IsValid,
-            accepted,
+            !hasSchemaErrors,
+            !issues.Any(issue => issue.Contains("weak grounding", StringComparison.OrdinalIgnoreCase)
+                                 || issue.Contains("drift into another subject", StringComparison.OrdinalIgnoreCase)
+                                 || issue.Contains("source container", StringComparison.OrdinalIgnoreCase)),
             !accepted,
             "rule-based");
     }
+
+    private static bool IsSevereDifficultyMismatch(string requestedDifficulty, string estimatedDifficulty)
+        => Math.Abs(GetDifficultyRank(requestedDifficulty) - GetDifficultyRank(estimatedDifficulty)) > 1;
+
+    private static ReviewDecision NormalizeReviewDecisionForMildDifficultyMismatch(
+        ReviewDecision review,
+        DifficultyAlignmentResult difficultyAlignment)
+    {
+        if (review.Issues.Count == 0
+            || !review.SchemaValid
+            || !review.ContentGrounded
+            || IsSevereDifficultyMismatch(difficultyAlignment.RequestedDifficulty, difficultyAlignment.EstimatedDifficulty))
+        {
+            return review;
+        }
+
+        static bool IsDifficultyIssue(string issue)
+            => issue.Contains("Difficulty alignment mismatch", StringComparison.OrdinalIgnoreCase)
+               || issue.Contains("Difficulty mismatch:", StringComparison.OrdinalIgnoreCase);
+
+        if (review.Issues.Any(issue => !IsDifficultyIssue(issue)))
+        {
+            return review;
+        }
+
+        var suggestions = review.Suggestions
+            .Concat(review.Issues.Select(static issue => $"{issue} Treat as a tuning warning, not a hard failure."))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return review with
+        {
+            ReviewStatus = "accepted",
+            Issues = [],
+            Suggestions = suggestions,
+            Score = Math.Max(review.Score, 0.84m),
+            NeedsRevision = false
+        };
+    }
+
+    private static int GetDifficultyRank(string? difficulty)
+        => difficulty?.Trim().ToLowerInvariant() switch
+        {
+            "easy" => 1,
+            "hard" => 3,
+            _ => 2
+        };
 
     private static void ValidateFeQuestion(GeneratedQuestion question, string prefix, List<string> issues, List<string> suggestions)
     {
@@ -1292,6 +1365,11 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             {
                 issues.Add($"{prefix}: FE contains placeholder option text.");
             }
+
+            if (ContainsMetaSourceReference(option))
+            {
+                issues.Add($"{prefix}: FE options should not mention slide/page/document/chunk references.");
+            }
         }
 
         var answers = question.CorrectAnswer?.Where(static item => !string.IsNullOrWhiteSpace(item)).ToList() ?? [];
@@ -1309,13 +1387,33 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             issues.Add($"{prefix}: FE explanation is too short to justify the answer.");
             suggestions.Add($"{prefix}: explain why the correct option is supported by the chunk and why the distractors are wrong.");
         }
+        else if (ContainsMetaSourceReference(question.Explanation))
+        {
+            issues.Add($"{prefix}: FE explanation should be self-contained and must not refer to slides/pages/documents/chunks.");
+        }
     }
 
-    private static void ValidatePeQuestion(string subject, GeneratedQuestion question, string prefix, List<string> issues, List<string> suggestions)
+    private static void ValidatePeQuestion(
+        string subject,
+        GeneratedQuestion question,
+        string prefix,
+        List<string> issues,
+        List<string> suggestions,
+        IReadOnlyDictionary<string, object> rubric)
     {
         var skeleton = question.SkeletonCode?.Where(static item => !string.IsNullOrWhiteSpace(item.FileName) && !string.IsNullOrWhiteSpace(item.Content)).ToList() ?? [];
         var solution = question.SolutionCode?.Where(static item => !string.IsNullOrWhiteSpace(item.FileName) && !string.IsNullOrWhiteSpace(item.Content)).ToList() ?? [];
         var testCases = question.TestCases?.ToList() ?? [];
+        var description = question.Description?.Trim() ?? string.Empty;
+        var title = question.Title?.Trim() ?? string.Empty;
+        var descriptionWordCount = description.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        var visibleTests = testCases.Count(static item => !item.IsHidden);
+        var hiddenTests = testCases.Count(static item => item.IsHidden);
+        var distinctExpectedOutputs = testCases
+            .Select(static item => item.ExpectedOutput?.Trim() ?? string.Empty)
+            .Where(static item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
 
         if (skeleton.Count == 0)
         {
@@ -1332,7 +1430,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             issues.Add($"{prefix}: PE should contain at least 2 test cases.");
         }
 
-        if (!testCases.Any(static item => !item.IsHidden))
+        if (visibleTests == 0)
         {
             issues.Add($"{prefix}: PE should contain at least one visible test case.");
         }
@@ -1352,13 +1450,41 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             }
         }
 
-        if (!question.Description.Contains("input", StringComparison.OrdinalIgnoreCase)
-            && !question.Description.Contains("output", StringComparison.OrdinalIgnoreCase)
-            && !question.Description.Contains("return", StringComparison.OrdinalIgnoreCase)
-            && !question.Description.Contains("write a program", StringComparison.OrdinalIgnoreCase)
-            && !question.Description.Contains("implement", StringComparison.OrdinalIgnoreCase))
+        if (descriptionWordCount < 22)
+        {
+            issues.Add($"{prefix}: PE description is too thin to be a meaningful assessment item.");
+            AddRubricQualityHints(rubric, suggestions);
+        }
+
+        if (!ContainsAny(description, ["input", "output", "return", "print", "write a program", "implement", "complete the method", "write a method", "read"]))
         {
             suggestions.Add($"{prefix}: make the PE description more explicit about the required program behavior.");
+        }
+
+        if (testCases.Count < 3)
+        {
+            suggestions.Add($"{prefix}: add broader test coverage so the task evaluates more than one narrow sample.");
+        }
+
+        if (hiddenTests == 0)
+        {
+            suggestions.Add($"{prefix}: add at least one hidden test to reduce lucky hardcoded solutions.");
+        }
+
+        if (visibleTests == 1 && !ContainsAny(description, ["example", "for example", "sample input", "sample output"]))
+        {
+            suggestions.Add($"{prefix}: include an example in the statement or add another visible test to make expected behavior easier to understand.");
+        }
+
+        if (testCases.Count >= 3 && distinctExpectedOutputs <= 1)
+        {
+            suggestions.Add($"{prefix}: current test outputs are too repetitive; add stronger variation so the tests better distinguish correct logic.");
+        }
+
+        if (LooksLikeLowValuePeDrill(subject, title, description, testCases))
+        {
+            suggestions.Add($"{prefix}: PE is currently close to a syntax drill. Reframe it as a small but meaningful task that still stays grounded in the chunks.");
+            AddRubricQualityHints(rubric, suggestions);
         }
     }
 
@@ -1424,6 +1550,33 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         => tokens.Any(token => candidateText.Contains(token, StringComparison.OrdinalIgnoreCase)
                                && !sourceText.Contains(token, StringComparison.OrdinalIgnoreCase));
 
+    private static bool ContainsAny(string text, IReadOnlyList<string> patterns)
+        => patterns.Any(pattern => text.Contains(pattern, StringComparison.OrdinalIgnoreCase));
+
+    private static bool LooksLikeLowValuePeDrill(string subject, string title, string description, IReadOnlyList<QuestionTestCase> testCases)
+    {
+        var combined = $"{title} {description}";
+        var shortDirectStatement = description.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 42;
+        var syntaxHeavy = ContainsAny(combined, ["operator", "keyword", "modifier", "specifier", "sizeof", "const", "remainder", "quotient", "increment", "decrement", "getter", "setter"]);
+        var lowBehaviorFraming = !ContainsAny(combined, ["given", "manage", "store", "calculate", "determine", "validate", "track", "update", "find", "count", "check", "class", "object", "method", "array", "list", "student", "book", "library", "score", "rectangle", "account", "inventory", "number"]);
+        var weakTests = testCases.Count <= 2;
+
+        if (subject.Equals("JAVA_OOP", StringComparison.OrdinalIgnoreCase))
+        {
+            return shortDirectStatement && syntaxHeavy && weakTests;
+        }
+
+        return shortDirectStatement && (syntaxHeavy || lowBehaviorFraming) && weakTests;
+    }
+
+    private static void AddRubricQualityHints(IReadOnlyDictionary<string, object> rubric, List<string> suggestions)
+    {
+        foreach (var hint in TryReadArrayStrings(rubric, "quality_regeneration_hints"))
+        {
+            suggestions.Add(hint);
+        }
+    }
+
     private static bool LooksLikePlaceholder(string? text)
     {
         var value = text?.Trim() ?? string.Empty;
@@ -1434,6 +1587,41 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             || value.Contains("based on the chunk content", StringComparison.OrdinalIgnoreCase)
             || value.Contains("distractor option", StringComparison.OrdinalIgnoreCase)
             || value.Contains("correct statement about", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsMetaSourceReference(string? text)
+    {
+        var value = text?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        string[] patterns =
+        [
+            "according to the slide",
+            "according to the slides",
+            "according to the page",
+            "according to the pages",
+            "according to the document",
+            "according to the chapter",
+            "according to the chunk",
+            "from the slide",
+            "from the slides",
+            "from the page",
+            "from the document",
+            "from the chunk",
+            "in the slide",
+            "in the slides",
+            "in the page",
+            "in the document",
+            "in the chunk",
+            "in the text above",
+            "the slide says",
+            "the document says"
+        ];
+
+        return patterns.Any(pattern => value.Contains(pattern, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string NormalizeComparableText(string? value)

@@ -1,0 +1,179 @@
+{
+  "Summary": {
+    "RunId": "extracted-content-20260716102942774-d468fee80a004a6b9084cd55",
+    "FunctionName": "extracted-content",
+    "RouteKey": "extracted-content",
+    "RecordedAt": "2026-07-16T10:29:42.7745087+00:00",
+    "RequestType": "ExtractedContentRequest",
+    "ResponseType": "ExtractedContentResult",
+    "Status": null,
+    "ModelSummary": "VisionModel=gpt-5.4-mini",
+    "ModelFields": {
+      "Provider": "openai",
+      "PrimaryModel": null,
+      "GeneratorModel": null,
+      "ReviewerModel": null,
+      "EmbeddingModel": null,
+      "TaggingModel": null,
+      "VisionModel": "gpt-5.4-mini",
+      "MentorModel": null
+    },
+    "UsageSource": "estimated",
+    "Error": null,
+    "Totals": {
+      "InputTokens": 49,
+      "OutputTokens": 1241,
+      "InputCostUsd": 0.000007,
+      "OutputCostUsd": 0.000745,
+      "TotalCostUsd": 0.000752,
+      "LatencyMs": 2322.0,
+      "UsageCapture": {
+        "UsageSource": "estimated",
+        "CacheInputTokens": null,
+        "CacheReadTokens": null,
+        "ReasoningTokens": null,
+        "RawUsageJson": null
+      },
+      "Error": null
+    },
+    "FileName": "extracted-content-20260716102942774-d468fee80a004a6b9084cd55.json"
+  },
+  "Request": {
+    "UserId": "user-demo",
+    "FileName": "50547bd6c8d656556ab8f71685032926.png",
+    "Subject": "JAVA_OOP",
+    "Language": "en",
+    "RawContent": "[image:D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png]",
+    "Mode": "FullMultimodalPage",
+    "VisionModel": "gpt-5.4-mini"
+  },
+  "Response": {
+    "Extracted": {
+      "RawText": "\n\n### Vision Extracted From Image \u0060D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png\u0060\n# JAVA OOP CHEAT SHEET\n\n*edureka!*  \n*Learn JAVA from experts at https://www.edureka.co*\n\n---\n\n## Object Oriented Programming in Java\n\nJava is an Object Oriented Programming language that produces software for multiple platforms. An object-based application in Java is concerned with declaring classes, creating objects from them and interacting between these objects.\n\n### Java Classes\n\u0060\u0060\u0060java\nclass Test {\n/* class body\n   member variables\n   methods\n}\n\u0060\u0060\u0060\n\n### Java Objects\n\u0060\u0060\u0060java\n//Declaring and Initializing an object\nTest t = new Test();\n\u0060\u0060\u0060\n\n---\n\n## Constructors\n\n### Default Constructor\n\u0060\u0060\u0060java\nclass Test{\n/* Added by the Java Compiler at the Run Time\nTest() { }\n*/\n\npublic static void main(String args[]) {\n    Test testObj = new Test();\n}\n\u0060\u0060\u0060\n\n### Parameterized Constructor\n\u0060\u0060\u0060java\npublic class Test {\n    int appId;\n    String appName;\n    //Parameterized constructor with two parameters\n    Test(int id, String name){\n        this.appId = id;\n        this.appName = name;\n    }\n\n    void info(){\n        System.out.println(\u0022Id: \u0022\u002BappId\u002B\u0022 Name: \u0022\u002BappName);\n    }\n\n    public static void main(String args[]){\n        Test obj1 = new Test(11001, \u0022Facebook\u0022);\n        Test obj2 = new Test(23003, \u0022Instagram\u0022);\n        obj1.info();\n        obj2.info();\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Inheritance\n\n### Single Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n\u0060\u0060\u0060\n\n### Multi Level Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends B {\n/* your code\n}\n\u0060\u0060\u0060\n\n### Hybrid Inheritance\nDiagram shows a hierarchy combining multiple inheritance paths, labeled with classes A, B, C, D, E.  \nMeaning: hybrid inheritance is a combination of more than one inheritance type.\n\n### Hierarchical Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends A {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n### Multiple Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B {\n/* your parent class code\n}\n\nclass C extends A,B {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n---\n\n## Polymorphism\n\n### Compile Time Polymorphism\n\u0060\u0060\u0060java\nclass Calculator {\n    static int add(int a, int b){\n        return a\u002Bb;\n    }\n\n    static double add(double a, double b){\n        return a\u002Bb;\n    }\n\n    public static void main(String[] args){\n        System.out.println(Calculator.add(123,17));\n        System.out.println(Calculator.add(18.3,1.9));\n    }\n}\n\u0060\u0060\u0060\n\n### Run Time Polymorphism\n\u0060\u0060\u0060java\npublic class Mobile {\n/* Mobile class */\nvoid sms(){\n    System.out.println(\u0022Mobile class\u0022);\n}\n}\n\n//Extending the Mobile class\npublic class OnePlus extends Mobile{\n/* overriding sms() of Mobile class\nvoid sms(){\n    System.out.println(\u0022OnePlus class\u0022);\n}\n*/\n\npublic static void main(String[] args){\n    Mobile m = new OnePlus();\n    m.sms();\n}\n\u0060\u0060\u0060\n\n---\n\n## Abstraction\n\n### Abstract Class\n\u0060\u0060\u0060java\npublic abstract class MyAbstractClass {\n    public abstract void abstractMethod();\n    public void display(){\n        System.out.println(\u0022Concrete method\u0022);\n    }\n}\n\u0060\u0060\u0060\n\n### Interface\n\u0060\u0060\u0060java\n//Creating an Interface\npublic interface Bike { public void start(); }\n\n//Creating class implement Bike interface\nclass Honda implements Bike{\n    public void start() {\n        System.out.println(\u0022Honda Bike\u0022);\n    }\n}\n\nclass Apache implements Bike{\n    public void start() {\n        System.out.println(\u0022Apache Bike\u0022);\n    }\n}\n\nclass Rider {\n    public static void main(String args[]){\n        Bike b1 = new Honda();\n        b1.start();\n        Bike b2 = new Apache();\n        b2.start();\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Encapsulation\n\n\u0060\u0060\u0060java\npublic class Artist {\n    private String name;\n    //get method\n    public String getName() { return name; }\n    //setter method\n    public void setName(String name) { this.name = name; }\n}\n\npublic class Show {\n    public static void main(String[] args){\n        //creating instance of the encapsulated class\n        //setting value of \u0027name\u0027 member\n        Artist s = new Artist();\n        s.setName(\u0022BTS\u0022);\n        //getting value of the name member\n        System.out.println(s.getName());\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Modifiers in Java\n\n### Access Modifiers\n\n| Scope | Private | Default | Protected | Public |\n|---|---:|---:|---:|---:|\n| Same class | Yes | Yes | Yes | Yes |\n| Same package subclass | No | Yes | Yes | Yes |\n| Same package non-subclass | No | Yes | Yes | Yes |\n| Different package subclass | No | No | Yes | Yes |\n| Different package non-subclass | No | No | No | Yes |\n\n### Non-Access Modifiers\n\n| Type | Scope |\n|---|---|\n| Static | Makes the attribute dependent on a class |\n| Final | Once defined, doesn\u2019t allow any change |\n| Abstract | Makes the classes and methods abstract |\n| Synchronized | Used to synchronize the threads |\n\n---\n\n*Some small code fragments may be partially unreadable due to image resolution, but the main headings and examples are preserved.*\n",
+      "NormalizedMarkdown": "# Parsed Document: 50547bd6c8d656556ab8f71685032926.png\n\nMode: full-multimodal-page\n\n### Vision Extracted From Image \u0060D:\\1_Tailieuhoctap REAL Reborn\\Ky9 - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png\u0060\n# JAVA OOP CHEAT SHEET\n\n*edureka!* \n*Learn JAVA from experts at https://www.edureka.co*\n\n---\n\n## Object Oriented Programming in Java\n\nJava is an Object Oriented Programming language that produces software for multiple platforms. An object-based application in Java is concerned with declaring classes, creating objects from them and interacting between these objects.\n\n### Java Classes\n\u0060\u0060\u0060java\nclass Test {\n/* class body\n member variables\n methods\n}\n\u0060\u0060\u0060\n\n### Java Objects\n\u0060\u0060\u0060java\n//Declaring and Initializing an object\nTest t = new Test();\n\u0060\u0060\u0060\n\n---\n\n## Constructors\n\n### Default Constructor\n\u0060\u0060\u0060java\nclass Test{\n/* Added by the Java Compiler at the Run Time\nTest() { }\n*/\n\npublic static void main(String args[]) {\n Test testObj = new Test();\n}\n\u0060\u0060\u0060\n\n### Parameterized Constructor\n\u0060\u0060\u0060java\npublic class Test {\n int appId;\n String appName;\n //Parameterized constructor with two parameters\n Test(int id, String name){\n this.appId = id;\n this.appName = name;\n }\n\n void info(){\n System.out.println(\u0022Id: \u0022\u002BappId\u002B\u0022 Name: \u0022\u002BappName);\n }\n\n public static void main(String args[]){\n Test obj1 = new Test(11001, \u0022Facebook\u0022);\n Test obj2 = new Test(23003, \u0022Instagram\u0022);\n obj1.info();\n obj2.info();\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Inheritance\n\n### Single Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n\u0060\u0060\u0060\n\n### Multi Level Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends B {\n/* your code\n}\n\u0060\u0060\u0060\n\n### Hybrid Inheritance\nDiagram shows a hierarchy combining multiple inheritance paths, labeled with classes A, B, C, D, E. \nMeaning: hybrid inheritance is a combination of more than one inheritance type.\n\n### Hierarchical Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends A {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n### Multiple Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B {\n/* your parent class code\n}\n\nclass C extends A,B {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n---\n\n## Polymorphism\n\n### Compile Time Polymorphism\n\u0060\u0060\u0060java\nclass Calculator {\n static int add(int a, int b){\n return a\u002Bb;\n }\n\n static double add(double a, double b){\n return a\u002Bb;\n }\n\n public static void main(String[] args){\n System.out.println(Calculator.add(123,17));\n System.out.println(Calculator.add(18.3,1.9));\n }\n}\n\u0060\u0060\u0060\n\n### Run Time Polymorphism\n\u0060\u0060\u0060java\npublic class Mobile {\n/* Mobile class */\nvoid sms(){\n System.out.println(\u0022Mobile class\u0022);\n}\n}\n\n//Extending the Mobile class\npublic class OnePlus extends Mobile{\n/* overriding sms() of Mobile class\nvoid sms(){\n System.out.println(\u0022OnePlus class\u0022);\n}\n*/\n\npublic static void main(String[] args){\n Mobile m = new OnePlus();\n m.sms();\n}\n\u0060\u0060\u0060\n\n---\n\n## Abstraction\n\n### Abstract Class\n\u0060\u0060\u0060java\npublic abstract class MyAbstractClass {\n public abstract void abstractMethod();\n public void display(){\n System.out.println(\u0022Concrete method\u0022);\n }\n}\n\u0060\u0060\u0060\n\n### Interface\n\u0060\u0060\u0060java\n//Creating an Interface\npublic interface Bike { public void start(); }\n\n//Creating class implement Bike interface\nclass Honda implements Bike{\n public void start() {\n System.out.println(\u0022Honda Bike\u0022);\n }\n}\n\nclass Apache implements Bike{\n public void start() {\n System.out.println(\u0022Apache Bike\u0022);\n }\n}\n\nclass Rider {\n public static void main(String args[]){\n Bike b1 = new Honda();\n b1.start();\n Bike b2 = new Apache();\n b2.start();\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Encapsulation\n\n\u0060\u0060\u0060java\npublic class Artist {\n private String name;\n //get method\n public String getName() { return name; }\n //setter method\n public void setName(String name) { this.name = name; }\n}\n\npublic class Show {\n public static void main(String[] args){\n //creating instance of the encapsulated class\n //setting value of \u0027name\u0027 member\n Artist s = new Artist();\n s.setName(\u0022BTS\u0022);\n //getting value of the name member\n System.out.println(s.getName());\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Modifiers in Java\n\n### Access Modifiers\n\n| Scope | Private | Default | Protected | Public |\n|---|---:|---:|---:|---:|\n| Same class | Yes | Yes | Yes | Yes |\n| Same package subclass | No | Yes | Yes | Yes |\n| Same package non-subclass | No | Yes | Yes | Yes |\n| Different package subclass | No | No | Yes | Yes |\n| Different package non-subclass | No | No | No | Yes |\n\n### Non-Access Modifiers\n\n| Type | Scope |\n|---|---|\n| Static | Makes the attribute dependent on a class |\n| Final | Once defined, doesn\u2019t allow any change |\n| Abstract | Makes the classes and methods abstract |\n| Synchronized | Used to synchronize the threads |\n\n---\n\n*Some small code fragments may be partially unreadable due to image resolution, but the main headings and examples are preserved.*",
+      "WordCount": 606,
+      "EmbeddedImageCount": 1,
+      "ParserName": "multimodal-page-parser",
+      "VisionModelName": "gpt-5.4-mini",
+      "ExtractionMode": "full_multimodal_page",
+      "DetectedImageReferences": [
+        "D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png"
+      ],
+      "Warnings": []
+    },
+    "StageLogs": [
+      {
+        "StageName": "extract-content",
+        "Status": "Completed",
+        "Cost": {
+          "InputTokens": 49,
+          "OutputTokens": 1241,
+          "InputCostUsd": 0.000007,
+          "OutputCostUsd": 0.000745,
+          "TotalCostUsd": 0.000752,
+          "LatencyMs": 2322.0,
+          "UsageCapture": {
+            "UsageSource": "estimated",
+            "CacheInputTokens": null,
+            "CacheReadTokens": null,
+            "ReasoningTokens": null,
+            "RawUsageJson": null
+          },
+          "Error": null
+        },
+        "Metadata": {
+          "parser": "multimodal-page-parser",
+          "embedded_images": "1",
+          "words": "606"
+        },
+        "ModelFields": {
+          "Provider": "openai",
+          "PrimaryModel": null,
+          "GeneratorModel": null,
+          "ReviewerModel": null,
+          "EmbeddingModel": null,
+          "TaggingModel": null,
+          "VisionModel": "gpt-5.4-mini",
+          "MentorModel": null
+        },
+        "Error": null
+      }
+    ],
+    "UsageLogs": [
+      {
+        "UsageLogId": "usage-bee953d3510c4389a237",
+        "TriggeredBy": "user-demo",
+        "AgentId": "AI_ExtractedContent",
+        "PipelineRunId": "extract-20260716102942-1a47a35792c440d5a",
+        "StageName": "extract_content",
+        "AttemptIndex": 1,
+        "Provider": "openai",
+        "ModelName": "gpt-5.4-mini",
+        "CreditsDeducted": 0.7520,
+        "InputTokens": 49,
+        "OutputTokens": 1241,
+        "TokensUsed": 1290,
+        "InputCostUsd": 0.000007,
+        "OutputCostUsd": 0.000745,
+        "CostUsd": 0.000752,
+        "UsageSource": "estimated",
+        "Status": "completed",
+        "CreatedAt": "2026-07-16T10:29:42.7735761+00:00",
+        "PayloadData": {
+          "PipelineType": "extracted_content",
+          "Subject": "JAVA_OOP",
+          "QuestionType": null,
+          "Difficulty": null,
+          "Result": "completed",
+          "Input": {
+            "FileName": "50547bd6c8d656556ab8f71685032926.png",
+            "Language": "en",
+            "Mode": "FullMultimodalPage",
+            "RawContent": "[image:D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png]"
+          },
+          "Output": {
+            "RawText": "\n\n### Vision Extracted From Image \u0060D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png\u0060\n# JAVA OOP CHEAT SHEET\n\n*edureka!*  \n*Learn JAVA from experts at https://www.edureka.co*\n\n---\n\n## Object Oriented Programming in Java\n\nJava is an Object Oriented Programming language that produces software for multiple platforms. An object-based application in Java is concerned with declaring classes, creating objects from them and interacting between these objects.\n\n### Java Classes\n\u0060\u0060\u0060java\nclass Test {\n/* class body\n   member variables\n   methods\n}\n\u0060\u0060\u0060\n\n### Java Objects\n\u0060\u0060\u0060java\n//Declaring and Initializing an object\nTest t = new Test();\n\u0060\u0060\u0060\n\n---\n\n## Constructors\n\n### Default Constructor\n\u0060\u0060\u0060java\nclass Test{\n/* Added by the Java Compiler at the Run Time\nTest() { }\n*/\n\npublic static void main(String args[]) {\n    Test testObj = new Test();\n}\n\u0060\u0060\u0060\n\n### Parameterized Constructor\n\u0060\u0060\u0060java\npublic class Test {\n    int appId;\n    String appName;\n    //Parameterized constructor with two parameters\n    Test(int id, String name){\n        this.appId = id;\n        this.appName = name;\n    }\n\n    void info(){\n        System.out.println(\u0022Id: \u0022\u002BappId\u002B\u0022 Name: \u0022\u002BappName);\n    }\n\n    public static void main(String args[]){\n        Test obj1 = new Test(11001, \u0022Facebook\u0022);\n        Test obj2 = new Test(23003, \u0022Instagram\u0022);\n        obj1.info();\n        obj2.info();\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Inheritance\n\n### Single Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n\u0060\u0060\u0060\n\n### Multi Level Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends B {\n/* your code\n}\n\u0060\u0060\u0060\n\n### Hybrid Inheritance\nDiagram shows a hierarchy combining multiple inheritance paths, labeled with classes A, B, C, D, E.  \nMeaning: hybrid inheritance is a combination of more than one inheritance type.\n\n### Hierarchical Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends A {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n### Multiple Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B {\n/* your parent class code\n}\n\nclass C extends A,B {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n---\n\n## Polymorphism\n\n### Compile Time Polymorphism\n\u0060\u0060\u0060java\nclass Calculator {\n    static int add(int a, int b){\n        return a\u002Bb;\n    }\n\n    static double add(double a, double b){\n        return a\u002Bb;\n    }\n\n    public static void main(String[] args){\n        System.out.println(Calculator.add(123,17));\n        System.out.println(Calculator.add(18.3,1.9));\n    }\n}\n\u0060\u0060\u0060\n\n### Run Time Polymorphism\n\u0060\u0060\u0060java\npublic class Mobile {\n/* Mobile class */\nvoid sms(){\n    System.out.println(\u0022Mobile class\u0022);\n}\n}\n\n//Extending the Mobile class\npublic class OnePlus extends Mobile{\n/* overriding sms() of Mobile class\nvoid sms(){\n    System.out.println(\u0022OnePlus class\u0022);\n}\n*/\n\npublic static void main(String[] args){\n    Mobile m = new OnePlus();\n    m.sms();\n}\n\u0060\u0060\u0060\n\n---\n\n## Abstraction\n\n### Abstract Class\n\u0060\u0060\u0060java\npublic abstract class MyAbstractClass {\n    public abstract void abstractMethod();\n    public void display(){\n        System.out.println(\u0022Concrete method\u0022);\n    }\n}\n\u0060\u0060\u0060\n\n### Interface\n\u0060\u0060\u0060java\n//Creating an Interface\npublic interface Bike { public void start(); }\n\n//Creating class implement Bike interface\nclass Honda implements Bike{\n    public void start() {\n        System.out.println(\u0022Honda Bike\u0022);\n    }\n}\n\nclass Apache implements Bike{\n    public void start() {\n        System.out.println(\u0022Apache Bike\u0022);\n    }\n}\n\nclass Rider {\n    public static void main(String args[]){\n        Bike b1 = new Honda();\n        b1.start();\n        Bike b2 = new Apache();\n        b2.start();\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Encapsulation\n\n\u0060\u0060\u0060java\npublic class Artist {\n    private String name;\n    //get method\n    public String getName() { return name; }\n    //setter method\n    public void setName(String name) { this.name = name; }\n}\n\npublic class Show {\n    public static void main(String[] args){\n        //creating instance of the encapsulated class\n        //setting value of \u0027name\u0027 member\n        Artist s = new Artist();\n        s.setName(\u0022BTS\u0022);\n        //getting value of the name member\n        System.out.println(s.getName());\n    }\n}\n\u0060\u0060\u0060\n\n---\n\n## Modifiers in Java\n\n### Access Modifiers\n\n| Scope | Private | Default | Protected | Public |\n|---|---:|---:|---:|---:|\n| Same class | Yes | Yes | Yes | Yes |\n| Same package subclass | No | Yes | Yes | Yes |\n| Same package non-subclass | No | Yes | Yes | Yes |\n| Different package subclass | No | No | Yes | Yes |\n| Different package non-subclass | No | No | No | Yes |\n\n### Non-Access Modifiers\n\n| Type | Scope |\n|---|---|\n| Static | Makes the attribute dependent on a class |\n| Final | Once defined, doesn\u2019t allow any change |\n| Abstract | Makes the classes and methods abstract |\n| Synchronized | Used to synchronize the threads |\n\n---\n\n*Some small code fragments may be partially unreadable due to image resolution, but the main headings and examples are preserved.*\n",
+            "NormalizedMarkdown": "# Parsed Document: 50547bd6c8d656556ab8f71685032926.png\n\nMode: full-multimodal-page\n\n### Vision Extracted From Image \u0060D:\\1_Tailieuhoctap REAL Reborn\\Ky9 - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png\u0060\n# JAVA OOP CHEAT SHEET\n\n*edureka!* \n*Learn JAVA from experts at https://www.edureka.co*\n\n---\n\n## Object Oriented Programming in Java\n\nJava is an Object Oriented Programming language that produces software for multiple platforms. An object-based application in Java is concerned with declaring classes, creating objects from them and interacting between these objects.\n\n### Java Classes\n\u0060\u0060\u0060java\nclass Test {\n/* class body\n member variables\n methods\n}\n\u0060\u0060\u0060\n\n### Java Objects\n\u0060\u0060\u0060java\n//Declaring and Initializing an object\nTest t = new Test();\n\u0060\u0060\u0060\n\n---\n\n## Constructors\n\n### Default Constructor\n\u0060\u0060\u0060java\nclass Test{\n/* Added by the Java Compiler at the Run Time\nTest() { }\n*/\n\npublic static void main(String args[]) {\n Test testObj = new Test();\n}\n\u0060\u0060\u0060\n\n### Parameterized Constructor\n\u0060\u0060\u0060java\npublic class Test {\n int appId;\n String appName;\n //Parameterized constructor with two parameters\n Test(int id, String name){\n this.appId = id;\n this.appName = name;\n }\n\n void info(){\n System.out.println(\u0022Id: \u0022\u002BappId\u002B\u0022 Name: \u0022\u002BappName);\n }\n\n public static void main(String args[]){\n Test obj1 = new Test(11001, \u0022Facebook\u0022);\n Test obj2 = new Test(23003, \u0022Instagram\u0022);\n obj1.info();\n obj2.info();\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Inheritance\n\n### Single Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n\u0060\u0060\u0060\n\n### Multi Level Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends B {\n/* your code\n}\n\u0060\u0060\u0060\n\n### Hybrid Inheritance\nDiagram shows a hierarchy combining multiple inheritance paths, labeled with classes A, B, C, D, E. \nMeaning: hybrid inheritance is a combination of more than one inheritance type.\n\n### Hierarchical Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B extends A {\n/* your child class code\n}\n\nclass C extends A {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n### Multiple Inheritance\n\u0060\u0060\u0060java\nclass A {\n/* your parent class code\n}\n\nclass B {\n/* your parent class code\n}\n\nclass C extends A,B {\n/* your child class code\n}\n\u0060\u0060\u0060\n\n---\n\n## Polymorphism\n\n### Compile Time Polymorphism\n\u0060\u0060\u0060java\nclass Calculator {\n static int add(int a, int b){\n return a\u002Bb;\n }\n\n static double add(double a, double b){\n return a\u002Bb;\n }\n\n public static void main(String[] args){\n System.out.println(Calculator.add(123,17));\n System.out.println(Calculator.add(18.3,1.9));\n }\n}\n\u0060\u0060\u0060\n\n### Run Time Polymorphism\n\u0060\u0060\u0060java\npublic class Mobile {\n/* Mobile class */\nvoid sms(){\n System.out.println(\u0022Mobile class\u0022);\n}\n}\n\n//Extending the Mobile class\npublic class OnePlus extends Mobile{\n/* overriding sms() of Mobile class\nvoid sms(){\n System.out.println(\u0022OnePlus class\u0022);\n}\n*/\n\npublic static void main(String[] args){\n Mobile m = new OnePlus();\n m.sms();\n}\n\u0060\u0060\u0060\n\n---\n\n## Abstraction\n\n### Abstract Class\n\u0060\u0060\u0060java\npublic abstract class MyAbstractClass {\n public abstract void abstractMethod();\n public void display(){\n System.out.println(\u0022Concrete method\u0022);\n }\n}\n\u0060\u0060\u0060\n\n### Interface\n\u0060\u0060\u0060java\n//Creating an Interface\npublic interface Bike { public void start(); }\n\n//Creating class implement Bike interface\nclass Honda implements Bike{\n public void start() {\n System.out.println(\u0022Honda Bike\u0022);\n }\n}\n\nclass Apache implements Bike{\n public void start() {\n System.out.println(\u0022Apache Bike\u0022);\n }\n}\n\nclass Rider {\n public static void main(String args[]){\n Bike b1 = new Honda();\n b1.start();\n Bike b2 = new Apache();\n b2.start();\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Encapsulation\n\n\u0060\u0060\u0060java\npublic class Artist {\n private String name;\n //get method\n public String getName() { return name; }\n //setter method\n public void setName(String name) { this.name = name; }\n}\n\npublic class Show {\n public static void main(String[] args){\n //creating instance of the encapsulated class\n //setting value of \u0027name\u0027 member\n Artist s = new Artist();\n s.setName(\u0022BTS\u0022);\n //getting value of the name member\n System.out.println(s.getName());\n }\n}\n\u0060\u0060\u0060\n\n---\n\n## Modifiers in Java\n\n### Access Modifiers\n\n| Scope | Private | Default | Protected | Public |\n|---|---:|---:|---:|---:|\n| Same class | Yes | Yes | Yes | Yes |\n| Same package subclass | No | Yes | Yes | Yes |\n| Same package non-subclass | No | Yes | Yes | Yes |\n| Different package subclass | No | No | Yes | Yes |\n| Different package non-subclass | No | No | No | Yes |\n\n### Non-Access Modifiers\n\n| Type | Scope |\n|---|---|\n| Static | Makes the attribute dependent on a class |\n| Final | Once defined, doesn\u2019t allow any change |\n| Abstract | Makes the classes and methods abstract |\n| Synchronized | Used to synchronize the threads |\n\n---\n\n*Some small code fragments may be partially unreadable due to image resolution, but the main headings and examples are preserved.*",
+            "WordCount": 606,
+            "EmbeddedImageCount": 1,
+            "ParserName": "multimodal-page-parser",
+            "VisionModelName": "gpt-5.4-mini",
+            "ExtractionMode": "full_multimodal_page",
+            "DetectedImageReferences": [
+              "D:\\1_Tailieuhoctap REAL Reborn\\Ky9  - Final\\Prototype_AI_Module_repo\\src-dotnet\\Ape.AiModule.Api\\App_Data\\uploads\\20260716\\20260716-102923546-e96a60f8-50547bd6c8d656556ab8f71685032926.png"
+            ],
+            "Warnings": []
+          }
+        },
+        "ModelFields": {
+          "Provider": "openai",
+          "PrimaryModel": null,
+          "GeneratorModel": null,
+          "ReviewerModel": null,
+          "EmbeddingModel": null,
+          "TaggingModel": null,
+          "VisionModel": "gpt-5.4-mini",
+          "MentorModel": null
+        },
+        "Error": null,
+        "RawUsageJson": null
+      }
+    ],
+    "Totals": {
+      "InputTokens": 49,
+      "OutputTokens": 1241,
+      "InputCostUsd": 0.000007,
+      "OutputCostUsd": 0.000745,
+      "TotalCostUsd": 0.000752,
+      "LatencyMs": 2322.0,
+      "UsageCapture": {
+        "UsageSource": "estimated",
+        "CacheInputTokens": null,
+        "CacheReadTokens": null,
+        "ReasoningTokens": null,
+        "RawUsageJson": null
+      },
+      "Error": null
+    }
+  }
+}
