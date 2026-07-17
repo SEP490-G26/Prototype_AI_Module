@@ -160,18 +160,28 @@ function mergeApprovalIntoExtracted(previous, approval) {
     return approval;
   }
 
+  const previousStageLogs = previous?.stageLogs ?? previous?.StageLogs ?? [];
+  const approvalStageLogs = approval?.stageLogs ?? approval?.StageLogs ?? [];
+  const previousUsageLogs = previous?.usageLogs ?? previous?.UsageLogs ?? [];
+  const approvalUsageLogs = approval?.usageLogs ?? approval?.UsageLogs ?? [];
+  const mergedStageLogs = [...previousStageLogs, ...approvalStageLogs];
+  const mergedUsageLogs = [...previousUsageLogs, ...approvalUsageLogs];
+  const previousTotals = previous?.totals ?? previous?.Totals ?? {};
+  const approvalTotals = approval?.totals ?? approval?.Totals ?? {};
+  const mergedTotals = mergeTotals(previousTotals, approvalTotals);
+
   return {
     ...previous,
     draft: approval?.draft ?? approval?.Draft ?? previous?.draft ?? previous?.Draft ?? {},
     Draft: approval?.Draft ?? approval?.draft ?? previous?.Draft ?? previous?.draft ?? {},
     contents: approval?.contents ?? approval?.Contents ?? previous?.contents ?? previous?.Contents ?? [],
     Contents: approval?.Contents ?? approval?.contents ?? previous?.Contents ?? previous?.contents ?? [],
-    stageLogs: approval?.stageLogs ?? approval?.StageLogs ?? previous?.stageLogs ?? previous?.StageLogs ?? [],
-    StageLogs: approval?.StageLogs ?? approval?.stageLogs ?? previous?.StageLogs ?? previous?.stageLogs ?? [],
-    usageLogs: approval?.usageLogs ?? approval?.UsageLogs ?? previous?.usageLogs ?? previous?.UsageLogs ?? [],
-    UsageLogs: approval?.UsageLogs ?? approval?.usageLogs ?? previous?.UsageLogs ?? previous?.usageLogs ?? [],
-    totals: approval?.totals ?? approval?.Totals ?? previous?.totals ?? previous?.Totals ?? {},
-    Totals: approval?.Totals ?? approval?.totals ?? previous?.Totals ?? previous?.totals ?? {}
+    stageLogs: mergedStageLogs,
+    StageLogs: mergedStageLogs,
+    usageLogs: mergedUsageLogs,
+    UsageLogs: mergedUsageLogs,
+    totals: mergedTotals,
+    Totals: mergedTotals
   };
 }
 
@@ -180,6 +190,31 @@ function persistExtractedResult(result) {
   window.ApeUi.state.lastResults.lastApprovedExtractionDraft = result;
   document.getElementById('extracted-json').textContent = JSON.stringify(result, null, 2);
   document.getElementById('extracted-result').innerHTML = extractedFeature.renderResult(result);
+}
+
+function mergeTotals(previousTotals, approvalTotals) {
+  const prevInput = Number(previousTotals?.inputTokens ?? previousTotals?.InputTokens ?? 0);
+  const prevOutput = Number(previousTotals?.outputTokens ?? previousTotals?.OutputTokens ?? 0);
+  const prevInputCost = Number(previousTotals?.inputCostUsd ?? previousTotals?.InputCostUsd ?? 0);
+  const prevOutputCost = Number(previousTotals?.outputCostUsd ?? previousTotals?.OutputCostUsd ?? 0);
+  const prevTotalCost = Number(previousTotals?.totalCostUsd ?? previousTotals?.TotalCostUsd ?? 0);
+  const prevLatency = Number(previousTotals?.latencyMs ?? previousTotals?.LatencyMs ?? 0);
+
+  const approvalInput = Number(approvalTotals?.inputTokens ?? approvalTotals?.InputTokens ?? 0);
+  const approvalOutput = Number(approvalTotals?.outputTokens ?? approvalTotals?.OutputTokens ?? 0);
+  const approvalInputCost = Number(approvalTotals?.inputCostUsd ?? approvalTotals?.InputCostUsd ?? 0);
+  const approvalOutputCost = Number(approvalTotals?.outputCostUsd ?? approvalTotals?.OutputCostUsd ?? 0);
+  const approvalTotalCost = Number(approvalTotals?.totalCostUsd ?? approvalTotals?.TotalCostUsd ?? 0);
+  const approvalLatency = Number(approvalTotals?.latencyMs ?? approvalTotals?.LatencyMs ?? 0);
+
+  return {
+    inputTokens: prevInput + approvalInput,
+    outputTokens: prevOutput + approvalOutput,
+    inputCostUsd: Number((prevInputCost + approvalInputCost).toFixed(6)),
+    outputCostUsd: Number((prevOutputCost + approvalOutputCost).toFixed(6)),
+    totalCostUsd: Number((prevTotalCost + approvalTotalCost).toFixed(6)),
+    latencyMs: Number((prevLatency + approvalLatency).toFixed(2))
+  };
 }
 
 function renderTextBlocks(extracted) {
