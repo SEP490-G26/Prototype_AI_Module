@@ -2,6 +2,7 @@ import {
   escapeHtml,
   parseCsvList,
   exportJsonFile,
+  postJson,
   renderJsonDetails,
   renderMetricCards,
   renderStageLogs,
@@ -88,16 +89,46 @@ export const embeddingFeature = {
       });
     }
 
-    document.getElementById('embedding-use-last-draft')?.addEventListener('click', () => {
-      const latest = window.ApeUi?.state?.lastResults?.extracted;
-      const draft = latest?.draft ?? latest?.Draft;
-      const draftId = draft?.draftId ?? draft?.DraftId;
-      if (!draftId || !form) {
+    document.getElementById('embedding-use-last-draft')?.addEventListener('click', async () => {
+      if (!form) {
         return;
       }
 
-      form.extractionDraftId.value = draftId;
-      form.fileName.value = draft.sourceName ?? draft.SourceName ?? form.fileName.value;
+      let latest = window.ApeUi?.state?.lastResults?.lastApprovedExtractionDraft
+        ?? window.ApeUi?.state?.lastResults?.extracted;
+      let draft = latest?.draft ?? latest?.Draft;
+      let draftId = draft?.draftId ?? draft?.DraftId;
+      if (!draftId) {
+        return;
+      }
+
+      const reviewStatus = String(draft.reviewStatus ?? draft.ReviewStatus ?? '').toLowerCase();
+      if (!(reviewStatus === 'approved' || reviewStatus === 'partially_approved' || reviewStatus === 'embedded')) {
+        const userId = form.userId.value.trim();
+        const approval = await postJson(`/api/ai-module/extraction-drafts/${draftId}/approve`, {
+          userId,
+          reviewerId: userId,
+          approveAll: true,
+          humanNotes: 'Auto-approved from embedding handoff.',
+          segments: null
+        });
+        latest = mergeApprovalIntoExtracted(latest, approval);
+        window.ApeUi.state.lastResults.extracted = latest;
+        window.ApeUi.state.lastResults.lastApprovedExtractionDraft = latest;
+        const extractedJson = document.getElementById('extracted-json');
+        const extractedResult = document.getElementById('extracted-result');
+        if (extractedJson) {
+          extractedJson.textContent = JSON.stringify(latest, null, 2);
+        }
+        if (extractedResult && window.ApeUi?.featureMap?.extracted?.renderResult) {
+          extractedResult.innerHTML = window.ApeUi.featureMap.extracted.renderResult(latest);
+        }
+        draft = latest?.draft ?? latest?.Draft;
+        draftId = draft?.draftId ?? draft?.DraftId;
+      }
+
+      form.extractionDraftId.value = draftId ?? '';
+      form.fileName.value = draft?.sourceName ?? draft?.SourceName ?? form.fileName.value;
     });
 
     document.getElementById('embedding-export-chunks')?.addEventListener('click', () => {
@@ -111,6 +142,26 @@ export const embeddingFeature = {
     });
   }
 };
+
+function mergeApprovalIntoExtracted(previous, approval) {
+  if (!previous) {
+    return approval;
+  }
+
+  return {
+    ...previous,
+    draft: approval?.draft ?? approval?.Draft ?? previous?.draft ?? previous?.Draft ?? {},
+    Draft: approval?.Draft ?? approval?.draft ?? previous?.Draft ?? previous?.draft ?? {},
+    contents: approval?.contents ?? approval?.Contents ?? previous?.contents ?? previous?.Contents ?? [],
+    Contents: approval?.Contents ?? approval?.contents ?? previous?.Contents ?? previous?.contents ?? [],
+    stageLogs: approval?.stageLogs ?? approval?.StageLogs ?? previous?.stageLogs ?? previous?.StageLogs ?? [],
+    StageLogs: approval?.StageLogs ?? approval?.stageLogs ?? previous?.StageLogs ?? previous?.stageLogs ?? [],
+    usageLogs: approval?.usageLogs ?? approval?.UsageLogs ?? previous?.usageLogs ?? previous?.UsageLogs ?? [],
+    UsageLogs: approval?.UsageLogs ?? approval?.usageLogs ?? previous?.UsageLogs ?? previous?.usageLogs ?? [],
+    totals: approval?.totals ?? approval?.Totals ?? previous?.totals ?? previous?.Totals ?? {},
+    Totals: approval?.Totals ?? approval?.totals ?? previous?.Totals ?? previous?.totals ?? {}
+  };
+}
 
 function renderChunks(chunks) {
   if (!Array.isArray(chunks) || chunks.length === 0) {

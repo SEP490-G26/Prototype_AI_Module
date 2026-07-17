@@ -9,6 +9,8 @@ import {
   formatDateTime,
   formatNumber,
   normalizeFunctionName,
+  renderBadge,
+  renderMetricCards,
   renderSummaryCards,
   setHtml,
   setJson,
@@ -60,8 +62,12 @@ export function initHistory(renderers) {
         <p><strong>Function:</strong> ${escapeHtml(summary.functionName ?? summary.FunctionName ?? '')}</p>
         <p><strong>Route:</strong> ${escapeHtml(summary.routeKey ?? summary.RouteKey ?? '')}</p>
         <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(summary.recordedAt ?? summary.RecordedAt ?? ''))}</p>
+        <p><strong>Status:</strong> ${renderBadge(summary.status ?? summary.Status ?? 'n/a')}</p>
+        <p><strong>File:</strong> ${escapeHtml(summary.fileName ?? summary.FileName ?? '')}</p>
         <p><strong>Model summary:</strong> ${escapeHtml(summary.modelSummary ?? summary.ModelSummary ?? '')}</p>
+        <p><strong>Usage source:</strong> ${escapeHtml(summary.usageSource ?? summary.UsageSource ?? '(none)')}</p>
       </div>
+      ${renderMetricCards(response)}
       ${parsed}
     `);
   }
@@ -99,10 +105,13 @@ function renderHistoryCards() {
 
   const html = state.historyList.map((item) => {
     const runId = item.runId ?? item.RunId ?? '';
+    const functionName = item.functionName ?? item.FunctionName ?? '';
     return `
-      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}">
+      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
         <h4>${escapeHtml(runId)}</h4>
-        <p><strong>Status:</strong> ${escapeHtml(item.status ?? item.Status ?? '')}</p>
+        <p><strong>Status:</strong> ${renderBadge(item.status ?? item.Status ?? 'n/a')}</p>
+        <p><strong>Function:</strong> ${escapeHtml(functionName)}</p>
+        <p><strong>Route:</strong> ${escapeHtml(item.routeKey ?? item.RouteKey ?? '')}</p>
         <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(item.recordedAt ?? item.RecordedAt ?? ''))}</p>
         <p><strong>File:</strong> ${escapeHtml(item.fileName ?? item.FileName ?? '')}</p>
         <p><strong>Model:</strong> ${escapeHtml(item.modelSummary ?? item.ModelSummary ?? '')}</p>
@@ -114,7 +123,7 @@ function renderHistoryCards() {
   setHtml('history-list-parsed', html);
   document.querySelectorAll('.history-card').forEach((card) => {
     card.addEventListener('click', async () => {
-      const functionName = $('#history-function')?.value ?? 'gatekeeper';
+      const functionName = card.dataset.functionName || $('#history-function')?.value || 'gatekeeper';
       const runId = card.dataset.runId;
       await window.ApeUiHistory.openDetail(functionName, runId);
     });

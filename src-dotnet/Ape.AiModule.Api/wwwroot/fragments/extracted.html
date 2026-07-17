@@ -71,7 +71,7 @@
           <button type="button" class="secondary" data-copy-json="extracted">Copy JSON</button>
           <button type="button" class="secondary" data-export-json="extracted">Export JSON</button>
           <button type="button" class="secondary" id="extracted-approve-draft">Approve Draft</button>
-          <button type="button" class="secondary" id="extracted-load-to-embedding">Load Approved Draft To Embedding</button>
+          <button type="button" class="secondary" id="extracted-load-to-embedding">Approve If Needed + Load To Embedding</button>
         </div>
       </form>
     </section>
@@ -146,7 +146,7 @@
           <input id="embedding-upload" type="file" accept=".txt,.md,.json,.pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp">
         </label>
         <div class="action-row">
-          <button type="button" class="secondary" id="embedding-use-last-draft">Use Last Extracted Draft</button>
+          <button type="button" class="secondary" id="embedding-use-last-draft">Use Last Draft + Auto-Approve</button>
         </div>
         <label>Allowed tags (comma separated)
           <textarea name="allowedTags" rows="3">array, pointer, loop, condition, class, object, inheritance, recursion, sorting, tree, linked-list, stack, queue</textarea>

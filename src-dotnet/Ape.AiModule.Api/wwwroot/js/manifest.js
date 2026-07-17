@@ -23,6 +23,7 @@ export function createRendererMap(features) {
     'extracted-content': features.extracted.renderResult,
     'extracted-content-debug': features.extracted.renderResult,
     'extraction-draft-approve': features.extracted.renderResult,
+    'extraction-drafts': features.extracted.renderResult,
     'embedding-tagging': features.embedding.renderResult,
     'embedding-tagging-debug': features.embedding.renderResult,
     'embedding-tagging-from-draft': features.embedding.renderResult,

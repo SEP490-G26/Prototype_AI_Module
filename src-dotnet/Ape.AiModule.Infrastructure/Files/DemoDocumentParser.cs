@@ -64,7 +64,7 @@ public sealed class DemoDocumentParser : IDocumentParser
             WordCount: wordCount,
             EmbeddedImageCount: imageMatches,
             ParserName: request.Mode == PipelineMode.FullMultimodalPage ? "multimodal-page-parser" : "text-parser",
-            VisionModelName: request.Mode == PipelineMode.FullMultimodalPage ? request.VisionModel : null,
+            VisionModelName: request.VisionModel,
             ExtractionMode: request.Mode == PipelineMode.FullMultimodalPage ? "full_multimodal_page" : "text_only",
             DetectedImageReferences: imageRefs,
             Warnings: warnings);

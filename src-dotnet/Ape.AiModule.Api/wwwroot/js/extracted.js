@@ -1,6 +1,7 @@
 import {
   escapeHtml,
   postJson,
+  renderBadge,
   renderJsonDetails,
   renderMetricCards,
   renderStageLogs,
@@ -36,12 +37,13 @@ export const extractedFeature = {
     const extracted = data?.extracted ?? data?.Extracted ?? {};
     const draft = data?.draft ?? data?.Draft ?? {};
     const contents = data?.contents ?? data?.Contents ?? [];
+    const visionModel = extracted.visionModelName ?? extracted.VisionModelName ?? draft.visionModel ?? draft.VisionModel ?? '';
     return `
       <section class="result-section">
         <h4>Extraction summary</h4>
         <div class="summary-grid">
           <article class="summary-card"><span class="summary-label">Parser</span><strong class="summary-value">${escapeHtml(extracted.parserName ?? extracted.ParserName ?? '')}</strong></article>
-          <article class="summary-card"><span class="summary-label">Vision model</span><strong class="summary-value">${escapeHtml(extracted.visionModelName ?? extracted.VisionModelName ?? '')}</strong></article>
+          <article class="summary-card"><span class="summary-label">Vision model</span><strong class="summary-value">${escapeHtml(visionModel || '(none)')}</strong></article>
           <article class="summary-card"><span class="summary-label">Words</span><strong class="summary-value">${escapeHtml(String(extracted.wordCount ?? extracted.WordCount ?? 0))}</strong></article>
           <article class="summary-card"><span class="summary-label">Embedded images</span><strong class="summary-value">${escapeHtml(String(extracted.embeddedImageCount ?? extracted.EmbeddedImageCount ?? 0))}</strong></article>
         </div>
@@ -79,7 +81,7 @@ export const extractedFeature = {
     });
 
     document.getElementById('extracted-approve-draft')?.addEventListener('click', async () => {
-      const latest = window.ApeUi?.state?.lastResults?.extracted;
+      const latest = getLastExtractedResult();
       const draft = latest?.draft ?? latest?.Draft;
       if (!draft?.draftId && !draft?.DraftId) {
         return;
@@ -87,7 +89,7 @@ export const extractedFeature = {
 
       const draftId = draft.draftId ?? draft.DraftId;
       const userId = form.userId.value.trim();
-      const result = await postJson(`/api/ai-module/extraction-drafts/${draftId}/approve`, {
+      const approval = await postJson(`/api/ai-module/extraction-drafts/${draftId}/approve`, {
         userId,
         reviewerId: userId,
         approveAll: true,
@@ -95,15 +97,13 @@ export const extractedFeature = {
         segments: null
       });
 
-      window.ApeUi.state.lastResults.extracted = result;
-      window.ApeUi.state.lastResults.lastApprovedExtractionDraft = result;
-      document.getElementById('extracted-json').textContent = JSON.stringify(result, null, 2);
-      document.getElementById('extracted-result').innerHTML = extractedFeature.renderResult(result);
+      const merged = mergeApprovalIntoExtracted(latest, approval);
+      persistExtractedResult(merged);
     });
 
-    document.getElementById('extracted-load-to-embedding')?.addEventListener('click', () => {
-      const latest = window.ApeUi?.state?.lastResults?.extracted;
-      const draft = latest?.draft ?? latest?.Draft;
+    document.getElementById('extracted-load-to-embedding')?.addEventListener('click', async () => {
+      const result = await ensureDraftApproved(form);
+      const draft = result?.draft ?? result?.Draft;
       const draftId = draft?.draftId ?? draft?.DraftId;
       if (!draftId) {
         return;
@@ -121,6 +121,66 @@ export const extractedFeature = {
     });
   }
 };
+
+async function ensureDraftApproved(form) {
+  const latest = getLastExtractedResult();
+  const draft = latest?.draft ?? latest?.Draft;
+  const draftId = draft?.draftId ?? draft?.DraftId;
+  if (!draftId) {
+    return null;
+  }
+
+  const reviewStatus = String(draft.reviewStatus ?? draft.ReviewStatus ?? '').toLowerCase();
+  if (reviewStatus === 'approved' || reviewStatus === 'partially_approved' || reviewStatus === 'embedded') {
+    return latest;
+  }
+
+  const userId = form.userId.value.trim();
+  const approval = await postJson(`/api/ai-module/extraction-drafts/${draftId}/approve`, {
+    userId,
+    reviewerId: userId,
+    approveAll: true,
+    humanNotes: 'Auto-approved from prototype UI handoff.',
+    segments: null
+  });
+
+  const merged = mergeApprovalIntoExtracted(latest, approval);
+  persistExtractedResult(merged);
+  return merged;
+}
+
+function getLastExtractedResult() {
+  return window.ApeUi?.state?.lastResults?.extracted
+    ?? window.ApeUi?.state?.lastResults?.lastApprovedExtractionDraft
+    ?? null;
+}
+
+function mergeApprovalIntoExtracted(previous, approval) {
+  if (!previous) {
+    return approval;
+  }
+
+  return {
+    ...previous,
+    draft: approval?.draft ?? approval?.Draft ?? previous?.draft ?? previous?.Draft ?? {},
+    Draft: approval?.Draft ?? approval?.draft ?? previous?.Draft ?? previous?.draft ?? {},
+    contents: approval?.contents ?? approval?.Contents ?? previous?.contents ?? previous?.Contents ?? [],
+    Contents: approval?.Contents ?? approval?.contents ?? previous?.Contents ?? previous?.contents ?? [],
+    stageLogs: approval?.stageLogs ?? approval?.StageLogs ?? previous?.stageLogs ?? previous?.StageLogs ?? [],
+    StageLogs: approval?.StageLogs ?? approval?.stageLogs ?? previous?.StageLogs ?? previous?.stageLogs ?? [],
+    usageLogs: approval?.usageLogs ?? approval?.UsageLogs ?? previous?.usageLogs ?? previous?.UsageLogs ?? [],
+    UsageLogs: approval?.UsageLogs ?? approval?.usageLogs ?? previous?.UsageLogs ?? previous?.usageLogs ?? [],
+    totals: approval?.totals ?? approval?.Totals ?? previous?.totals ?? previous?.Totals ?? {},
+    Totals: approval?.Totals ?? approval?.totals ?? previous?.Totals ?? previous?.totals ?? {}
+  };
+}
+
+function persistExtractedResult(result) {
+  window.ApeUi.state.lastResults.extracted = result;
+  window.ApeUi.state.lastResults.lastApprovedExtractionDraft = result;
+  document.getElementById('extracted-json').textContent = JSON.stringify(result, null, 2);
+  document.getElementById('extracted-result').innerHTML = extractedFeature.renderResult(result);
+}
 
 function renderTextBlocks(extracted) {
   const rawText = extracted.rawText ?? extracted.RawText ?? '';
@@ -152,7 +212,7 @@ function renderDraftSummary(draft) {
   return `
     <div class="summary-grid">
       <article class="summary-card"><span class="summary-label">Draft ID</span><strong class="summary-value">${escapeHtml(draft.draftId ?? draft.DraftId ?? '')}</strong></article>
-      <article class="summary-card"><span class="summary-label">Review status</span><strong class="summary-value">${escapeHtml(draft.reviewStatus ?? draft.ReviewStatus ?? '')}</strong></article>
+      <article class="summary-card"><span class="summary-label">Review status</span><strong class="summary-value">${renderBadge(draft.reviewStatus ?? draft.ReviewStatus ?? 'needs_review')}</strong></article>
       <article class="summary-card"><span class="summary-label">Segments</span><strong class="summary-value">${escapeHtml(String(draft.totalSegments ?? draft.TotalSegments ?? 0))}</strong></article>
       <article class="summary-card"><span class="summary-label">Approved</span><strong class="summary-value">${escapeHtml(String(draft.approvedSegments ?? draft.ApprovedSegments ?? 0))}</strong></article>
     </div>
@@ -170,10 +230,11 @@ function renderDraftContents(contents) {
       <div class="card-stack">
         ${contents.map((item, index) => `
           <details class="details-block">
-            <summary>Segment ${escapeHtml(String(item.segmentIndex ?? item.SegmentIndex ?? index + 1))} | ${escapeHtml(item.reviewStatus ?? item.ReviewStatus ?? '')}</summary>
+            <summary>Segment ${escapeHtml(String(item.segmentIndex ?? item.SegmentIndex ?? index + 1))} | ${escapeHtml(String(item.reviewStatus ?? item.ReviewStatus ?? ''))}</summary>
             <div class="kv-block">
               <p><strong>Content ID:</strong> ${escapeHtml(item.contentId ?? item.ContentId ?? '')}</p>
               <p><strong>Pages:</strong> ${escapeHtml(String(item.sourcePageFrom ?? item.SourcePageFrom ?? ''))}-${escapeHtml(String(item.sourcePageTo ?? item.SourcePageTo ?? ''))}</p>
+              <p><strong>Status:</strong> ${renderBadge(item.reviewStatus ?? item.ReviewStatus ?? 'needs_review')}</p>
             </div>
             <pre class="json-view">${escapeHtml(item.approvedMarkdown ?? item.ApprovedMarkdown ?? item.cleanMarkdown ?? item.CleanMarkdown ?? '')}</pre>
           </details>
