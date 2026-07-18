@@ -153,8 +153,8 @@ Flow hiện tại trong prototype:
 
 Điểm còn thiếu:
 
-- chưa có retrieval planner đúng nghĩa trước khi generator chạy
-- chưa có context pack store để tái sử dụng ngữ cảnh
+- chưa có DB/vector retrieval thật
+- chưa có reuse policy / cache invalidation đủ chặt cho context pack
 
 ### `generation-review`
 
@@ -173,11 +173,11 @@ Mode đã hỗ trợ:
 - `SameModelDualRole`
 - `DualAgent`
 
-## Pipeline production đề xuất
+## Pipeline production-test-harness hiện tại
 
 ### `generation-request`
 
-Flow production nên là:
+Flow đang hỗ trợ trong prototype:
 
 1. nhận request tạo đề
 2. retrieval planner lọc candidate từ `KnowledgeChunks`
@@ -320,12 +320,12 @@ Ground truth đã nối vào:
 - `POST /api/ai-module/generation-review`
 - `POST /api/ai-module/generation-review/debug`
 - `POST /api/ai-module/generation-review/export`
-
-Về sau nếu nối retrieval planner thật, nên bổ sung thêm các route như:
-
-- `POST /api/ai-module/context-packs/plan`
+- `POST /api/ai-module/retrieval/plan`
+- `POST /api/ai-module/retrieval/plan/debug`
 - `POST /api/ai-module/context-packs/build`
 - `GET /api/ai-module/context-packs/{packId}`
+- `GET /api/ai-module/context-packs`
+- `POST /api/ai-module/context-packs/{packId}/mark-stale`
 
 ## Export package đã có
 
@@ -364,7 +364,12 @@ Về sau nên thêm:
 
 ## Kết luận
 
-Generation + Review hiện đã đủ tốt để benchmark chất lượng ở quy mô nhỏ.
+Generation + Review hiện đã có retrieval + context packing ở mức prototype test harness.
 
-Nhưng để production và trả lời bài toán chi phí thật, bắt buộc phải có thêm tầng retrieval + context packing. Nếu thiếu tầng này, việc tạo đề từ tài liệu lớn sẽ rất dễ đốt quá nhiều input token cho mỗi request.
+Điểm cần tối ưu tiếp không còn là “có hay không có retrieval planner”, mà là:
+
+- retrieval quality
+- packed token ratio
+- cache/reuse strategy
+- khả năng nối DB/vector search thật để phản ánh production đầy đủ hơn
 

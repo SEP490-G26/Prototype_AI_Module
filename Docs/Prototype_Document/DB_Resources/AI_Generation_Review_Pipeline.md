@@ -12,9 +12,9 @@ Luồng này dùng để tạo câu hỏi FE/PE từ tri thức đã ingest và 
 
 ## Điều chỉnh tư duy pipeline
 
-Ở mức prototype nhỏ, có thể truyền thẳng `KnowledgeChunks` vào generation.
+Ở mức benchmark nhỏ, có thể vẫn truyền thẳng `KnowledgeChunks` vào generation.
 
-Ở mức production, luồng đúng phải là:
+Ở mức production-test-harness hiện tại, luồng khuyến nghị là:
 
 `KnowledgeChunks -> Retrieval Planner -> AI_Context_Packs -> Generator -> Reviewer`
 
@@ -152,6 +152,30 @@ Trước khi AI1 chạy, planner nên:
    - duplicate penalty
 4. build `AI_Context_Packs` theo token budget
 
+## Runtime hiện tại của prototype
+
+Prototype hiện tại đã nối runtime theo 3 kiểu input cho `generation-review`:
+
+1. `chunks`
+2. `contextPackId`
+3. `retrieval`
+
+Nếu dùng `retrieval`:
+
+- orchestrator sẽ gọi retrieval planner
+- retrieval planner chọn candidate, re-rank và build/load `AI_Context_Packs`
+- `generator` và `reviewer` sẽ đọc `pack.Chunks`
+
+Nếu dùng `contextPackId`:
+
+- orchestrator sẽ load pack đã lưu
+- phù hợp để chạy nhiều model trên cùng một ngữ cảnh
+
+Nếu dùng `chunks`:
+
+- hệ thống sẽ chạy trực tiếp theo kiểu benchmark nhanh
+- phù hợp để test prompt hoặc test quality ở quy mô nhỏ
+
 ## Token budget gợi ý
 
 ### FE single
@@ -197,6 +221,11 @@ Reviewer cần kiểm tra thêm:
 
 ## Kết luận
 
-Luồng generation-review sẽ chỉ thực sự production-ready khi có tầng retrieval + context packing đứng giữa `KnowledgeChunks` và generator.
+Luồng generation-review hiện đã có tầng retrieval + context packing ở mức prototype test harness.
 
-Nếu bỏ qua tầng này, pipeline có thể vẫn chạy, nhưng chi phí và token input sẽ rất khó kiểm soát khi đi vào tài liệu lớn hoặc BYOS.
+Điểm cần phát triển tiếp không còn là thiếu flow này, mà là:
+
+- tối ưu retrieval quality
+- tối ưu token packing ở case trung bình/dài
+- nối DB/vector search thật
+- siết reuse policy cho `AI_Context_Packs`

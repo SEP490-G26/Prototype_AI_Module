@@ -10,8 +10,10 @@ import {
   formatNumber,
   normalizeFunctionName,
   renderBadge,
+  renderJsonDetails,
   renderMetricCards,
   renderSummaryCards,
+  renderTextBlock,
   setHtml,
   setJson,
   stringifyJson
@@ -55,7 +57,7 @@ export function initHistory(renderers) {
     const routeKey = normalizeFunctionName(summary.routeKey ?? summary.RouteKey ?? functionName);
     const renderer = renderers[routeKey] ?? renderers[normalizeFunctionName(functionName)];
     const response = detail.response ?? detail.Response ?? {};
-    const parsed = renderer ? renderer(response) : `<pre class="json-view">${escapeHtml(stringifyJson(response))}</pre>`;
+    const parsed = renderHistoryDetailParsed(routeKey, response, renderer);
     setHtml('history-detail-result', `
       <div class="kv-block">
         <p><strong>Run ID:</strong> ${escapeHtml(summary.runId ?? summary.RunId ?? '')}</p>
@@ -106,18 +108,8 @@ function renderHistoryCards() {
   const html = state.historyList.map((item) => {
     const runId = item.runId ?? item.RunId ?? '';
     const functionName = item.functionName ?? item.FunctionName ?? '';
-    return `
-      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
-        <h4>${escapeHtml(runId)}</h4>
-        <p><strong>Status:</strong> ${renderBadge(item.status ?? item.Status ?? 'n/a')}</p>
-        <p><strong>Function:</strong> ${escapeHtml(functionName)}</p>
-        <p><strong>Route:</strong> ${escapeHtml(item.routeKey ?? item.RouteKey ?? '')}</p>
-        <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(item.recordedAt ?? item.RecordedAt ?? ''))}</p>
-        <p><strong>File:</strong> ${escapeHtml(item.fileName ?? item.FileName ?? '')}</p>
-        <p><strong>Model:</strong> ${escapeHtml(item.modelSummary ?? item.ModelSummary ?? '')}</p>
-        <p><strong>Cost:</strong> ${escapeHtml(formatCurrency(item.totals?.totalCostUsd ?? item.Totals?.TotalCostUsd ?? 0))}</p>
-      </article>
-    `;
+    const routeKey = normalizeFunctionName(item.routeKey ?? item.RouteKey ?? functionName);
+    return renderHistoryListCard(item, runId, functionName, routeKey);
   }).join('');
 
   setHtml('history-list-parsed', html);
@@ -128,6 +120,58 @@ function renderHistoryCards() {
       await window.ApeUiHistory.openDetail(functionName, runId);
     });
   });
+}
+
+function renderHistoryListCard(item, runId, functionName, routeKey) {
+  if (isRetrievalHistoryRoute(routeKey)) {
+    const packId = item.packId ?? item.PackId ?? item.contextPackId ?? item.ContextPackId ?? '';
+    const packedTokens = item.packedTokens ?? item.PackedTokens ?? item.tokenCount ?? item.TokenCount ?? item.totals?.inputTokens ?? item.Totals?.InputTokens ?? 0;
+    const compressionRatio = item.compressionRatio ?? item.CompressionRatio ?? '';
+    return `
+      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
+        <h4>${escapeHtml(runId)}</h4>
+        <p><strong>Status:</strong> ${renderBadge(item.status ?? item.Status ?? 'n/a')}</p>
+        <p><strong>Function:</strong> ${escapeHtml(functionName)}</p>
+        <p><strong>Route:</strong> ${escapeHtml(item.routeKey ?? item.RouteKey ?? '')}</p>
+        <p><strong>Pack ID:</strong> ${escapeHtml(packId || '(generated at runtime)')}</p>
+        <p><strong>Packed tokens:</strong> ${escapeHtml(formatNumber(packedTokens))}</p>
+        <p><strong>Compression:</strong> ${escapeHtml(String(compressionRatio || '(n/a)'))}</p>
+        <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(item.recordedAt ?? item.RecordedAt ?? ''))}</p>
+        <p><strong>Model:</strong> ${escapeHtml(item.modelSummary ?? item.ModelSummary ?? '')}</p>
+        <p><strong>Cost:</strong> ${escapeHtml(formatCurrency(item.totals?.totalCostUsd ?? item.Totals?.TotalCostUsd ?? 0))}</p>
+      </article>
+    `;
+  }
+
+  if (isContextPackHistoryRoute(routeKey)) {
+    const packId = item.packId ?? item.PackId ?? '';
+    const status = item.packStatus ?? item.PackStatus ?? item.status ?? item.Status ?? 'n/a';
+    const tokenCount = item.tokenCount ?? item.TokenCount ?? item.totals?.inputTokens ?? item.Totals?.InputTokens ?? 0;
+    return `
+      <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
+        <h4>${escapeHtml(runId)}</h4>
+        <p><strong>Status:</strong> ${renderBadge(status)}</p>
+        <p><strong>Pack ID:</strong> ${escapeHtml(packId || '(none)')}</p>
+        <p><strong>Route:</strong> ${escapeHtml(item.routeKey ?? item.RouteKey ?? '')}</p>
+        <p><strong>Token count:</strong> ${escapeHtml(formatNumber(tokenCount))}</p>
+        <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(item.recordedAt ?? item.RecordedAt ?? ''))}</p>
+        <p><strong>Model:</strong> ${escapeHtml(item.modelSummary ?? item.ModelSummary ?? '')}</p>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="list-card history-card" data-run-id="${escapeHtml(runId)}" data-function-name="${escapeHtml(functionName)}">
+      <h4>${escapeHtml(runId)}</h4>
+      <p><strong>Status:</strong> ${renderBadge(item.status ?? item.Status ?? 'n/a')}</p>
+      <p><strong>Function:</strong> ${escapeHtml(functionName)}</p>
+      <p><strong>Route:</strong> ${escapeHtml(item.routeKey ?? item.RouteKey ?? '')}</p>
+      <p><strong>Recorded:</strong> ${escapeHtml(formatDateTime(item.recordedAt ?? item.RecordedAt ?? ''))}</p>
+      <p><strong>File:</strong> ${escapeHtml(item.fileName ?? item.FileName ?? '')}</p>
+      <p><strong>Model:</strong> ${escapeHtml(item.modelSummary ?? item.ModelSummary ?? '')}</p>
+      <p><strong>Cost:</strong> ${escapeHtml(formatCurrency(item.totals?.totalCostUsd ?? item.Totals?.TotalCostUsd ?? 0))}</p>
+    </article>
+  `;
 }
 
 function renderHistorySummary() {
@@ -194,4 +238,119 @@ function buildTsv(summary) {
     summary.totals?.totalCostUsd ?? summary.Totals?.TotalCostUsd ?? 0,
     summary.totals?.latencyMs ?? summary.Totals?.LatencyMs ?? 0
   ].join('\t');
+}
+
+function renderHistoryDetailParsed(routeKey, response, fallbackRenderer) {
+  if (isRetrievalHistoryRoute(routeKey)) {
+    return renderRetrievalHistoryDetail(response);
+  }
+
+  if (isContextPackHistoryRoute(routeKey)) {
+    return renderContextPackHistoryDetail(response);
+  }
+
+  return fallbackRenderer ? fallbackRenderer(response) : `<pre class="json-view">${escapeHtml(stringifyJson(response))}</pre>`;
+}
+
+function renderRetrievalHistoryDetail(response) {
+  const contextPack = response?.contextPack ?? response?.ContextPack ?? null;
+  const tokenBudget = response?.tokenBudget ?? response?.TokenBudget ?? null;
+  const candidateStats = response?.candidateStats ?? response?.CandidateStats ?? null;
+  const selectedChunks = response?.selectedChunks ?? response?.SelectedChunks ?? [];
+  return `
+    <section class="result-section">
+      <h4>Retrieval run</h4>
+      <div class="summary-grid">
+        <article class="summary-card"><span class="summary-label">Pack ID</span><strong class="summary-value">${escapeHtml(contextPack?.packId ?? contextPack?.PackId ?? '(none)')}</strong></article>
+        <article class="summary-card"><span class="summary-label">Source tokens</span><strong class="summary-value">${escapeHtml(formatNumber(tokenBudget?.estimatedSourceTokens ?? tokenBudget?.EstimatedSourceTokens ?? contextPack?.sourceTokenCount ?? contextPack?.SourceTokenCount ?? 0))}</strong></article>
+        <article class="summary-card"><span class="summary-label">Packed tokens</span><strong class="summary-value">${escapeHtml(formatNumber(tokenBudget?.estimatedPackedTokens ?? tokenBudget?.EstimatedPackedTokens ?? contextPack?.tokenCount ?? contextPack?.TokenCount ?? 0))}</strong></article>
+        <article class="summary-card"><span class="summary-label">Compression</span><strong class="summary-value">${escapeHtml(String(tokenBudget?.compressionRatio ?? tokenBudget?.CompressionRatio ?? contextPack?.compressionRatio ?? contextPack?.CompressionRatio ?? 0))}</strong></article>
+      </div>
+      ${candidateStats ? renderJsonDetails('Candidate stats', candidateStats, true) : ''}
+      ${renderSelectedChunkTable(selectedChunks)}
+      ${renderContextPackSummary(contextPack)}
+    </section>
+  `;
+}
+
+function renderContextPackHistoryDetail(response) {
+  const pack = response?.contextPack ?? response?.ContextPack ?? response;
+  return `
+    <section class="result-section">
+      <h4>Context pack run</h4>
+      <div class="summary-grid">
+        <article class="summary-card"><span class="summary-label">Pack ID</span><strong class="summary-value">${escapeHtml(pack?.packId ?? pack?.PackId ?? '(none)')}</strong></article>
+        <article class="summary-card"><span class="summary-label">Status</span><strong class="summary-value">${renderBadge(pack?.packStatus ?? pack?.PackStatus ?? 'n/a')}</strong></article>
+        <article class="summary-card"><span class="summary-label">Token count</span><strong class="summary-value">${escapeHtml(formatNumber(pack?.tokenCount ?? pack?.TokenCount ?? 0))}</strong></article>
+        <article class="summary-card"><span class="summary-label">Updated</span><strong class="summary-value">${escapeHtml(formatDateTime(pack?.updatedAt ?? pack?.UpdatedAt ?? ''))}</strong></article>
+      </div>
+      ${renderContextPackSummary(pack)}
+    </section>
+  `;
+}
+
+function renderContextPackSummary(contextPack) {
+  if (!contextPack) {
+    return '<div class="placeholder">No context pack payload was saved for this run.</div>';
+  }
+
+  return `
+    <details class="details-block" open>
+      <summary>Context pack summary</summary>
+      <div class="kv-block">
+        <p><strong>Target topics:</strong> ${escapeHtml(((contextPack.targetTopics ?? contextPack.TargetTopics ?? [])).join(', ') || '(none)')}</p>
+        <p><strong>Question type:</strong> ${escapeHtml(contextPack.questionType ?? contextPack.QuestionType ?? '(n/a)')}</p>
+        <p><strong>Difficulty:</strong> ${escapeHtml(contextPack.targetDifficulty ?? contextPack.TargetDifficulty ?? '(n/a)')}</p>
+        <p><strong>Source scope:</strong> ${escapeHtml(contextPack.sourceScope ?? contextPack.SourceScope ?? '(n/a)')}</p>
+        <p><strong>Usage count:</strong> ${escapeHtml(formatNumber(contextPack.usageCount ?? contextPack.UsageCount ?? 0))}</p>
+        <p><strong>Expires at:</strong> ${escapeHtml(formatDateTime(contextPack.expiresAt ?? contextPack.ExpiresAt ?? ''))}</p>
+      </div>
+      ${renderTextBlock('Packed summary text', contextPack.packedSummaryText ?? contextPack.PackedSummaryText ?? '', true)}
+      ${renderTextBlock('Packed context text', contextPack.packedContextText ?? contextPack.PackedContextText ?? '', false)}
+    </details>
+  `;
+}
+
+function renderSelectedChunkTable(selectedChunks) {
+  if (!Array.isArray(selectedChunks) || selectedChunks.length === 0) {
+    return '';
+  }
+
+  const rows = selectedChunks.map((chunk) => `
+    <tr>
+      <td>${escapeHtml(chunk.chunkId ?? chunk.ChunkId ?? '')}</td>
+      <td>${escapeHtml(chunk.selectionRole ?? chunk.SelectionRole ?? '')}</td>
+      <td>${escapeHtml(chunk.topicPrimary ?? chunk.TopicPrimary ?? '')}</td>
+      <td>${escapeHtml(formatNumber(chunk.tokenCount ?? chunk.TokenCount ?? 0))}</td>
+      <td>${escapeHtml(String(chunk.finalScore ?? chunk.FinalScore ?? 0))}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <details class="details-block" open>
+      <summary>Selected chunks</summary>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Chunk ID</th>
+              <th>Role</th>
+              <th>Primary topic</th>
+              <th>Tokens</th>
+              <th>Final score</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function isRetrievalHistoryRoute(routeKey) {
+  return routeKey === 'retrieval' || routeKey === 'retrieval-plan' || routeKey === 'retrieval-plan-debug';
+}
+
+function isContextPackHistoryRoute(routeKey) {
+  return routeKey === 'context-packs' || routeKey === 'context-pack-build' || routeKey === 'context-pack-mark-stale';
 }

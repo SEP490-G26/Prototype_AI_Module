@@ -367,7 +367,7 @@ Nên:
 - prebuild pack cho topic hot
 - chỉ re-pack động cho case mới hoặc BYOS
 
-## 14. Điều prototype hiện tại chưa làm
+## 14. Trạng thái prototype hiện tại
 
 Prototype hiện tại đã có:
 
@@ -375,19 +375,29 @@ Prototype hiện tại đã có:
 - chunking
 - embedding
 - tagging
+- retrieval planner
+- context pack store
 - generation/review
 
-Nhưng chưa có production retrieval planner đúng nghĩa. Tức là:
+Prototype hiện tại đã hỗ trợ:
 
-- generation hiện vẫn phụ thuộc vào `chunks` được request đưa vào
-- chưa có bước candidate search + re-rank + token-budget pack ở giữa
+- `POST /api/ai-module/retrieval/plan`
+- `POST /api/ai-module/retrieval/plan/debug`
+- `POST /api/ai-module/context-packs/build`
+- `GET /api/ai-module/context-packs/{packId}`
+- `GET /api/ai-module/context-packs`
+- `POST /api/ai-module/context-packs/{packId}/mark-stale`
+- `generation-review` nhận:
+  - `chunks`
+  - `contextPackId`
+  - `retrieval`
 
-Vì vậy, nếu muốn dùng prototype như production test harness, bước tiếp theo sau đặc tả này là:
+Những gì vẫn còn là bước tối ưu tiếp theo:
 
-1. thêm `retrieval planner service`
-2. thêm `context pack builder`
-3. thêm `AI_Context_Packs` repository tạm
-4. nối generation/review sang đọc context pack thay vì raw chunk list quá lớn
+1. siết token ratio tốt hơn cho chunk trung bình/dài
+2. thêm rerank/vector retrieval thật khi nối DB/vector store
+3. thêm context-pack reuse policy chặt hơn
+4. thêm telemetry so sánh `raw chunk mode` với `context pack mode`
 
 ## 15. Kết luận
 

@@ -331,8 +331,30 @@ Mục tiêu của prototype:
 - đã có rubric runtime theo môn + FE/PE
 - đã có ground truth starter
 - đã có regression runner
+- đã có retrieval planner + context pack runtime cho mode production-test-harness
 - đã đủ để benchmark và ghép với BE tổng
 - `generation-review/debug` hiện đang là route placeholder, trả cùng payload runtime như route thường
+
+### Flow khuyến nghị hiện tại
+
+Nếu benchmark nhanh:
+
+- `Embedding + Auto Tagging`
+- export / import `chunks`
+- `generation-review`
+
+Nếu benchmark gần production:
+
+- `Embedding + Auto Tagging`
+- `retrieval/plan`
+- lấy `contextPackId`
+- `generation-review` với `contextPackId`
+
+Nếu muốn so model công bằng:
+
+- dùng cùng một `contextPackId`
+- đổi `generatorModel` và/hoặc `reviewerModel`
+- như vậy input ngữ cảnh được giữ nguyên
 
 ## 6. AI Code Mentor
 
@@ -483,6 +505,7 @@ Module AI prototype hiện tại đã đạt mức:
 - có `normalized error catalog` ở mức runtime
 - có benchmark session save/open
 - có parser PDF thật cho production test harness
+- có retrieval planner và file-backed context pack store
 - có khả năng ghép vào BE tổng sau này
 
 ## Đánh giá prototype testing/production hiện tại

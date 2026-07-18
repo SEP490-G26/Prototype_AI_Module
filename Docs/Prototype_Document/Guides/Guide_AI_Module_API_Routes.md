@@ -71,6 +71,19 @@ Tài liệu này gom toàn bộ route chính để nhóm FE, QA và BE tổng tr
 | `POST` | `/api/ai-module/generation-review/debug` | Route debug hiện có, nhưng đang trả cùng payload runtime như generation-review thường |
 | `POST` | `/api/ai-module/generation-review/export` | Export package JSON chuẩn hoá |
 
+### Ghi chú flow end-to-end cho generation/review
+
+- `generation-review` hiện hỗ trợ 3 kiểu input:
+  - `chunks`
+  - `contextPackId`
+  - `retrieval`
+- Nếu muốn test gần production:
+  1. gọi `POST /api/ai-module/retrieval/plan`
+  2. lấy `contextPack.packId`
+  3. gọi `POST /api/ai-module/generation-review` với `contextPackId`
+- Nếu muốn test nhanh quality từ file chunk nhỏ:
+  - có thể gửi trực tiếp `chunks`, nhưng cost sẽ phản ánh kiểu benchmark hơn là production retrieval flow
+
 ## Code mentor
 
 | Method | Route | Mục đích |
@@ -133,4 +146,13 @@ Tài liệu này chỉ tập trung vào route. Phần flow nghiệp vụ xem th�
 | GET | /api/ai-module/context-packs/{packId} | Lấy chi tiết một context pack |
 | GET | /api/ai-module/context-packs?subject=&questionType=&difficulty=&topic=&status= | Lấy danh sách context pack theo filter |
 | POST | /api/ai-module/context-packs/{packId}/mark-stale | Đánh dấu context pack cần rebuild |
+
+### Dùng route nào trong thực tế
+
+- Benchmark nhỏ, kiểm tra prompt nhanh:
+  - dùng `chunks` trực tiếp trong `generation-review`
+- Benchmark gần production:
+  - `retrieval/plan` -> `contextPackId` -> `generation-review`
+- Chạy lại đúng cùng một ngữ cảnh để so model:
+  - dùng `contextPackId`
 

@@ -36,9 +36,16 @@ UI này là operator console để chạy thử, benchmark và kiểm tra pipeli
 
 ### 5. Generation + Review
 
-- nạp `chunks` JSON
+- hỗ trợ 3 input strategy:
+  - `Chunks JSON`
+  - `Context Pack ID`
+  - `Retrieval Planner`
+- có thể bấm `Plan Retrieval Pack` để build trước `context pack`
+- có thể dùng lại `Last Context Pack` để chạy lại cùng ngữ cảnh
 - chọn mode `SingleAgent`, `SameModelDualRole`, `DualAgent`
 - chọn loại câu hỏi `FE` hoặc `PE`
+- xem `source token`, `packed token`, `compression ratio`
+- xem `selected chunks`, `packed summary`, `packed context`
 - xem output AI1, output AI2, kết quả cuối cùng
 - xem raw JSON từng bước để đưa vào báo cáo
 
@@ -48,12 +55,7 @@ UI này là operator console để chạy thử, benchmark và kiểm tra pipeli
 - chọn provider/model
 - xem feedback dạng đọc được và JSON raw
 
-### 7. Ingestion / Full Pipeline
-
-- test luồng đầy đủ từ ingest tới generation/review
-- dùng để nhìn tổng token, tổng cost, tổng latency
-
-### 8. History + Sessions
+### 7. History + Sessions
 
 - xem lại lịch sử test theo function
 - filter theo model, status, date
@@ -72,3 +74,7 @@ UI này là operator console để chạy thử, benchmark và kiểm tra pipeli
 - UI này là console cho prototype, không phải FE production.
 - Dữ liệu hiển thị ưu tiên kiểu `JSON-first` theo DTO backend.
 - Các tab đều nên được dùng kèm history để lưu bằng chứng test.
+- Với flow production-test-harness cho tạo đề, thứ tự nên là:
+  1. `Extraction -> Embedding`
+  2. `Plan Retrieval Pack`
+  3. `Generation + Review` bằng `Context Pack ID`

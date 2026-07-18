@@ -71,6 +71,7 @@ export const generationFeature = {
     const difficulty = data?.difficultyAlignment ?? data?.DifficultyAlignment ?? null;
     const contextPack = data?.contextPack ?? data?.ContextPack ?? null;
     const retrievalPlan = data?.retrievalPlan ?? data?.RetrievalPlan ?? null;
+    const inputSource = detectInputSource(data);
     return `
       <section class="result-section">
         <h4>Generation + review result</h4>
@@ -79,9 +80,11 @@ export const generationFeature = {
           <article class="summary-card"><span class="summary-label">Questions</span><strong class="summary-value">${escapeHtml(String(questions.length))}</strong></article>
           <article class="summary-card"><span class="summary-label">Review status</span><strong class="summary-value">${review ? escapeHtml(review.reviewStatus ?? review.ReviewStatus ?? '') : 'n/a'}</strong></article>
           <article class="summary-card"><span class="summary-label">Attempts</span><strong class="summary-value">${escapeHtml(String(data?.attemptsUsed ?? data?.AttemptsUsed ?? 0))}</strong></article>
+          <article class="summary-card"><span class="summary-label">Input source</span><strong class="summary-value">${escapeHtml(inputSource)}</strong></article>
         </div>
         ${renderMetricCards(data)}
         ${renderContextPackBlock(contextPack, retrievalPlan)}
+        ${retrievalPlan ? renderSelectedChunks(retrievalPlan.selectedChunks ?? retrievalPlan.SelectedChunks ?? []) : ''}
         ${renderQuestionBlocks(questions)}
         ${renderReviewBlock(review, mapping, difficulty)}
         ${renderStageLogs(data)}
@@ -125,6 +128,31 @@ export const generationFeature = {
       syncInputStrategy();
     });
 
+    document.getElementById('generation-use-last-pack')?.addEventListener('click', () => {
+      const form = document.getElementById('generation-form');
+      if (!form) {
+        return;
+      }
+
+      const packId = state.lastResults.generationPlan?.contextPack?.packId
+        ?? state.lastResults.generationPlan?.ContextPack?.PackId
+        ?? state.lastResults.generation?.contextPack?.packId
+        ?? state.lastResults.generation?.ContextPack?.PackId
+        ?? '';
+
+      if (!packId) {
+        const note = document.getElementById('generation-flow-note');
+        if (note) {
+          note.textContent = 'Chưa có context pack trong session hiện tại. Hãy bấm Plan Retrieval Pack trước.';
+        }
+        return;
+      }
+
+      form.contextPackId.value = packId;
+      form.inputStrategy.value = 'contextPack';
+      syncInputStrategy();
+    });
+
     document.getElementById('generation-plan-retrieval')?.addEventListener('click', async () => {
       const form = document.getElementById('generation-form');
       if (!form) {
@@ -137,6 +165,8 @@ export const generationFeature = {
       state.lastResults.generationPlan = result;
       if (result?.contextPack?.packId || result?.ContextPack?.PackId) {
         form.contextPackId.value = result?.contextPack?.packId ?? result?.ContextPack?.PackId ?? '';
+        form.inputStrategy.value = 'contextPack';
+        syncInputStrategy();
       }
       setGenerationResult(result);
     });
@@ -197,6 +227,14 @@ function syncInputStrategy() {
   form.retrievalQuery.disabled = !isRetrieval;
   form.chunks.disabled = !isChunks;
   document.getElementById('generation-import').disabled = !isChunks;
+  const note = document.getElementById('generation-flow-note');
+  if (note) {
+    note.textContent = isChunks
+      ? 'Chunks JSON: dùng khi bạn muốn benchmark trực tiếp từ dữ liệu embedding/tagging hoặc import file chunk JSON.'
+      : isContextPack
+        ? 'Context Pack ID: dùng lại pack đã plan trước đó để cost gần production hơn và tránh re-pack không cần thiết.'
+        : 'Retrieval Planner: nhận target topics + retrieval query, tự chọn chunk phù hợp rồi build context pack trước khi generation/review chạy.';
+  }
 }
 
 function resolveChunks(form) {
@@ -232,6 +270,18 @@ function buildRetrievalPayload(form) {
     retrievalQuery: form.retrievalQuery.value.trim() || buildDefaultRetrievalQuery(form, topics),
     seedChunks: chunks.length ? chunks : null
   };
+}
+
+function detectInputSource(data) {
+  if (data?.retrievalPlan || data?.RetrievalPlan) {
+    return 'retrieval-derived context pack';
+  }
+
+  if (data?.contextPack || data?.ContextPack) {
+    return 'context pack';
+  }
+
+  return 'chunks json';
 }
 
 function buildDefaultRetrievalQuery(form, topics) {

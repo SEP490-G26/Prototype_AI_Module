@@ -271,9 +271,9 @@ Nếu 7 phần này không ổn, module sẽ chỉ dùng được để benchmar
 
 ## 8. Những gì cần sửa khi nối vào DB thật
 
-### 8.1 Knowledgeknowledge chunks / context packs
+### 8.1 Knowledge chunks / context packs
 
-Cần map đúng vào collection `Knowledgeknowledge chunks / context packs` và bổ sung các field metadata cần thiết.
+Cần map đúng vào collection `KnowledgeChunks / AI_Context_Packs` và bổ sung các field metadata cần thiết.
 
 ### 8.2 FE_Questions / PE_Questions
 
@@ -317,7 +317,7 @@ Thứ tự đề nghị:
 1. chốt contract JSON cho 6 function
 2. siết output generation/review
 3. viết rubric theo môn học + loại câu hỏi
-4. chốt schema `Knowledgeknowledge chunks / context packs`
+4. chốt schema `KnowledgeChunks / AI_Context_Packs`
 5. thêm Mongo repository adapter
 6. thêm mapping log sang `AI_Usage_Logs`
 7. sau cùng mới hoàn thiện FE test

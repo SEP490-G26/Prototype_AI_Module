@@ -5,6 +5,7 @@
         <div>
           <p class="panel-kicker">Function 4-5</p>
           <h3>Question Generation + Review</h3>
+          <p class="text-note">Luồng khuyến nghị: `Extraction -> Embedding -> Retrieval Plan -> Context Pack -> Generation + Review`.</p>
         </div>
       </div>
       <form id="generation-form" class="stack-form">
@@ -116,6 +117,7 @@
         <label>Retrieval query
           <textarea name="retrievalQuery" id="generation-retrieval-query" rows="3" placeholder="Create one medium PE question about constructors and object initialization"></textarea>
         </label>
+        <div id="generation-flow-note" class="text-note"></div>
         <label>Import chunks JSON
           <input id="generation-import" type="file" accept=".json">
         </label>
@@ -125,6 +127,7 @@
         <div class="action-row">
           <button type="submit">Run Generation + Review</button>
           <button type="button" class="secondary" id="generation-plan-retrieval">Plan Retrieval Pack</button>
+          <button type="button" class="secondary" id="generation-use-last-pack">Use Last Context Pack</button>
           <button type="button" class="secondary" id="generation-use-last-embedding">Use Last Embedding Result</button>
           <button type="button" class="secondary" data-run-export="generation">Export Review Package</button>
           <button type="button" class="secondary" data-copy-json="generation">Copy JSON</button>

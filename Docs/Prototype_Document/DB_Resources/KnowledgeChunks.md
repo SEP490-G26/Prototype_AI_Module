@@ -98,6 +98,178 @@ Nhóm này giúp retrieval không phải chỉ dựa vào vector. Hệ thống c
 
 Đây là các trường mới quan trọng cho production. Nếu không có chúng, việc tạo đề từ tài liệu lớn sẽ rất dễ đưa quá nhiều chunk vào LLM và làm chi phí tăng mạnh.
 
+## Phân lớp field để chốt DB
+
+### 1. Core required fields
+
+Đây là nhóm nên có ngay từ vòng đầu khi dựng collection production:
+
+- identity và ownership:
+  - `_id`
+  - `course_id`
+  - `document_id`
+  - `user_id`
+- extraction trace:
+  - `extraction_draft_id`
+  - `extraction_content_id`
+  - `chunk_index`
+  - `chunking_strategy`
+  - `chunk_type`
+  - `section_title`
+  - `source_type`
+  - `source_name`
+  - `source_page_from`
+  - `source_page_to`
+- learning context:
+  - `language`
+  - `subject_code`
+  - `syllabus_scope`
+- content payload:
+  - `raw_text`
+  - `normalized_text`
+  - `markdown_text`
+- retrieval payload:
+  - `topic_tags`
+  - `topic_primary`
+  - `embedding`
+  - `embedding_provider`
+  - `embedding_model`
+  - `embedding_dim`
+  - `tagging_provider`
+  - `tagging_model`
+- stats and lifecycle:
+  - `word_count`
+  - `token_count`
+  - `char_count`
+  - `retrieval_enabled`
+  - `status`
+  - `created_at`
+  - `updated_at`
+
+### 2. Recommended production fields
+
+Đây là nhóm rất nên có nếu hệ thống sẽ chạy retrieval + context packing thật:
+
+- structure and navigation:
+  - `chapter_id`
+  - `chapter_title`
+  - `chunk_path`
+  - `source_block_refs`
+- retrieval quality:
+  - `chunk_summary`
+  - `concept_keywords`
+  - `topic_secondary`
+  - `prerequisite_tags`
+  - `estimated_difficulty`
+  - `assessment_value_score`
+  - `content_quality_score`
+  - `retrieval_score_boost`
+  - `duplicate_group_id`
+- invalidation and provenance:
+  - `content_version`
+  - `source_checksum`
+  - `is_human_edited`
+  - `approved_from_draft_version`
+  - `approval_status`
+- model/pipeline trace:
+  - `embedding_version`
+  - `tagging_version`
+
+### 3. Optional benchmark and audit fields
+
+Đây là nhóm nên thêm khi bắt đầu tối ưu benchmark, cache và audit sâu:
+
+- dedupe and change detection:
+  - `normalized_text_hash`
+  - `markdown_text_hash`
+- retrieval tuning:
+  - `neighbor_chunk_ids`
+  - `retrieval_notes`
+- usage/cost trace:
+  - `token_count_source`
+  - `last_embedding_at`
+
+## Khuyến nghị bổ sung thêm
+
+Các field dưới đây không bắt buộc để chạy prototype hiện tại, nhưng rất đáng cân nhắc khi chốt DB production:
+
+### 1. Phục vụ dedupe và audit
+
+- `normalized_text_hash: String`
+  - hash của `normalized_text`
+  - dùng để phát hiện chunk trùng rất nhanh mà không cần so text full
+
+- `markdown_text_hash: String`
+  - hash của `markdown_text`
+  - hữu ích nếu muốn phát hiện thay đổi cấu trúc hiển thị/debug
+
+### 2. Phục vụ retrieval tốt hơn
+
+- `neighbor_chunk_ids: [ObjectId]`
+  - ID chunk trước/sau trong cùng document
+  - dùng khi planner cần mở rộng ngữ cảnh lân cận thay vì query lại bằng index
+
+- `retrieval_notes: [String]`
+  - note ngắn kiểu `short_chunk_passthrough`, `summary_ready`, `low_signal`
+  - giúp debug vì sao chunk được giữ, boost hay loại
+
+### 3. Phục vụ cost / benchmark chính xác hơn
+
+- `token_count_source: String`
+  - `estimated | provider_raw | cached_estimate`
+  - phân biệt token count là ước lượng hay lấy từ usage thật
+
+- `last_embedding_at: DateTime`
+  - thời điểm gần nhất embedding của chunk được tạo/cập nhật
+  - hữu ích khi kiểm soát re-embed
+
+### 4. Phục vụ invalidation
+
+- `content_version: Number`
+  - tăng khi chunk bị regenerate từ extraction draft hoặc bị chỉnh sửa
+  - rất hữu ích để đánh stale các `AI_Context_Packs` dùng chunk cũ
+
+- `source_checksum: String`
+  - hash ổn định của block nguồn hoặc segment nguồn trước khi chunking
+  - dùng để phát hiện thay đổi nội dung thật sự, tránh re-embed vô ích khi chỉ đổi metadata
+
+### 5. Phục vụ provenance và human-in-the-loop
+
+- `is_human_edited: Boolean`
+  - cho biết chunk hiện tại có bị chỉnh tay sau extraction/cleanup hay không
+  - quan trọng để audit chất lượng vì dữ liệu benchmark và dữ liệu production có thể khác nhau ở bước review tay
+
+- `approved_from_draft_version: Number`
+  - version của extraction draft tại thời điểm chunk này được sinh ra
+  - giúp biết chunk đang bám vào approval snapshot nào
+
+- `approval_status: String`
+  - `approved | system_generated | superseded`
+  - nên có nếu sau này muốn tách rõ chunk chỉ mới sinh tự động và chunk đã đi qua human review
+
+### 6. Phục vụ trace model/config
+
+- `embedding_version: String`
+  - version logic của pipeline embedding, ví dụ `cohere-embed-v1`
+  - khác với `embedding_model`; field này dùng để trace thay đổi prompt/preprocess/chunk-cleaning
+
+- `tagging_version: String`
+  - version logic của autotagging pipeline
+  - hữu ích khi chất lượng tag thay đổi nhưng model name vẫn giữ nguyên
+
+## Ghi chú thực tế với runtime hiện tại
+
+- Prototype runtime hiện đã dùng trực tiếp các field:
+  - `chunk_summary`
+  - `concept_keywords`
+  - `topic_primary`
+  - `assessment_value_score`
+  - `content_quality_score`
+  - `retrieval_score_boost`
+  - `duplicate_group_id`
+- Vì vậy các field trên nên được xem là nhóm `production-critical`, không còn là metadata phụ.
+- Các field như `embedding_version`, `tagging_version`, `approved_from_draft_version`, `is_human_edited` chưa bắt buộc cho runtime hiện tại, nhưng rất nên chốt từ sớm trong DB design để tránh phải migration lại khi bắt đầu audit chất lượng hoặc rebuild retrieval cache.
+
 ## Gợi ý index Mongo
 
 ### Index bắt buộc

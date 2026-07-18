@@ -81,6 +81,8 @@ UI operator được serve trực tiếp từ `wwwroot` của API.
 - `POST /api/ai-module/gatekeeper`
 - `POST /api/ai-module/extracted-content`
 - `POST /api/ai-module/embedding-tagging`
+- `POST /api/ai-module/retrieval/plan`
+- `GET /api/ai-module/context-packs/{packId}`
 - `POST /api/ai-module/generation-review`
 - `POST /api/ai-module/code-mentor`
 - `GET /api/ai-module/history`
@@ -92,6 +94,7 @@ UI operator được serve trực tiếp từ `wwwroot` của API.
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-rubrics/`
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-groundtruth/`
 - `src-dotnet/Ape.AiModule.Api/App_Data/run-history/`
+- `src-dotnet/Ape.AiModule.Api/App_Data/context-packs/`
 - `src-dotnet/Ape.AiModule.Api/App_Data/uploads/`
 
 ## Ghi chú vận hành
@@ -100,3 +103,9 @@ UI operator được serve trực tiếp từ `wwwroot` của API.
 - `question-generation/debug` và `generation-review/debug` hiện vẫn là debug placeholder.
 - PDF đã dùng parser thật qua `PdfPig`.
 - `docx/pptx` đang ở mức parser prototype bằng OpenXML text + media extraction.
+- Để test gần production cho tạo đề, thứ tự nên là:
+  1. `Extracted Content`
+  2. `Embedding + Auto Tagging`
+  3. `Retrieval Plan`
+  4. `Generation + Review` bằng `contextPackId`
+- Nếu cần so model công bằng, nên dùng lại cùng một `contextPackId`.
