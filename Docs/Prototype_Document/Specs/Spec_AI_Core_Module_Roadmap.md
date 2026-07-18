@@ -213,12 +213,12 @@ Done criteria:
 
 Luồng:
 
-`Input file -> Gatekeeper -> Extracted Content / Parser -> Chunking -> Embedding -> Auto Tagging`
+`Input file -> Gatekeeper -> Extracted Content / Parser -> Chunking -> Embedding -> Auto Tagging -> Retrieval Planner -> Context Packing`
 
 Output:
 
 - document metadata
-- chunks
+- knowledge chunks / context packs
 - usage logs
 - stage logs
 
@@ -226,7 +226,7 @@ Output:
 
 Luồng:
 
-`Chunks -> Generator -> Reviewer -> Pass / Regenerate -> End`
+`knowledge chunks / context packs -> Generator -> Reviewer -> Pass / Regenerate -> End`
 
 Quy tắc:
 
@@ -271,9 +271,9 @@ Nếu 7 phần này không ổn, module sẽ chỉ dùng được để benchmar
 
 ## 8. Những gì cần sửa khi nối vào DB thật
 
-### 8.1 KnowledgeChunks
+### 8.1 Knowledgeknowledge chunks / context packs
 
-Cần map đúng vào collection `KnowledgeChunks` và bổ sung các field metadata cần thiết.
+Cần map đúng vào collection `Knowledgeknowledge chunks / context packs` và bổ sung các field metadata cần thiết.
 
 ### 8.2 FE_Questions / PE_Questions
 
@@ -317,7 +317,7 @@ Thứ tự đề nghị:
 1. chốt contract JSON cho 6 function
 2. siết output generation/review
 3. viết rubric theo môn học + loại câu hỏi
-4. chốt schema `KnowledgeChunks`
+4. chốt schema `Knowledgeknowledge chunks / context packs`
 5. thêm Mongo repository adapter
 6. thêm mapping log sang `AI_Usage_Logs`
 7. sau cùng mới hoàn thiện FE test
@@ -372,3 +372,4 @@ Benchmark từ giờ chỉ là 1 cách vận hành module để:
 Còn mục tiêu chính là:
 
 - xây dựng 1 core module có thể đưa vào BE tổng của đồ án.
+

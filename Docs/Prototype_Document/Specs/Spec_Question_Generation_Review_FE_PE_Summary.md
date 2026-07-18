@@ -9,7 +9,7 @@ Tài liệu này tổng hợp toàn bộ những gì đã làm cho chức năng:
 - review kết quả tạo câu hỏi
 - chuẩn hoá output để đưa vào BE tổng sau này
 
-Đây là phần AI quan trọng nhất của hệ thống vì nó dùng để biến `KnowledgeChunks` thành câu hỏi học tập có thể đưa vào question bank.
+Đây là phần AI quan trọng nhất của hệ thống vì nó dùng để biến tri thức đã ingest thành câu hỏi học tập có thể đưa vào question bank.
 
 ## Phạm vi đã làm
 
@@ -27,13 +27,39 @@ Tài liệu này tổng hợp toàn bộ những gì đã làm cho chức năng:
 10. export package JSON chuẩn hoá
 11. log stage + usage + token/cost tổng
 
+## Phạm vi còn thiếu cho production
+
+Production không thể chỉ nối thẳng `KnowledgeChunks` vào AI1 như prototype nhỏ hiện nay.
+
+Cần thêm 1 tầng bắt buộc ở giữa:
+
+`KnowledgeChunks -> Retrieval Planner -> Context Packing -> Question Generation -> Question Review`
+
+Mục tiêu của tầng này là:
+
+- giảm token input
+- chọn đúng chunk theo topic/difficulty
+- tránh đẩy quá nhiều raw chunks vào model
+- tối ưu cost khi tạo 1 câu đơn hoặc một batch câu hỏi
+
 ## Các thành phần chính
+
+### Retrieval Planner
+
+Vai trò:
+
+- nhận yêu cầu tạo đề theo môn, topic, difficulty, question type
+- lọc candidate chunk từ `KnowledgeChunks`
+- re-rank theo độ phù hợp
+- build hoặc load `AI_Context_Packs`
+
+Đây là lớp sẽ quyết định phần lớn chi phí production của flow tạo đề.
 
 ### AI1 - Generator
 
 Vai trò:
 
-- nhận `KnowledgeChunks`
+- nhận `AI_Context_Packs` hoặc tập chunk đã được pack gọn
 - tạo `FE` hoặc `PE`
 - output JSON theo schema đã chốt
 
@@ -43,7 +69,7 @@ Input chính:
 - `difficulty`
 - `questionType`
 - `count`
-- `chunks`
+- `contextPack` hoặc `chunks`
 - `revisionFeedback` nếu regenerate
 - `previousQuestions` nếu regenerate
 
@@ -52,7 +78,7 @@ Input chính:
 Vai trò:
 
 - đọc output của AI1
-- đối chiếu với chunk nguồn
+- đối chiếu với context pack và chunk nguồn
 - đối chiếu với rubric
 - kết luận `accepted` hoặc `needs_revision`
 
@@ -112,27 +138,27 @@ Field phải là `null`:
 - `correct_answer`
 - `explanation`
 
-## Pipeline runtime
+## Pipeline runtime hiện tại
 
 ### `question-generation`
 
-Flow:
+Flow hiện tại trong prototype:
 
-1. AI generator tạo danh sách câu hỏi
-2. module normalize output
-3. module validate schema
-4. module map sang FE/PE save-ready record
-5. module tính token/cost
+1. nhận `chunks`
+2. AI generator tạo danh sách câu hỏi
+3. module normalize output
+4. module validate schema
+5. module map sang FE/PE save-ready record
+6. module tính token/cost
 
-Lưu ý runtime:
+Điểm còn thiếu:
 
-- route `POST /api/ai-module/question-generation/debug` hiện tồn tại
-- nhưng hiện đang trả cùng payload runtime như route thường
-- chưa có debug envelope riêng cho prompt/rubric/ground-truth
+- chưa có retrieval planner đúng nghĩa trước khi generator chạy
+- chưa có context pack store để tái sử dụng ngữ cảnh
 
 ### `generation-review`
 
-Flow:
+Flow hiện tại:
 
 1. chạy `question-generation`
 2. chạy AI reviewer
@@ -141,17 +167,79 @@ Flow:
 5. nếu reviewer reject -> tạo lại tối đa 1 lần nữa
 6. sau vòng cuối -> map và save tạm
 
-Lưu ý runtime:
-
-- route `POST /api/ai-module/generation-review/debug` hiện tồn tại
-- nhưng hiện đang trả cùng payload runtime như route thường
-- route `POST /api/ai-module/generation-review/export` mới là route đầy đủ nhất để audit package
-
 Mode đã hỗ trợ:
 
 - `SingleAgent`
 - `SameModelDualRole`
 - `DualAgent`
+
+## Pipeline production đề xuất
+
+### `generation-request`
+
+Flow production nên là:
+
+1. nhận request tạo đề
+2. retrieval planner lọc candidate từ `KnowledgeChunks`
+3. re-rank candidate
+4. build/load `AI_Context_Packs`
+5. generator tạo câu hỏi từ context pack
+6. reviewer đối chiếu lại với context pack + source chunks
+7. save logs + config refs + context pack refs
+
+## Tại sao cần context packing
+
+Nếu đưa quá nhiều chunk raw vào AI1, hệ thống sẽ gặp:
+
+- token input cao
+- latency cao
+- chi phí cao cho một câu hỏi đơn
+- ngữ cảnh loãng, dễ sinh câu hỏi generic
+
+Do đó, trước generation phải có tầng:
+
+- lọc đúng chunk
+- bỏ chunk trùng
+- ưu tiên chunk có giá trị assessment cao
+- pack theo token budget
+
+## Mode downstream nên có
+
+### `single_question_precise`
+
+Dùng khi:
+
+- chỉ tạo 1 câu
+- cần tối ưu chi phí
+
+Chiến lược:
+
+- 1 primary chunk
+- 0-2 supporting chunks
+- token budget chặt
+
+### `small_batch`
+
+Dùng khi:
+
+- tạo 3-5 câu cùng topic/chương
+
+Chiến lược:
+
+- 1 pack dùng chung
+- amortize chi phí tốt hơn
+
+### `coverage_exam`
+
+Dùng khi:
+
+- cần phủ nhiều topic
+- tạo đề nhiều phần
+
+Chiến lược:
+
+- nhiều context pack nhỏ
+- mỗi pack tạo 1-2 câu
 
 ## Duplicate detection đã có
 
@@ -166,6 +254,14 @@ Tác dụng:
 - schema mapping sẽ bị đánh dấu issue
 - review flow có thể bị ép về `needs_revision`
 
+Về sau nên kết hợp thêm duplicate theo retrieval/context pack:
+
+- cùng `topic`
+- cùng `source_chunk_ids`
+- cùng `task pattern`
+
+để tránh sinh lặp theo pack đã dùng nhiều lần.
+
 ## Difficulty alignment đã có
 
 Đã thêm service độc lập:
@@ -177,6 +273,13 @@ Vai trò:
 - tự đánh giá `Easy/Medium/Hard`
 - đối chiếu với difficulty được yêu cầu
 - nếu lệch mức -> thêm issue và có thể reject output
+
+Về sau retrieval planner cũng nên tận dụng field:
+
+- `estimated_difficulty`
+- `assessment_value_score`
+
+để chọn chunk phù hợp difficulty trước khi gửi vào AI.
 
 ## Rubric đã có
 
@@ -218,6 +321,12 @@ Ground truth đã nối vào:
 - `POST /api/ai-module/generation-review/debug`
 - `POST /api/ai-module/generation-review/export`
 
+Về sau nếu nối retrieval planner thật, nên bổ sung thêm các route như:
+
+- `POST /api/ai-module/context-packs/plan`
+- `POST /api/ai-module/context-packs/build`
+- `GET /api/ai-module/context-packs/{packId}`
+
 ## Export package đã có
 
 Route:
@@ -240,41 +349,22 @@ Payload export gồm:
 - `usageLogs`
 - `totals`
 
-Mục đích:
+Về sau nên thêm:
 
-- debug
-- benchmark
-- so sánh model
-- đưa cho FE render
-- chuyển tiếp vào BE tổng sau này
+- `contextPackSummary`
+- `contextPackId`
+- `contextSourceChunkIds`
+- `retrievalScores`
 
-## Collection / config liên quan đã được định hình
+## Tài liệu liên quan nên đọc cùng
 
-Đã chốt hướng cho 3 collection cấu hình:
-
-- `AI_Prompt_Versions`
-- `AI_Rubrics`
-- `AI_GroundTruth_Sets`
-
-## Những gì chưa làm
-
-Những phần còn lại hợp lý để làm khi merge vào BE thật:
-
-1. Mongo repository thật
-2. vector-based duplicate detection
-3. compile/run verification cho `PE` bằng Judge0
-4. publish workflow cho question bank
-5. prompt/rubric/ground truth đọc thật từ DB
-6. lưu export package vào DB nếu cần audit lâu dài
+- `Docs/Prototype_Document/DB_Resources/KnowledgeChunks.md`
+- `Docs/Prototype_Document/DB_Resources/AI_Context_Packs.md`
+- `Docs/Prototype_Document/Specs/Spec_AI_Retrieval_Context_Packing_Architecture.md`\n- `Docs/Prototype_Document/Specs/Spec_AI_Retrieval_Planner_Contracts.md`
 
 ## Kết luận
 
-Phần `Question Generation + Review FE/PE` hiện đã đủ mức để:
+Generation + Review hiện đã đủ tốt để benchmark chất lượng ở quy mô nhỏ.
 
-- test model
-- benchmark cost
-- regression có đối chiếu
-- ép JSON gần với schema DB
-- làm prototype cho core module AI của đồ án
+Nhưng để production và trả lời bài toán chi phí thật, bắt buộc phải có thêm tầng retrieval + context packing. Nếu thiếu tầng này, việc tạo đề từ tài liệu lớn sẽ rất dễ đốt quá nhiều input token cho mỗi request.
 
-Nghĩa là khi chuyển sang AI function tiếp theo, phần này đã có thể xem là khối core ổn định nhất của module.

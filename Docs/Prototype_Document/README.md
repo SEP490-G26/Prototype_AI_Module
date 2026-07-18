@@ -23,12 +23,16 @@ Thư mục này chứa tài liệu của prototype `.NET` đang active.
 ### Đặc tả
 
 - `Specs/Spec_AI_Module_6_Functions_Summary.md`
-- `Specs/Spec_Question_Generation_Review_FE_PE_Summary.md`
 - `Specs/Spec_AI_Embedding_AutoTagging_Design.md`
+- `Specs/Spec_Question_Generation_Review_FE_PE_Summary.md`
+- `Specs/Spec_AI_Retrieval_Context_Packing_Architecture.md`
+- `Specs/Spec_AI_Retrieval_Planner_Contracts.md`
 
 ### Tài nguyên DB
 
 - `DB_Resources/KnowledgeChunks.md`
+- `DB_Resources/AI_Context_Packs.md`
 - `DB_Resources/AI_Policies.md`
 - `DB_Resources/AI_Rubrics.md`
 - `DB_Resources/AI_GroundTruth_Sets.md`
+

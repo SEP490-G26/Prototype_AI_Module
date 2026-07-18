@@ -40,6 +40,13 @@ public interface IModuleRepository
 {
     Task SaveDocumentAsync(StoredDocument document, CancellationToken cancellationToken);
     Task<StoredDocument?> GetDocumentAsync(string documentId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<KnowledgeChunk>> SearchKnowledgeChunksAsync(
+        string? courseId,
+        string? documentId,
+        string subject,
+        string userId,
+        string sourceScope,
+        CancellationToken cancellationToken);
     Task SaveGenerationAsync(string documentId, IReadOnlyList<GeneratedQuestion> questions, ReviewDecision review, CancellationToken cancellationToken);
     Task SaveFeQuestionsAsync(string generationId, IReadOnlyList<FeQuestionRecord> questions, ReviewDecision review, CancellationToken cancellationToken);
     Task SavePeQuestionsAsync(string generationId, IReadOnlyList<PeQuestionRecord> questions, ReviewDecision review, CancellationToken cancellationToken);
@@ -51,6 +58,29 @@ public interface IModuleRepository
         IReadOnlyList<string> topicTags,
         CancellationToken cancellationToken);
     Task SaveMentorFeedbackAsync(string submissionId, MentorFeedback feedback, CancellationToken cancellationToken);
+}
+
+public interface IContextPackStore
+{
+    Task<AIContextPack> SaveAsync(AIContextPack pack, CancellationToken cancellationToken);
+    Task<AIContextPack?> GetAsync(string packId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ContextPackSummaryResult>> ListAsync(
+        string? subject,
+        string? questionType,
+        string? difficulty,
+        string? topic,
+        string? status,
+        int take,
+        CancellationToken cancellationToken);
+    Task<AIContextPack> MarkStaleAsync(string packId, CancellationToken cancellationToken);
+    Task<AIContextPack> TouchUsageAsync(string packId, CancellationToken cancellationToken);
+}
+
+public interface IRetrievalPlannerService
+{
+    Task<RetrievalPlanResult> PlanAsync(RetrievalPlanRequest request, CancellationToken cancellationToken);
+    Task<RetrievalPlanDebugResult> PlanDebugAsync(RetrievalPlanRequest request, CancellationToken cancellationToken);
+    Task<ContextPackBuildResult> BuildAsync(ContextPackBuildRequest request, CancellationToken cancellationToken);
 }
 
 public interface IQuestionSchemaService
@@ -205,6 +235,19 @@ public interface IAiPipelineOrchestrator
     Task<EmbeddingTaggingDebugResult> RunEmbeddingTaggingDebugAsync(EmbeddingTaggingRequest request, CancellationToken cancellationToken);
     Task<EmbeddingTaggingResult> RunEmbeddingTaggingFromDraftAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken);
     Task<EmbeddingTaggingDebugResult> RunEmbeddingTaggingFromDraftDebugAsync(EmbeddingFromDraftRequest request, CancellationToken cancellationToken);
+    Task<RetrievalPlanResult> RunRetrievalPlanAsync(RetrievalPlanRequest request, CancellationToken cancellationToken);
+    Task<RetrievalPlanDebugResult> RunRetrievalPlanDebugAsync(RetrievalPlanRequest request, CancellationToken cancellationToken);
+    Task<ContextPackBuildResult> RunContextPackBuildAsync(ContextPackBuildRequest request, CancellationToken cancellationToken);
+    Task<AIContextPack?> GetContextPackAsync(string packId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ContextPackSummaryResult>> ListContextPacksAsync(
+        string? subject,
+        string? questionType,
+        string? difficulty,
+        string? topic,
+        string? status,
+        int take,
+        CancellationToken cancellationToken);
+    Task<AIContextPack> MarkContextPackStaleAsync(string packId, CancellationToken cancellationToken);
     Task<QuestionGenerationResult> RunQuestionGenerationAsync(QuestionGenerationRequest request, CancellationToken cancellationToken);
     Task<ReviewDecision> RunQuestionReviewAsync(QuestionReviewRequest request, CancellationToken cancellationToken);
     Task<IngestionResult> RunIngestionAsync(IngestionRequest request, CancellationToken cancellationToken);

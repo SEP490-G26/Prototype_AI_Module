@@ -52,11 +52,13 @@ public static class DependencyInjection
         services.AddSingleton<ICodeMentorPolicyService, FileCodeMentorPolicyService>();
         services.AddSingleton<IRubricCatalogService, FileRubricCatalogService>();
         services.AddSingleton<IGroundTruthCatalogService, FileGroundTruthCatalogService>();
+        services.AddSingleton<IContextPackStore, FileContextPackStore>();
         services.AddSingleton<IDocumentParser, DemoDocumentParser>();
         services.AddSingleton<IChunkingService, DemoChunkingService>();
         services.AddSingleton<IQuestionSchemaService, QuestionSchemaService>();
         services.AddSingleton<IQuestionPersistenceMapper, QuestionPersistenceMapper>();
         services.AddSingleton<IDifficultyAlignmentService, DifficultyAlignmentService>();
+        services.AddSingleton<IRetrievalPlannerService, RetrievalPlannerService>();
         services.AddScoped<IAiPipelineOrchestrator, AiPipelineOrchestrator>();
 
         return services;

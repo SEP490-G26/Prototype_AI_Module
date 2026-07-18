@@ -8,7 +8,8 @@ import {
   renderMetricCards,
   renderStageLogs,
   renderUsageLogs,
-  readFileText
+  readFileText,
+  renderTextBlock
 } from './shared/core.js';
 
 export const generationFeature = {
@@ -23,12 +24,21 @@ export const generationFeature = {
     const mode = form.mode.value;
     const generatorModel = form.generatorModel.value;
     const reviewerModel = mode === 'SameModelDualRole' ? generatorModel : form.reviewerModel.value;
-    const textareaValue = form.chunks.value;
-    const importedPayload = textareaValue.trim() ? parseJsonInput(textareaValue, []) : null;
-    const fallbackPayload = importedPayload ?? state.lastResults.embedding ?? state.lastResults.extracted ?? null;
-    const chunks = normalizeChunks(fallbackPayload);
-    if (!chunks.length) {
-      throw new Error('Generation + Review requires at least one chunk. Import chunk JSON from Embedding + Tagging, or run Embedding first and keep its result in this session.');
+    const strategy = form.inputStrategy.value;
+    const chunks = resolveChunks(form);
+    const contextPackId = form.contextPackId.value.trim() || null;
+    const retrieval = strategy === 'retrieval' ? buildRetrievalPayload(form) : null;
+
+    if (strategy === 'chunks' && !chunks.length) {
+      throw new Error('Generation + Review requires at least one chunk when input strategy is Chunks JSON.');
+    }
+
+    if (strategy === 'contextPack' && !contextPackId) {
+      throw new Error('Context Pack ID is required when input strategy is Context Pack ID.');
+    }
+
+    if (strategy === 'retrieval' && !retrieval) {
+      throw new Error('Retrieval request could not be built. Check target topics or retrieval query.');
     }
 
     return {
@@ -44,14 +54,23 @@ export const generationFeature = {
       generatorModel,
       reviewerModel,
       maxAttempts: Number(form.maxAttempts.value || 1),
-      chunks
+      chunks: strategy === 'chunks' ? chunks : [],
+      contextPackId: strategy === 'contextPack' ? contextPackId : null,
+      retrieval
     };
   },
   renderResult(data) {
+    const isRetrievalPlan = Boolean(data?.contextPack && data?.selectedChunks && !data?.questions && !data?.Questions);
+    if (isRetrievalPlan) {
+      return renderRetrievalPlan(data);
+    }
+
     const questions = data?.questions ?? data?.Questions ?? [];
     const review = data?.review ?? data?.Review ?? null;
     const mapping = data?.schemaMapping ?? data?.SchemaMapping ?? null;
     const difficulty = data?.difficultyAlignment ?? data?.DifficultyAlignment ?? null;
+    const contextPack = data?.contextPack ?? data?.ContextPack ?? null;
+    const retrievalPlan = data?.retrievalPlan ?? data?.RetrievalPlan ?? null;
     return `
       <section class="result-section">
         <h4>Generation + review result</h4>
@@ -62,6 +81,7 @@ export const generationFeature = {
           <article class="summary-card"><span class="summary-label">Attempts</span><strong class="summary-value">${escapeHtml(String(data?.attemptsUsed ?? data?.AttemptsUsed ?? 0))}</strong></article>
         </div>
         ${renderMetricCards(data)}
+        ${renderContextPackBlock(contextPack, retrievalPlan)}
         ${renderQuestionBlocks(questions)}
         ${renderReviewBlock(review, mapping, difficulty)}
         ${renderStageLogs(data)}
@@ -82,12 +102,44 @@ export const generationFeature = {
         const text = await readFileText(file);
         const parsed = parseJsonInput(text, []);
         chunksArea.value = JSON.stringify(normalizeChunks(parsed), null, 2);
+        document.getElementById('generation-input-strategy').value = 'chunks';
+        syncInputStrategy();
       });
     }
 
     document.getElementById('generation-mode')?.addEventListener('change', syncReviewerState);
     document.getElementById('generation-generator-model')?.addEventListener('change', syncReviewerState);
+    document.getElementById('generation-input-strategy')?.addEventListener('change', syncInputStrategy);
     syncReviewerState();
+    syncInputStrategy();
+
+    document.getElementById('generation-use-last-embedding')?.addEventListener('click', () => {
+      const form = document.getElementById('generation-form');
+      if (!form) {
+        return;
+      }
+
+      const chunks = normalizeChunks(state.lastResults.embedding ?? state.lastResults.extracted ?? state.lastResults.generationPlan ?? null);
+      form.chunks.value = JSON.stringify(chunks, null, 2);
+      form.inputStrategy.value = 'chunks';
+      syncInputStrategy();
+    });
+
+    document.getElementById('generation-plan-retrieval')?.addEventListener('click', async () => {
+      const form = document.getElementById('generation-form');
+      if (!form) {
+        return;
+      }
+
+      const payload = buildRetrievalPayload(form);
+      const result = await postJson('/api/ai-module/retrieval/plan', payload);
+      state.lastResults.generation = result;
+      state.lastResults.generationPlan = result;
+      if (result?.contextPack?.packId || result?.ContextPack?.PackId) {
+        form.contextPackId.value = result?.contextPack?.packId ?? result?.ContextPack?.PackId ?? '';
+      }
+      setGenerationResult(result);
+    });
 
     document.querySelector('[data-run-export="generation"]')?.addEventListener('click', async () => {
       const form = document.getElementById('generation-form');
@@ -102,6 +154,14 @@ export const generationFeature = {
   }
 };
 
+function setGenerationResult(result) {
+  state.lastResults.generation = result;
+  const jsonId = generationFeature.jsonId;
+  const resultId = generationFeature.resultId;
+  document.getElementById(jsonId).textContent = JSON.stringify(result, null, 2);
+  document.getElementById(resultId).innerHTML = generationFeature.renderResult(result);
+}
+
 function syncReviewerState() {
   const form = document.getElementById('generation-form');
   if (!form) {
@@ -115,6 +175,90 @@ function syncReviewerState() {
   }
 }
 
+function syncInputStrategy() {
+  const form = document.getElementById('generation-form');
+  if (!form) {
+    return;
+  }
+
+  const strategy = form.inputStrategy.value;
+  const isChunks = strategy === 'chunks';
+  const isContextPack = strategy === 'contextPack';
+  const isRetrieval = strategy === 'retrieval';
+
+  form.contextPackId.disabled = !isContextPack;
+  form.targetTopics.disabled = !isRetrieval;
+  form.sourceScope.disabled = !isRetrieval;
+  form.useCachedPack.disabled = !isRetrieval;
+  form.forceRebuildPack.disabled = !isRetrieval;
+  form.maxCandidateCount.disabled = !isRetrieval;
+  form.maxPackedTokens.disabled = !isRetrieval;
+  form.preferredChapterIds.disabled = !isRetrieval;
+  form.retrievalQuery.disabled = !isRetrieval;
+  form.chunks.disabled = !isChunks;
+  document.getElementById('generation-import').disabled = !isChunks;
+}
+
+function resolveChunks(form) {
+  const textareaValue = form.chunks.value;
+  const importedPayload = textareaValue.trim() ? parseJsonInput(textareaValue, []) : null;
+  const fallbackPayload = importedPayload ?? state.lastResults.embedding ?? state.lastResults.extracted ?? null;
+  return normalizeChunks(fallbackPayload);
+}
+
+function buildRetrievalPayload(form) {
+  const topics = splitCsv(form.targetTopics.value);
+  const preferredChapterIds = splitCsv(form.preferredChapterIds.value);
+  const chunks = resolveChunks(form);
+
+  return {
+    userId: form.userId.value.trim(),
+    courseId: form.courseId.value.trim() || null,
+    documentId: form.documentId.value.trim() || null,
+    subject: form.subject.value,
+    questionType: form.questionType.value,
+    difficulty: form.difficulty.value,
+    requestedQuestionCount: Number(form.count.value || 1),
+    generationMode: inferGenerationMode(form.count.value),
+    targetTopics: topics,
+    preferredChapterIds,
+    sourceScope: form.sourceScope.value,
+    language: 'en',
+    useCachedPack: form.useCachedPack.value === 'true',
+    forceRebuildPack: form.forceRebuildPack.value === 'true',
+    includeChunkText: false,
+    maxCandidateCount: Number(form.maxCandidateCount.value || 40),
+    maxPackedTokens: Number(form.maxPackedTokens.value || 7000),
+    retrievalQuery: form.retrievalQuery.value.trim() || buildDefaultRetrievalQuery(form, topics),
+    seedChunks: chunks.length ? chunks : null
+  };
+}
+
+function buildDefaultRetrievalQuery(form, topics) {
+  const topicText = topics.length ? topics.join(', ') : 'core lesson concepts';
+  return `Create ${form.count.value || 1} ${form.difficulty.value} ${form.questionType.value} question(s) about ${topicText} in ${form.subject.value}`;
+}
+
+function inferGenerationMode(countValue) {
+  const count = Number(countValue || 1);
+  if (count <= 1) {
+    return 'single_question_precise';
+  }
+
+  if (count <= 5) {
+    return 'small_batch';
+  }
+
+  return 'coverage_exam';
+}
+
+function splitCsv(value) {
+  return String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function normalizeChunks(payload) {
   const rawChunks = Array.isArray(payload)
     ? payload
@@ -126,7 +270,11 @@ function normalizeChunks(payload) {
           ? payload.document.chunks
           : Array.isArray(payload?.Document?.Chunks)
             ? payload.Document.Chunks
-            : [];
+            : Array.isArray(payload?.contextPack?.chunks)
+              ? payload.contextPack.chunks
+              : Array.isArray(payload?.ContextPack?.Chunks)
+                ? payload.ContextPack.Chunks
+                : [];
 
   return rawChunks
     .map((chunk, index) => normalizeChunkItem(chunk, index))
@@ -158,6 +306,8 @@ function normalizeChunkItem(chunk, index) {
   const sectionTitle = chunk.sectionTitle
     ?? chunk.SectionTitle
     ?? chunk.section_title
+    ?? chunk.chapterTitle
+    ?? chunk.ChapterTitle
     ?? chunk.chunkType
     ?? chunk.ChunkType
     ?? chunk.chunk_type
@@ -175,6 +325,93 @@ function normalizeChunkItem(chunk, index) {
     sectionTitle: sectionTitle ? String(sectionTitle) : null,
     language: String(language)
   };
+}
+
+function renderRetrievalPlan(data) {
+  const contextPack = data?.contextPack ?? data?.ContextPack ?? null;
+  const selectedChunks = data?.selectedChunks ?? data?.SelectedChunks ?? [];
+  const tokenBudget = data?.tokenBudget ?? data?.TokenBudget ?? null;
+  const candidateStats = data?.candidateStats ?? data?.CandidateStats ?? null;
+  return `
+    <section class="result-section">
+      <h4>Retrieval plan</h4>
+      <div class="summary-grid">
+        <article class="summary-card"><span class="summary-label">Pack ID</span><strong class="summary-value">${escapeHtml(contextPack?.packId ?? contextPack?.PackId ?? '(none)')}</strong></article>
+        <article class="summary-card"><span class="summary-label">Selected chunks</span><strong class="summary-value">${escapeHtml(String(selectedChunks.length))}</strong></article>
+        <article class="summary-card"><span class="summary-label">Packed tokens</span><strong class="summary-value">${escapeHtml(String(tokenBudget?.estimatedPackedTokens ?? tokenBudget?.EstimatedPackedTokens ?? 0))}</strong></article>
+        <article class="summary-card"><span class="summary-label">Compression ratio</span><strong class="summary-value">${escapeHtml(String(tokenBudget?.compressionRatio ?? tokenBudget?.CompressionRatio ?? 0))}</strong></article>
+      </div>
+      ${renderMetricCards(data)}
+      ${candidateStats ? renderJsonDetails('Candidate stats', candidateStats, true) : ''}
+      ${renderContextPackBlock(contextPack, data)}
+      ${renderSelectedChunks(selectedChunks)}
+      ${renderStageLogs(data)}
+      ${renderUsageLogs(data)}
+    </section>
+  `;
+}
+
+function renderContextPackBlock(contextPack, retrievalPlan) {
+  if (!contextPack) {
+    return '';
+  }
+
+  const planBudget = retrievalPlan?.tokenBudget ?? retrievalPlan?.TokenBudget ?? null;
+  return `
+    <details class="details-block" open>
+      <summary>Context pack</summary>
+      <div class="kv-block">
+        <p><strong>Pack ID:</strong> ${escapeHtml(contextPack.packId ?? contextPack.PackId ?? '')}</p>
+        <p><strong>Strategy:</strong> ${escapeHtml(contextPack.packStrategy ?? contextPack.PackStrategy ?? '')}</p>
+        <p><strong>Status:</strong> ${escapeHtml(contextPack.packStatus ?? contextPack.PackStatus ?? '')}</p>
+        <p><strong>Target topics:</strong> ${escapeHtml(((contextPack.targetTopics ?? contextPack.TargetTopics ?? [])).join(', ') || '(none)')}</p>
+        <p><strong>Recommended question count:</strong> ${escapeHtml(String(contextPack.recommendedQuestionCount ?? contextPack.RecommendedQuestionCount ?? 0))}</p>
+        <p><strong>Source token count:</strong> ${escapeHtml(String(contextPack.sourceTokenCount ?? contextPack.SourceTokenCount ?? 0))}</p>
+        <p><strong>Packed token count:</strong> ${escapeHtml(String(contextPack.tokenCount ?? contextPack.TokenCount ?? 0))}</p>
+        <p><strong>Compression ratio:</strong> ${escapeHtml(String(planBudget?.compressionRatio ?? planBudget?.CompressionRatio ?? contextPack.compressionRatio ?? contextPack.CompressionRatio ?? 0))}</p>
+      </div>
+      ${renderTextBlock('Packed summary text', contextPack.packedSummaryText ?? contextPack.PackedSummaryText ?? '', true)}
+      ${renderTextBlock('Packed context text', contextPack.packedContextText ?? contextPack.PackedContextText ?? '', false)}
+    </details>
+  `;
+}
+
+function renderSelectedChunks(selectedChunks) {
+  if (!Array.isArray(selectedChunks) || selectedChunks.length === 0) {
+    return '';
+  }
+
+  const rows = selectedChunks.map((chunk) => `
+    <tr>
+      <td>${escapeHtml(chunk.chunkId ?? chunk.ChunkId ?? '')}</td>
+      <td>${escapeHtml(chunk.selectionRole ?? chunk.SelectionRole ?? '')}</td>
+      <td>${escapeHtml(chunk.topicPrimary ?? chunk.TopicPrimary ?? '')}</td>
+      <td>${escapeHtml((chunk.topicTags ?? chunk.TopicTags ?? []).join(', '))}</td>
+      <td>${escapeHtml(String(chunk.tokenCount ?? chunk.TokenCount ?? 0))}</td>
+      <td>${escapeHtml(String(chunk.finalScore ?? chunk.FinalScore ?? 0))}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <details class="details-block" open>
+      <summary>Selected chunks</summary>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Chunk ID</th>
+              <th>Role</th>
+              <th>Primary topic</th>
+              <th>Topic tags</th>
+              <th>Tokens</th>
+              <th>Final score</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
 }
 
 function renderQuestionBlocks(questions) {

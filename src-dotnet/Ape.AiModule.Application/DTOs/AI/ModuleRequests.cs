@@ -9,6 +9,43 @@ public sealed record ChunkContextDto(
     string? SectionTitle,
     string Language);
 
+public sealed record RetrievalPlanRequest(
+    string UserId,
+    string? CourseId,
+    string? DocumentId,
+    string Subject,
+    string QuestionType,
+    string Difficulty,
+    int RequestedQuestionCount,
+    string GenerationMode,
+    IReadOnlyList<string> TargetTopics,
+    IReadOnlyList<string>? PreferredChapterIds,
+    string SourceScope,
+    string? Language,
+    bool UseCachedPack,
+    bool ForceRebuildPack,
+    bool IncludeChunkText,
+    int MaxCandidateCount,
+    int MaxPackedTokens,
+    string? RetrievalQuery,
+    IReadOnlyList<ChunkContextDto>? SeedChunks = null);
+
+public sealed record ContextPackBuildRequest(
+    string UserId,
+    string? CourseId,
+    string? DocumentId,
+    string Subject,
+    string QuestionType,
+    string Difficulty,
+    string PackType,
+    string PackStrategy,
+    string GenerationMode,
+    IReadOnlyList<string> TargetTopics,
+    IReadOnlyList<string> ChunkIds,
+    int MaxPackedTokens,
+    bool RebuildSummary,
+    string? Notes);
+
 public sealed record GatekeeperRequest(
     string UserId,
     string FileName,
@@ -88,7 +125,9 @@ public sealed record QuestionGenerationRequest(
     string GeneratorModel,
     string? RevisionFeedback,
     IReadOnlyList<GeneratedQuestion>? PreviousQuestions,
-    IReadOnlyList<ChunkContextDto> Chunks);
+    IReadOnlyList<ChunkContextDto> Chunks,
+    string? ContextPackId = null,
+    RetrievalPlanRequest? Retrieval = null);
 
 public sealed record QuestionReviewRequest(
     string UserId,
@@ -111,7 +150,9 @@ public sealed record GenerationReviewRequest(
     string GeneratorModel,
     string ReviewerModel,
     int MaxAttempts,
-    IReadOnlyList<ChunkContextDto> Chunks);
+    IReadOnlyList<ChunkContextDto> Chunks,
+    string? ContextPackId = null,
+    RetrievalPlanRequest? Retrieval = null);
 
 public sealed record CodeMentorRequest(
     string SubmissionId,

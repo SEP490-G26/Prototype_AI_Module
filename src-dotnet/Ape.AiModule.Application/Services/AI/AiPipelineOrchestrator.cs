@@ -21,6 +21,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
     private readonly IRubricCatalogService _rubricCatalogService;
     private readonly IGroundTruthCatalogService _groundTruthCatalogService;
     private readonly IDifficultyAlignmentService _difficultyAlignmentService;
+    private readonly IRetrievalPlannerService _retrievalPlannerService;
+    private readonly IContextPackStore _contextPackStore;
 
     public AiPipelineOrchestrator(
         IAiProviderGateway aiProviderGateway,
@@ -36,7 +38,9 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         ICodeMentorPolicyService codeMentorPolicyService,
         IRubricCatalogService rubricCatalogService,
         IGroundTruthCatalogService groundTruthCatalogService,
-        IDifficultyAlignmentService difficultyAlignmentService)
+        IDifficultyAlignmentService difficultyAlignmentService,
+        IRetrievalPlannerService retrievalPlannerService,
+        IContextPackStore contextPackStore)
     {
         _aiProviderGateway = aiProviderGateway;
         _documentParser = documentParser;
@@ -52,6 +56,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         _rubricCatalogService = rubricCatalogService;
         _groundTruthCatalogService = groundTruthCatalogService;
         _difficultyAlignmentService = difficultyAlignmentService;
+        _retrievalPlannerService = retrievalPlannerService;
+        _contextPackStore = contextPackStore;
     }
 
     public async Task<GatekeeperResult> RunGatekeeperAsync(GatekeeperRequest request, CancellationToken cancellationToken)
@@ -552,17 +558,50 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             result.Totals);
     }
 
+    public Task<RetrievalPlanResult> RunRetrievalPlanAsync(RetrievalPlanRequest request, CancellationToken cancellationToken)
+        => _retrievalPlannerService.PlanAsync(request, cancellationToken);
+
+    public Task<RetrievalPlanDebugResult> RunRetrievalPlanDebugAsync(RetrievalPlanRequest request, CancellationToken cancellationToken)
+        => _retrievalPlannerService.PlanDebugAsync(request, cancellationToken);
+
+    public Task<ContextPackBuildResult> RunContextPackBuildAsync(ContextPackBuildRequest request, CancellationToken cancellationToken)
+        => _retrievalPlannerService.BuildAsync(request, cancellationToken);
+
+    public Task<AIContextPack?> GetContextPackAsync(string packId, CancellationToken cancellationToken)
+        => _contextPackStore.GetAsync(packId, cancellationToken);
+
+    public Task<IReadOnlyList<ContextPackSummaryResult>> ListContextPacksAsync(
+        string? subject,
+        string? questionType,
+        string? difficulty,
+        string? topic,
+        string? status,
+        int take,
+        CancellationToken cancellationToken)
+        => _contextPackStore.ListAsync(subject, questionType, difficulty, topic, status, take, cancellationToken);
+
+    public Task<AIContextPack> MarkContextPackStaleAsync(string packId, CancellationToken cancellationToken)
+        => _contextPackStore.MarkStaleAsync(packId, cancellationToken);
+
     public async Task<QuestionGenerationResult> RunQuestionGenerationAsync(QuestionGenerationRequest request, CancellationToken cancellationToken)
     {
-        if (request.Chunks is null || request.Chunks.Count == 0)
-        {
-            throw new InvalidOperationException("Question generation requires at least one chunk. Import chunk JSON from Embedding + Tagging or provide a non-empty chunks array.");
-        }
+        var chunkResolution = await ResolveQuestionChunksAsync(
+            request.UserId,
+            request.Subject,
+            request.QuestionType,
+            request.Difficulty,
+            request.Count,
+            request.ContextPackId,
+            request.Retrieval,
+            request.Chunks,
+            cancellationToken);
+        var effectiveChunks = chunkResolution.Chunks;
 
-        var questions = await _aiProviderGateway.GenerateQuestionsAsync(request, cancellationToken);
+        var effectiveRequest = request with { Chunks = effectiveChunks };
+        var questions = await _aiProviderGateway.GenerateQuestionsAsync(effectiveRequest, cancellationToken);
         var schemaMapping = await EnrichSchemaMappingWithRepositoryDuplicatesAsync(
             request.CourseId,
-            _questionSchemaService.ValidateAndMap(request.Subject, request.QuestionType, questions, request.Chunks),
+            _questionSchemaService.ValidateAndMap(request.Subject, request.QuestionType, questions, effectiveChunks),
             cancellationToken);
         var difficultyAlignment = _difficultyAlignmentService.Evaluate(request.Subject, request.QuestionType, request.Difficulty, questions);
         var mappedFeQuestions = _questionPersistenceMapper.MapFeQuestions(schemaMapping, request.UserId, BuildPipelineRunId("qgenmap"), new ReviewDecision("draft", [], [], 0, schemaMapping.IsValid, true, !schemaMapping.IsValid, request.GeneratorModel), request.CourseId, request.IsPublic);
@@ -570,25 +609,39 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         var cost = ResolveStageCost(
             "question-generation",
             request.GeneratorModel,
-            request.Chunks.Sum(static chunk => chunk.ContentText.Length),
+            effectiveChunks.Sum(static chunk => chunk.ContentText.Length),
             JsonSerializer.Serialize(questions).Length,
             "question-generation");
-        var stageLogs = new List<PipelineStageLog>
+        var stageLogs = new List<PipelineStageLog>();
+        if (chunkResolution.RetrievalPlan is not null)
         {
+            stageLogs.AddRange(chunkResolution.RetrievalPlan.StageLogs);
+        }
+
+        stageLogs.AddRange(
+        [
             CreateStageLog("question-generation", InferStageStatus(cost), cost, new Dictionary<string, string>
             {
                 ["question_type"] = request.QuestionType,
                 ["difficulty"] = request.Difficulty,
                 ["count"] = questions.Count.ToString(),
+                ["chunk_count"] = effectiveChunks.Count.ToString(),
+                ["context_pack_id"] = chunkResolution.ContextPack?.PackId ?? string.Empty,
                 ["schema_valid"] = schemaMapping.IsValid.ToString(),
                 ["schema_issue_count"] = schemaMapping.Issues.Count.ToString(),
                 ["difficulty_aligned"] = difficultyAlignment.IsAligned.ToString(),
                 ["estimated_difficulty"] = difficultyAlignment.EstimatedDifficulty,
                 ["duplicate_issue_count"] = schemaMapping.Issues.Count(issue => issue.Code == "duplicate_existing_question").ToString()
             }, InferProvider(request.GeneratorModel), request.GeneratorModel)
-        };
-        var usageLogs = new List<AIUsageLogEntry>
+        ]);
+        var usageLogs = new List<AIUsageLogEntry>();
+        if (chunkResolution.RetrievalPlan is not null)
         {
+            usageLogs.AddRange(chunkResolution.RetrievalPlan.UsageLogs);
+        }
+
+        usageLogs.AddRange(
+        [
             CreateUsageLog(
                 triggeredBy: request.UserId,
                 agentId: "AI_Generator",
@@ -605,11 +658,11 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     request.QuestionType,
                     request.Difficulty,
                     "generated",
-                    new { request.CourseId, request.DocumentId, request.IsPublic, request.Count, request.RevisionFeedback, request.PreviousQuestions, request.Chunks },
+                    new { request.CourseId, request.DocumentId, request.IsPublic, request.Count, request.RevisionFeedback, request.PreviousQuestions, EffectiveChunks = effectiveChunks, ContextPackId = chunkResolution.ContextPack?.PackId, Retrieval = request.Retrieval },
                     questions))
-        };
+        ]);
 
-        return new QuestionGenerationResult(questions, schemaMapping, difficultyAlignment, mappedFeQuestions, mappedPeQuestions, stageLogs, usageLogs, cost);
+        return new QuestionGenerationResult(questions, schemaMapping, difficultyAlignment, mappedFeQuestions, mappedPeQuestions, stageLogs, usageLogs, cost, chunkResolution.ContextPack, chunkResolution.RetrievalPlan);
     }
 
     public Task<ReviewDecision> RunQuestionReviewAsync(QuestionReviewRequest request, CancellationToken cancellationToken)
@@ -642,14 +695,26 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
     public async Task<GenerationReviewResult> RunGenerationReviewAsync(GenerationReviewRequest request, CancellationToken cancellationToken)
     {
-        if (request.Chunks is null || request.Chunks.Count == 0)
-        {
-            throw new InvalidOperationException("Generation + Review requires at least one chunk. Import chunk JSON from Embedding + Tagging or provide a non-empty chunks array.");
-        }
+        var chunkResolution = await ResolveQuestionChunksAsync(
+            request.UserId,
+            request.Subject,
+            request.QuestionType,
+            request.Difficulty,
+            request.Count,
+            request.ContextPackId,
+            request.Retrieval,
+            request.Chunks,
+            cancellationToken);
+        var effectiveChunks = chunkResolution.Chunks;
 
         var questionRubric = await _rubricCatalogService.GetQuestionReviewRubricAsync(request.Subject, request.QuestionType, cancellationToken);
         var stageLogs = new List<PipelineStageLog>();
         var usageLogs = new List<AIUsageLogEntry>();
+        if (chunkResolution.RetrievalPlan is not null)
+        {
+            stageLogs.AddRange(chunkResolution.RetrievalPlan.StageLogs);
+            usageLogs.AddRange(chunkResolution.RetrievalPlan.UsageLogs);
+        }
         IReadOnlyList<GeneratedQuestion> questions = [];
         ReviewDecision review = new("needs_revision", ["Generation did not run."], ["Retry the generation flow."], 0, false, false, true, request.ReviewerModel);
         var attemptsToUse = request.Mode == GenerationReviewMode.SingleAgent
@@ -681,7 +746,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 request.GeneratorModel,
                 revisionFeedback,
                 previousQuestions,
-                request.Chunks), cancellationToken);
+                effectiveChunks,
+                chunkResolution.ContextPack?.PackId), cancellationToken);
 
             stageLogs.AddRange(generation.StageLogs.Select(log => log with
             {
@@ -707,7 +773,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     {
                         request.Mode,
                         request.Count,
-                        request.Chunks,
+                        effectiveChunks,
+                        chunkResolution.ContextPack?.PackId,
                         revisionFeedback,
                         previousQuestions
                     },
@@ -743,7 +810,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     request.QuestionType,
                     reviewerModel,
                     questions,
-                    request.Chunks), cancellationToken);
+                    effectiveChunks), cancellationToken);
                 if (!schemaMapping.IsValid)
                 {
                     var mergedIssues = review.Issues.Concat(schemaMapping.Issues.Select(issue => issue.Message)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -832,9 +899,9 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                         review.ReviewStatus,
                         new
                         {
-                            request.Mode,
-                            request.Chunks,
-                            questions
+                        request.Mode,
+                        effectiveChunks,
+                        questions
                     },
                         review)));
             }
@@ -872,7 +939,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     new
                     {
                         request.Mode,
-                        request.Chunks,
+                        effectiveChunks,
                         questions,
                         rubric = questionRubric
                     },
@@ -889,7 +956,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
 
         var finalSchemaMapping = await EnrichSchemaMappingWithRepositoryDuplicatesAsync(
             request.CourseId,
-            _questionSchemaService.ValidateAndMap(request.Subject, request.QuestionType, questions, request.Chunks),
+            _questionSchemaService.ValidateAndMap(request.Subject, request.QuestionType, questions, effectiveChunks),
             cancellationToken);
         var generationId = $"{request.QuestionType.ToLowerInvariant()}-generation:{request.UserId}:{request.Subject}:{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
         await _moduleRepository.SaveGenerationAsync(generationId, questions, review, cancellationToken);
@@ -919,7 +986,9 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
             attemptsUsed,
             stageLogs,
             usageLogs,
-            SumCosts(stageLogs.Select(static item => item.Cost)));
+            SumCosts(stageLogs.Select(static item => item.Cost)),
+            chunkResolution.ContextPack,
+            chunkResolution.RetrievalPlan);
     }
 
     public async Task<QuestionRegressionRunResult> RunQuestionRegressionAsync(QuestionRegressionRunRequest request, CancellationToken cancellationToken)
@@ -1038,7 +1107,8 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                     chunk.ContentText,
                     chunk.TopicTags,
                     chunk.SectionTitle,
-                    chunk.Language)).ToList()),
+                    chunk.Language)).ToList(),
+                generationReview.ContextPack?.PackId ?? request.ContextPackId),
             rubric,
             generationReview.Questions,
             generationReview.SchemaMapping,
@@ -1118,6 +1188,56 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         var usageLogs = ingestion.UsageLogs.Concat(generationReview.UsageLogs).ToList();
         return new FullPipelineResult(ingestion, generationReview, usageLogs, SumCosts([ingestion.Totals, generationReview.Totals]));
     }
+
+    private async Task<ResolvedChunkSet> ResolveQuestionChunksAsync(
+        string userId,
+        string subject,
+        string questionType,
+        string difficulty,
+        int requestedQuestionCount,
+        string? contextPackId,
+        RetrievalPlanRequest? retrievalRequest,
+        IReadOnlyList<ChunkContextDto> chunks,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(contextPackId))
+        {
+            var pack = await _contextPackStore.TouchUsageAsync(contextPackId, cancellationToken);
+            return new ResolvedChunkSet(
+                pack.Chunks.Select(static chunk => new ChunkContextDto(chunk.ChunkId, chunk.ContentText, chunk.TopicTags, chunk.SectionTitle, chunk.Language)).ToList(),
+                pack,
+                null);
+        }
+
+        if (chunks is { Count: > 0 })
+        {
+            return new ResolvedChunkSet(chunks, null, null);
+        }
+
+        if (retrievalRequest is not null)
+        {
+            var normalizedRequest = retrievalRequest with
+            {
+                UserId = userId,
+                Subject = subject,
+                QuestionType = questionType,
+                Difficulty = difficulty,
+                RequestedQuestionCount = requestedQuestionCount
+            };
+            var plan = await _retrievalPlannerService.PlanAsync(normalizedRequest, cancellationToken);
+            return new ResolvedChunkSet(
+                plan.ContextPack.Chunks.Select(static chunk => new ChunkContextDto(chunk.ChunkId, chunk.ContentText, chunk.TopicTags, chunk.SectionTitle, chunk.Language)).ToList(),
+                plan.ContextPack,
+                plan);
+        }
+
+        throw new InvalidOperationException("Question generation requires at least one chunk, a valid contextPackId, or a retrieval request.");
+    }
+
+    private sealed record ResolvedChunkSet(
+        IReadOnlyList<ChunkContextDto> Chunks,
+        AIContextPack? ContextPack,
+        RetrievalPlanResult? RetrievalPlan);
 
     private static ReviewDecision MergeReviewDecisions(ReviewDecision baseReview, ReviewDecision ruleBasedReview)
     {

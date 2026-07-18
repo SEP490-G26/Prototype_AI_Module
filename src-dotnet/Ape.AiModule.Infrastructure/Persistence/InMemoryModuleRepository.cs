@@ -24,6 +24,30 @@ public sealed class InMemoryModuleRepository : IModuleRepository
         return Task.FromResult(document);
     }
 
+    public Task<IReadOnlyList<KnowledgeChunk>> SearchKnowledgeChunksAsync(
+        string? courseId,
+        string? documentId,
+        string subject,
+        string userId,
+        string sourceScope,
+        CancellationToken cancellationToken)
+    {
+        var normalizedSubject = NormalizeSubject(subject);
+        var normalizedScope = (sourceScope ?? "HYBRID").Trim().ToUpperInvariant();
+
+        var chunks = _documents.Values
+            .Where(document => string.IsNullOrWhiteSpace(documentId) || string.Equals(document.DocumentId, documentId, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(document => document.Chunks)
+            .Where(chunk => string.Equals(NormalizeSubject(chunk.SubjectCode), normalizedSubject, StringComparison.OrdinalIgnoreCase))
+            .Where(chunk => string.IsNullOrWhiteSpace(courseId) || string.Equals(chunk.CourseId, courseId, StringComparison.OrdinalIgnoreCase))
+            .Where(chunk => MatchesScope(chunk, userId, normalizedScope))
+            .OrderBy(chunk => chunk.SourcePageFrom)
+            .ThenBy(chunk => chunk.ChunkIndex)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyList<KnowledgeChunk>>(chunks);
+    }
+
     public Task SaveGenerationAsync(string documentId, IReadOnlyList<GeneratedQuestion> questions, ReviewDecision review, CancellationToken cancellationToken)
     {
         _generations[documentId] = (questions, review);
@@ -129,6 +153,39 @@ public sealed class InMemoryModuleRepository : IModuleRepository
         }
 
         return string.Equals(requestedCourseId, existingCourseId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool MatchesScope(KnowledgeChunk chunk, string userId, string normalizedScope)
+        => normalizedScope switch
+        {
+            "BYOS" => string.Equals(chunk.UserId, userId, StringComparison.OrdinalIgnoreCase),
+            "SYSTEM_CORE" => !string.Equals(chunk.UserId, userId, StringComparison.OrdinalIgnoreCase),
+            _ => true
+        };
+
+    private static string NormalizeSubject(string subject)
+    {
+        var lowered = subject.Trim().ToLowerInvariant();
+        if (lowered.Contains("java") && lowered.Contains("oop"))
+        {
+            return "JAVA_OOP";
+        }
+
+        if (lowered.Contains("dsa") || lowered.Contains("data structure") || lowered.Contains("algorithm"))
+        {
+            return "DSA_JAVA";
+        }
+
+        if (lowered.Contains("c_basic"))
+        {
+            return "C";
+        }
+
+        return lowered switch
+        {
+            "c" => "C",
+            _ => subject.Trim().ToUpperInvariant()
+        };
     }
 
     private static decimal CalculateSimilarity(

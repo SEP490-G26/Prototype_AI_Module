@@ -180,6 +180,128 @@ public sealed record KnowledgeChunk(
     bool RetrievalEnabled,
     string Status,
     DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt,
+    string? ChapterId = null,
+    string? ChapterTitle = null,
+    IReadOnlyList<string>? ChunkPath = null,
+    IReadOnlyList<string>? SourceBlockRefs = null,
+    string SyllabusScope = "BYOS",
+    string? ChunkSummary = null,
+    IReadOnlyList<string>? ConceptKeywords = null,
+    string? TopicPrimary = null,
+    IReadOnlyList<string>? TopicSecondary = null,
+    IReadOnlyList<string>? PrerequisiteTags = null,
+    string? EstimatedDifficulty = null,
+    decimal AssessmentValueScore = 0.5m,
+    decimal ContentQualityScore = 0.75m,
+    decimal RetrievalScoreBoost = 0m,
+    string? DuplicateGroupId = null);
+
+public sealed record RetrievedChunkScore(
+    string ChunkId,
+    int ChunkIndex,
+    string? SectionTitle,
+    string? ChapterTitle,
+    string? TopicPrimary,
+    IReadOnlyList<string> TopicTags,
+    int TokenCount,
+    decimal VectorScore,
+    decimal LexicalScore,
+    decimal TopicScore,
+    decimal FinalScore,
+    string SelectionRole,
+    string? ContentText = null);
+
+public sealed record RetrievalCandidateStats(
+    int PreFilterCount,
+    int TopicMatchCount,
+    int VectorCandidateCount,
+    int LexicalCandidateCount,
+    int RerankedCount,
+    int SelectedChunkCount);
+
+public sealed record RetrievalTokenBudget(
+    int MaxPackedTokens,
+    int EstimatedPackedTokens,
+    int EstimatedSourceTokens,
+    decimal CompressionRatio);
+
+public sealed record RejectedChunkInfo(
+    string ChunkId,
+    string Reason);
+
+public sealed record AIContextPack(
+    string PackId,
+    string PackType,
+    string PackStrategy,
+    string PackStatus,
+    string UserId,
+    string? CourseId,
+    string? DocumentId,
+    string Subject,
+    string? QuestionType,
+    string? TargetDifficulty,
+    IReadOnlyList<string> TargetTopics,
+    string SourceScope,
+    string? RetrievalQuery,
+    IReadOnlyList<string> SourceChunkIds,
+    IReadOnlyList<RetrievedChunkScore> RetrievedChunks,
+    IReadOnlyList<ChunkContextSnapshot> Chunks,
+    string PackedSummaryText,
+    string PackedContextText,
+    int TokenCount,
+    int SourceTokenCount,
+    decimal CompressionRatio,
+    int RecommendedQuestionCount,
+    int MaxQuestionCount,
+    int UsageCount,
+    DateTimeOffset? LastUsedAt,
+    DateTimeOffset? ExpiresAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+public sealed record RetrievalPlanResult(
+    string PlanId,
+    string? PackId,
+    bool UsedCachedPack,
+    string Subject,
+    string QuestionType,
+    string Difficulty,
+    string GenerationMode,
+    IReadOnlyList<string> TargetTopics,
+    string? RetrievalQuery,
+    RetrievalTokenBudget TokenBudget,
+    RetrievalCandidateStats CandidateStats,
+    IReadOnlyList<RetrievedChunkScore> SelectedChunks,
+    AIContextPack ContextPack,
+    IReadOnlyList<PipelineStageLog> StageLogs,
+    IReadOnlyList<AIUsageLogEntry> UsageLogs,
+    TokenCostBreakdown Totals);
+
+public sealed record RetrievalPlanDebugResult(
+    RetrievalPlanResult Plan,
+    IReadOnlyDictionary<string, string?> FiltersApplied,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> CandidatePools,
+    IReadOnlyList<RejectedChunkInfo> RejectedChunks,
+    IReadOnlyDictionary<string, decimal> ScoringWeights);
+
+public sealed record ContextPackBuildResult(
+    AIContextPack ContextPack,
+    IReadOnlyList<PipelineStageLog> StageLogs,
+    IReadOnlyList<AIUsageLogEntry> UsageLogs,
+    TokenCostBreakdown Totals);
+
+public sealed record ContextPackSummaryResult(
+    string PackId,
+    string Subject,
+    string? QuestionType,
+    string? TargetDifficulty,
+    IReadOnlyList<string> TargetTopics,
+    string PackStrategy,
+    int TokenCount,
+    int RecommendedQuestionCount,
+    int UsageCount,
+    string PackStatus,
     DateTimeOffset UpdatedAt);
 
 public sealed record GeneratedQuestion(
@@ -376,7 +498,9 @@ public sealed record QuestionGenerationResult(
     IReadOnlyList<PeQuestionRecord> MappedPeQuestions,
     IReadOnlyList<PipelineStageLog> StageLogs,
     IReadOnlyList<AIUsageLogEntry> UsageLogs,
-    TokenCostBreakdown Totals);
+    TokenCostBreakdown Totals,
+    AIContextPack? ContextPack = null,
+    RetrievalPlanResult? RetrievalPlan = null);
 
 public sealed record GenerationReviewResult(
     string Subject,
@@ -389,7 +513,9 @@ public sealed record GenerationReviewResult(
     int AttemptsUsed,
     IReadOnlyList<PipelineStageLog> StageLogs,
     IReadOnlyList<AIUsageLogEntry> UsageLogs,
-    TokenCostBreakdown Totals);
+    TokenCostBreakdown Totals,
+    AIContextPack? ContextPack = null,
+    RetrievalPlanResult? RetrievalPlan = null);
 
 public sealed record QuestionReviewPackageMetadata(
     string PackageId,
@@ -435,7 +561,8 @@ public sealed record GenerationReviewRequestSnapshot(
     string GeneratorModel,
     string ReviewerModel,
     int MaxAttempts,
-    IReadOnlyList<ChunkContextSnapshot> Chunks);
+    IReadOnlyList<ChunkContextSnapshot> Chunks,
+    string? ContextPackId = null);
 
 public sealed record ChunkContextSnapshot(
     string ChunkId,

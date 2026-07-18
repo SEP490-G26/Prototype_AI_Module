@@ -121,3 +121,16 @@ Tài liệu này gom toàn bộ route chính để nhóm FE, QA và BE tổng tr
 - `question-generation/debug` và `generation-review/debug` hiện là route debug placeholder; nếu cần payload debug riêng thì phải bổ sung thêm ở orchestrator/controller.
 
 Tài liệu này chỉ tập trung vào route. Phần flow nghiệp vụ xem thêm trong `Specs/`.
+
+
+## Retrieval + Context Packs
+
+| Method | Route | Mục đích |
+| --- | --- | --- |
+| POST | /api/ai-module/retrieval/plan | Lập retrieval plan và build/load context pack phù hợp |
+| POST | /api/ai-module/retrieval/plan/debug | Trả plan debug gồm candidate pools, rejected chunks, scoring weights |
+| POST | /api/ai-module/context-packs/build | Build context pack từ danh sách chunk đã biết |
+| GET | /api/ai-module/context-packs/{packId} | Lấy chi tiết một context pack |
+| GET | /api/ai-module/context-packs?subject=&questionType=&difficulty=&topic=&status= | Lấy danh sách context pack theo filter |
+| POST | /api/ai-module/context-packs/{packId}/mark-stale | Đánh dấu context pack cần rebuild |
+

@@ -2,13 +2,23 @@
 
 ## Mục tiêu
 
-Luồng này dùng để tạo câu hỏi FE/PE từ `KnowledgeChunks` và kiểm soát chất lượng bằng một AI reviewer trước khi trả kết quả cho hệ thống.
+Luồng này dùng để tạo câu hỏi FE/PE từ tri thức đã ingest và kiểm soát chất lượng bằng một AI reviewer trước khi trả kết quả cho hệ thống.
 
 Đây là luồng quan trọng nhất của đồ án vì nó quyết định:
 
 - câu hỏi có bám sát tri thức đã embedding hay không
 - chi phí AI của chức năng tạo đề
 - khả năng tái sử dụng thẳng vào BE tổng
+
+## Điều chỉnh tư duy pipeline
+
+Ở mức prototype nhỏ, có thể truyền thẳng `KnowledgeChunks` vào generation.
+
+Ở mức production, luồng đúng phải là:
+
+`KnowledgeChunks -> Retrieval Planner -> AI_Context_Packs -> Generator -> Reviewer`
+
+Nghĩa là `KnowledgeChunks` là nơi lưu tri thức gốc, còn `AI_Context_Packs` là context đã được chọn lọc và nén để đưa vào AI downstream.
 
 ## Schema output đã được siết lại
 
@@ -54,7 +64,7 @@ Và các field sau phải là `null`:
 - `correct_answer`
 - `explanation`
 
-### Normalize sau generation
+## Normalize sau generation
 
 Sau khi AI1 trả kết quả:
 
@@ -78,7 +88,7 @@ Sau khi AI1 trả kết quả:
 
 Vai trò:
 
-- nhận `KnowledgeChunk` đã được trích, chunk và tag
+- nhận context pack hoặc tập chunk đã được pack gọn
 - tạo ra câu hỏi theo đúng schema JSON của:
   - `FE_Questions`
   - `PE_Questions`
@@ -89,7 +99,7 @@ Input chính:
 - `difficulty`
 - `question_type`
 - `count`
-- `chunks_json`
+- `chunks_json` hoặc `context_pack`
 - `revision_feedback` nếu đây là lần tạo lại
 - `previous_questions_json` nếu đây là lần tạo lại
 
@@ -102,7 +112,7 @@ Output:
 Vai trò:
 
 - đọc kết quả của AI1
-- so sánh với chunk context
+- so sánh với chunk/context nguồn
 - so sánh với rubric từng loại câu hỏi
 - kết luận có chấp nhận hay không
 
@@ -110,7 +120,7 @@ Input chính:
 
 - `subject`
 - `question_type`
-- `chunks_json`
+- `chunks_json` hoặc `context_pack`
 - `questions_json`
 - `rubric_json`
 
@@ -128,215 +138,65 @@ Output:
 }
 ```
 
+## Retrieval planner nên làm gì trước AI1
+
+Trước khi AI1 chạy, planner nên:
+
+1. filter theo `course_id`, `subject_code`, `retrieval_enabled`, `status`
+2. lấy candidate theo `topic_tags`, lexical search, vector search
+3. re-rank theo:
+   - `topic_primary`
+   - `assessment_value_score`
+   - `content_quality_score`
+   - `estimated_difficulty`
+   - duplicate penalty
+4. build `AI_Context_Packs` theo token budget
+
+## Token budget gợi ý
+
+### FE single
+
+- khoảng 2k đến 5k input tokens
+
+### PE single
+
+- khoảng 4k đến 8k input tokens
+
+### Small batch
+
+- khoảng 8k đến 15k input tokens tuỳ loại
+
+Mục tiêu là giảm cost cho từng câu hỏi, nhất là khi tài liệu nguồn rất lớn.
+
 ## Rubric đánh giá
 
 ### FE
 
-AI reviewer cần check:
+Reviewer cần kiểm tra:
 
-- output có đúng schema `FE_Questions` không
-- câu hỏi có bám sát chunk nguồn không
-- `topic_tags` có hợp lý không
-- `difficulty` có đúng mức yêu cầu không
-- `options` có đầy đủ và không mơ hồ không
-- `correct_answer` có hợp lệ không
-- `explanation` có giải thích hợp lý không
+- có grounded vào context pack và source chunks không
+- có đúng difficulty không
+- có đúng schema không
+- có self-contained cho sinh viên không
+- có tránh meta-source wording không
 
 ### PE
 
-AI reviewer cần check:
+Reviewer cần kiểm tra thêm:
 
-- output có đúng schema `PE_Questions` không
-- đề bài có bám sát chunk nguồn không
-- `topic_tags` có hợp lý không
-- `difficulty` có đúng mức yêu cầu không
-- `skeleton_code` có đúng ngôn ngữ không
-- `solution_code` có giải được đề không
-- `test_cases` có hợp lý không
+- task có meaningful hay không
+- skeleton/solution/tests có align không
+- có rơi vào syntax drill quá hời hợt không
+- test coverage có đủ để xem là bài PE hợp lệ không
 
-### Rubric theo môn học
+## Quan hệ collection
 
-Reviewer không còn review generic theo FE/PE thuần.
+- `KnowledgeChunks` là kho tri thức gốc
+- `AI_Context_Packs` là ngữ cảnh đã tối ưu cho generation/review
+- `FE_Questions` / `PE_Questions` là output cuối cùng của pipeline
 
-Rubric hiện tại đã chia theo:
+## Kết luận
 
-- `C + FE`
-- `C + PE`
-- `Java OOP + FE`
-- `Java OOP + PE`
-- `DSA Java + FE`
-- `DSA Java + PE`
+Luồng generation-review sẽ chỉ thực sự production-ready khi có tầng retrieval + context packing đứng giữa `KnowledgeChunks` và generator.
 
-Ý nghĩa:
-
-- C: tập trung biến, vòng lặp, mảng, con trỏ, hàm
-- Java OOP: tập trung class, object, constructor, encapsulation, inheritance, polymorphism
-- DSA Java: tập trung array, list, stack, queue, tree, graph, search, sort
-
-## Vòng lặp
-
-Để tránh tốn token, vòng lặp chỉ chạy tối đa `2` lần.
-
-## Lớp validation và mapping nội bộ
-
-Ngoài AI reviewer, module hiện tại đã có thêm 1 lớp `rule-based validation` trong application layer:
-
-- `QuestionSchemaService`
-
-Vai trò:
-
-1. validate output của AI1 theo schema FE/PE
-2. map sang object gần với collection thật:
-   - `FeQuestionDocument`
-   - `PeQuestionDocument`
-3. trả về `QuestionSchemaMappingResult`
-
-Nó giúp:
-
-- không phụ thuộc hoàn toàn vào reviewer AI
-- reject sớm các output sai schema
-- chuẩn bị đường dẫn `validate -> map -> save`
-
-### Tiêu chí validate FE
-
-- đúng `type = FE`
-- có `topic_tags`
-- có `title`
-- có `description`
-- có `source_chunk_ids`
-- có `options`
-- có `correct_answer`
-- `correct_answer` phải khớp label của option
-- không được có field PE
-
-### Tiêu chí validate PE
-
-- đúng `type = PE`
-- có `topic_tags`
-- có `title`
-- có `description`
-- có `source_chunk_ids`
-- có `skeleton_code`
-- có `solution_code`
-- có `test_cases`
-- không được có field FE
-
-### Tác động lên review
-
-Nếu `QuestionSchemaService` kết luận output sai schema:
-
-- reviewer result sẽ bị ép về `needs_revision`
-- `schemaValid = false`
-- score bị hạ xuống
-- issue schema được gộp vào issue của AI reviewer
-
-### Attempt 1
-
-1. AI1 tạo câu hỏi
-2. AI2 review
-3. Nếu `accepted` -> dừng
-4. Nếu `needs_revision` -> chuyển sang Attempt 2
-
-### Attempt 2
-
-1. AI1 nhận thêm:
-   - `revision_feedback`
-   - `previous_questions_json`
-2. AI1 tạo lại câu hỏi
-3. AI2 review lại
-4. Dù accepted hay fail thì đều dừng tại đây
-
-## Lý do giới hạn 2 lần
-
-- tránh vòng lặp vô hạn
-- kiểm soát chi phí benchmark
-- vẫn đủ để đo khả năng self-correction của hệ thống
-
-## API hiện tại
-
-- `POST /api/ai-module/question-generation`
-- `POST /api/ai-module/question-review`
-- `POST /api/ai-module/generation-review`
-- `POST /api/ai-module/generation-review/export`
-
-## Export package JSON chuẩn hoá
-
-Route:
-
-- `POST /api/ai-module/generation-review/export`
-
-Mục đích:
-
-- trả về một gói JSON hoàn chỉnh để debug, benchmark, lưu file hoặc đưa sang BE tổng
-- giữ cùng một payload chuẩn cho cả:
-  - test tay
-  - regression
-  - so sánh model
-  - lưu tạm làm bằng chứng báo cáo
-
-Cấu trúc gói export gồm:
-
-- `metadata`
-- `request`
-- `rubric`
-- `questions`
-- `schemaMapping`
-- `difficultyAlignment`
-- `mappedFeQuestions`
-- `mappedPeQuestions`
-- `review`
-- `attemptsUsed`
-- `stageLogs`
-- `usageLogs`
-- `totals`
-
-Ý nghĩa:
-
-- `metadata`: thông tin package, model, rubric, prompt key, dataset id nếu có
-- `request`: snapshot request gốc
-- `rubric`: rubric runtime đang dùng cho review
-- `questions`: output raw sau generation
-- `schemaMapping`: kết quả validate/map nội bộ
-- `mappedFeQuestions` / `mappedPeQuestions`: bản ghi save-ready gần với collection
-- `review`: kết quả AI reviewer sau cùng
-- `stageLogs`: log từng stage hoặc từng attempt
-- `usageLogs`: log usage/cost phục vụ benchmark và audit
-- `totals`: tổng token/cost/latency của cả flow
-
-## Prompt hiện tại
-
-Trong prompt registry tạm thời đang có:
-
-- `question_generation`
-- `question_review`
-
-Prompt không bị hard-code cố định trong flow nghiệp vụ mà được lấy từ prompt store file-backed.
-
-## Prompt storage tạm thời
-
-Prompt hiện tại được lưu tại:
-
-- `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
-
-Tạm thời đây là bộ nhớ đệm hoặc prompt registry để BE và UI test có thể:
-
-- xem prompt
-- sửa prompt
-- reload prompt
-
-Sau này khi merge vào BE tổng, nguồn này sẽ được thay bằng prompt version trong DB.
-
-## Trạng thái hiện tại
-
-Luồng đã được triển khai ở mức:
-
-- có 2 agent
-- có rubric review theo FE/PE
-- có loop tối đa 2 lần
-- có ghi log từng attempt
-- có sử dụng provider thật nếu config phù hợp
-
-Nhưng vẫn cần siết thêm:
-
-- thêm mapper save thẳng vào `FE_Questions` và `PE_Questions`
-- thêm usage log thật nếu provider trả usage
+Nếu bỏ qua tầng này, pipeline có thể vẫn chạy, nhưng chi phí và token input sẽ rất khó kiểm soát khi đi vào tài liệu lớn hoặc BYOS.

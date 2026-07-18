@@ -174,6 +174,40 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> RunEmbeddingTaggingFromDraftDebugAsync([FromBody] EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
         => Ok(await ExecuteWithHistoryAsync("embedding-tagging", "embedding-tagging-from-draft-debug", request, () => _orchestrator.RunEmbeddingTaggingFromDraftDebugAsync(request, cancellationToken), cancellationToken));
 
+    [HttpPost("retrieval/plan")]
+    public async Task<IActionResult> RunRetrievalPlanAsync([FromBody] RetrievalPlanRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("retrieval", "retrieval-plan", request, () => _orchestrator.RunRetrievalPlanAsync(request, cancellationToken), cancellationToken));
+
+    [HttpPost("retrieval/plan/debug")]
+    public async Task<IActionResult> RunRetrievalPlanDebugAsync([FromBody] RetrievalPlanRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("retrieval", "retrieval-plan-debug", request, () => _orchestrator.RunRetrievalPlanDebugAsync(request, cancellationToken), cancellationToken));
+
+    [HttpPost("context-packs/build")]
+    public async Task<IActionResult> RunContextPackBuildAsync([FromBody] ContextPackBuildRequest request, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("context-packs", "context-pack-build", request, () => _orchestrator.RunContextPackBuildAsync(request, cancellationToken), cancellationToken));
+
+    [HttpGet("context-packs/{packId}")]
+    public async Task<IActionResult> GetContextPackAsync(string packId, CancellationToken cancellationToken)
+    {
+        var pack = await _orchestrator.GetContextPackAsync(packId, cancellationToken);
+        return pack is null ? NotFound(new { error = $"Context pack '{packId}' was not found." }) : Ok(pack);
+    }
+
+    [HttpGet("context-packs")]
+    public async Task<IActionResult> ListContextPacksAsync(
+        [FromQuery] string? subject,
+        [FromQuery] string? questionType,
+        [FromQuery] string? difficulty,
+        [FromQuery] string? topic,
+        [FromQuery] string? status,
+        [FromQuery] int take = 20,
+        CancellationToken cancellationToken = default)
+        => Ok(await _orchestrator.ListContextPacksAsync(subject, questionType, difficulty, topic, status, take, cancellationToken));
+
+    [HttpPost("context-packs/{packId}/mark-stale")]
+    public async Task<IActionResult> MarkContextPackStaleAsync(string packId, CancellationToken cancellationToken)
+        => Ok(await ExecuteWithHistoryAsync("context-packs", "context-pack-mark-stale", new { packId }, () => _orchestrator.MarkContextPackStaleAsync(packId, cancellationToken), cancellationToken));
+
     [HttpPost("ingestion")]
     public async Task<IActionResult> RunIngestionAsync([FromBody] IngestionRequest request, CancellationToken cancellationToken)
         => Ok(await ExecuteWithHistoryAsync("ingestion", "ingestion", request, () => _orchestrator.RunIngestionAsync(request, cancellationToken), cancellationToken));

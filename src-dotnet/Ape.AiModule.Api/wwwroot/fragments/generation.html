@@ -70,6 +70,52 @@
             </select>
           </label>
         </div>
+        <div class="grid grid--3">
+          <label>Input strategy
+            <select name="inputStrategy" id="generation-input-strategy">
+              <option value="chunks" selected>Chunks JSON</option>
+              <option value="contextPack">Context Pack ID</option>
+              <option value="retrieval">Retrieval Planner</option>
+            </select>
+          </label>
+          <label>Context pack ID
+            <input name="contextPackId" id="generation-context-pack-id" placeholder="pack-java-oop-constructor-medium-001">
+          </label>
+          <label>Target topics
+            <input name="targetTopics" id="generation-target-topics" placeholder="constructor, class, object">
+          </label>
+          <label>Source scope
+            <select name="sourceScope" id="generation-source-scope">
+              <option value="HYBRID" selected>HYBRID</option>
+              <option value="SYSTEM_CORE">SYSTEM_CORE</option>
+              <option value="BYOS">BYOS</option>
+            </select>
+          </label>
+          <label>Use cached pack
+            <select name="useCachedPack" id="generation-use-cached-pack">
+              <option value="true" selected>true</option>
+              <option value="false">false</option>
+            </select>
+          </label>
+          <label>Force rebuild pack
+            <select name="forceRebuildPack" id="generation-force-rebuild-pack">
+              <option value="false" selected>false</option>
+              <option value="true">true</option>
+            </select>
+          </label>
+          <label>Max candidate count
+            <input name="maxCandidateCount" id="generation-max-candidate-count" type="number" min="1" max="200" value="40">
+          </label>
+          <label>Max packed tokens
+            <input name="maxPackedTokens" id="generation-max-packed-tokens" type="number" min="256" max="50000" value="7000">
+          </label>
+          <label>Preferred chapter IDs
+            <input name="preferredChapterIds" id="generation-preferred-chapter-ids" placeholder="chapter-01, chapter-02">
+          </label>
+        </div>
+        <label>Retrieval query
+          <textarea name="retrievalQuery" id="generation-retrieval-query" rows="3" placeholder="Create one medium PE question about constructors and object initialization"></textarea>
+        </label>
         <label>Import chunks JSON
           <input id="generation-import" type="file" accept=".json">
         </label>
@@ -78,6 +124,8 @@
         </label>
         <div class="action-row">
           <button type="submit">Run Generation + Review</button>
+          <button type="button" class="secondary" id="generation-plan-retrieval">Plan Retrieval Pack</button>
+          <button type="button" class="secondary" id="generation-use-last-embedding">Use Last Embedding Result</button>
           <button type="button" class="secondary" data-run-export="generation">Export Review Package</button>
           <button type="button" class="secondary" data-copy-json="generation">Copy JSON</button>
           <button type="button" class="secondary" data-export-json="generation">Export JSON</button>
