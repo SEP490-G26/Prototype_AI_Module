@@ -84,6 +84,14 @@ function bindFeature(feature) {
     }
   });
 
+  document.querySelector(`[data-copy-parsed="${feature.key}"]`)?.addEventListener('click', async () => {
+    const container = document.getElementById(feature.resultId);
+    const text = container?.innerText?.trim();
+    if (text) {
+      await copyText(text);
+    }
+  });
+
   document.querySelector(`[data-export-json="${feature.key}"]`)?.addEventListener('click', () => {
     const result = state.lastResults[feature.key];
     if (result) {

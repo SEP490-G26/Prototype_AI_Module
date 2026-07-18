@@ -23,6 +23,12 @@ export function initHistory(renderers) {
   $('#history-load-list')?.addEventListener('click', () => loadHistoryList());
   $('#history-apply-filters')?.addEventListener('click', refreshHistoryBrowser);
   $('#history-clear-filters')?.addEventListener('click', clearFilters);
+  $('#history-copy-parsed')?.addEventListener('click', async () => {
+    const text = $('#history-detail-result')?.innerText?.trim();
+    if (text) {
+      await copyText(text);
+    }
+  });
   $('#history-copy-json')?.addEventListener('click', async () => {
     if (state.historyDetail) {
       await copyText(stringifyJson(state.historyDetail));
