@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ape.AiModule.Application.DTOs.AI;
@@ -315,16 +317,22 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
         {
             var prompt = ReadCurrentJsonFile(Path.Combine(_appDataFolder, "ai-prompts.json"), promptKey, "Key");
             if (prompt is null) return;
+            var version = ReadString(prompt, "Version") ?? "unknown";
+            var snapshot = ReadSnapshotReference("prompts", promptKey, version);
+            var snapshotHash = snapshot is null ? null : ReadString(snapshot, "content_hash");
+            var snapshotId = snapshot is null ? null : ReadString(snapshot, "snapshot_id");
             refs.Add(new AiConfigReference(
                 "prompt",
                 promptKey,
-                ReadString(prompt, "Version") ?? "unknown",
+                version,
                 ResolveFunctionNameFromPromptKey(promptKey),
                 null,
                 null,
                 "en",
-                null,
-                Path.Combine("App_Data", "ai-prompts.json")));
+                snapshotHash ?? ComputeContentHash(prompt),
+                snapshotId is { Length: > 0 }
+                    ? Path.Combine("App_Data", "ai-config-history", "prompts", promptKey, $"{snapshotId}.json")
+                    : Path.Combine("App_Data", "ai-prompts.json")));
         }
 
         void AddRubricRef(string rubricId)
@@ -332,16 +340,22 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             var path = Path.Combine(_appDataFolder, "ai-rubrics", $"{rubricId}.json");
             var rubric = ReadCurrentJsonFile(path);
             if (rubric is null) return;
+            var version = ReadString(rubric, "version") ?? "unknown";
+            var snapshot = ReadSnapshotReference("rubrics", ReadString(rubric, "rubric_id") ?? rubricId, version);
+            var snapshotHash = snapshot is null ? null : ReadString(snapshot, "content_hash");
+            var snapshotId = snapshot is null ? null : ReadString(snapshot, "snapshot_id");
             refs.Add(new AiConfigReference(
                 "rubric",
                 ReadString(rubric, "rubric_id") ?? rubricId,
-                ReadString(rubric, "version") ?? "unknown",
+                version,
                 ReadString(rubric, "function_name"),
                 ReadString(rubric, "subject_code"),
                 ReadString(rubric, "question_type"),
                 ReadString(rubric, "language"),
-                null,
-                path));
+                snapshotHash ?? ComputeContentHash(rubric),
+                snapshotId is { Length: > 0 }
+                    ? Path.Combine("App_Data", "ai-config-history", "rubrics", ReadString(rubric, "rubric_id") ?? rubricId, $"{snapshotId}.json")
+                    : path));
         }
 
         void AddGroundTruthRef(string datasetId)
@@ -349,16 +363,23 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             var path = Path.Combine(_appDataFolder, "ai-groundtruth", $"{datasetId}.json");
             var dataset = ReadCurrentJsonFile(path);
             if (dataset is null) return;
+            var stableId = ReadString(dataset, "dataset_id") ?? datasetId;
+            var version = ReadString(dataset, "version") ?? "unknown";
+            var snapshot = ReadSnapshotReference("groundtruth", stableId, version);
+            var snapshotHash = snapshot is null ? null : ReadString(snapshot, "content_hash");
+            var snapshotId = snapshot is null ? null : ReadString(snapshot, "snapshot_id");
             refs.Add(new AiConfigReference(
                 "groundtruth",
-                ReadString(dataset, "dataset_id") ?? datasetId,
-                ReadString(dataset, "version") ?? "unknown",
+                stableId,
+                version,
                 ReadString(dataset, "function_name"),
                 ReadString(dataset, "subject_code"),
                 ReadString(dataset, "question_type"),
                 ReadString(dataset, "language"),
-                null,
-                path));
+                snapshotHash ?? ComputeContentHash(dataset),
+                snapshotId is { Length: > 0 }
+                    ? Path.Combine("App_Data", "ai-config-history", "groundtruth", stableId, $"{snapshotId}.json")
+                    : path));
         }
 
         void AddPolicyRef(string fileName)
@@ -366,16 +387,23 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             var path = Path.Combine(_appDataFolder, fileName);
             var policy = ReadCurrentJsonFile(path);
             if (policy is null) return;
+            var stableId = ReadString(policy, "policy_id") ?? Path.GetFileNameWithoutExtension(fileName);
+            var version = ReadString(policy, "version") ?? "unknown";
+            var snapshot = ReadSnapshotReference("policies", stableId, version);
+            var snapshotHash = snapshot is null ? null : ReadString(snapshot, "content_hash");
+            var snapshotId = snapshot is null ? null : ReadString(snapshot, "snapshot_id");
             refs.Add(new AiConfigReference(
                 "policy",
-                ReadString(policy, "policy_id") ?? Path.GetFileNameWithoutExtension(fileName),
-                ReadString(policy, "version") ?? "unknown",
+                stableId,
+                version,
                 ReadString(policy, "function_name"),
                 null,
                 null,
                 null,
-                null,
-                path));
+                snapshotHash ?? ComputeContentHash(policy),
+                snapshotId is { Length: > 0 }
+                    ? Path.Combine("App_Data", "ai-config-history", "policies", stableId, $"{snapshotId}.json")
+                    : path));
         }
 
         if (normalizedRoute.Contains("gatekeeper", StringComparison.Ordinal))
@@ -466,6 +494,23 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
         return ConvertObject(document.RootElement);
     }
 
+    private IReadOnlyDictionary<string, object>? ReadSnapshotReference(string artifactType, string stableId, string version)
+    {
+        var folder = Path.Combine(_appDataFolder, "ai-config-history", NormalizeArtifactType(artifactType), SanitizePathSegment(stableId));
+        if (!Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        return Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly)
+            .Select(path => ReadCurrentJsonFile(path))
+            .Where(static snapshot => snapshot is not null)
+            .Cast<IReadOnlyDictionary<string, object>>()
+            .Where(snapshot => string.Equals(ReadString(snapshot, "version"), version, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(snapshot => ReadString(snapshot, "captured_at"))
+            .FirstOrDefault();
+    }
+
     private static IReadOnlyDictionary<string, object> ConvertObject(JsonElement element)
     {
         var dictionary = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
@@ -490,6 +535,14 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             JsonValueKind.Null => null,
             _ => element.ToString()
         };
+
+    private static string ComputeContentHash(IReadOnlyDictionary<string, object> source)
+    {
+        var json = JsonSerializer.Serialize(source.OrderBy(static pair => pair.Key).ToDictionary(static pair => pair.Key, static pair => pair.Value));
+        using var sha = SHA256.Create();
+        var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(json));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
+    }
 
     private static string? ReadString(IReadOnlyDictionary<string, object> source, string? key)
     {
@@ -532,6 +585,28 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
         }
 
         return "C";
+    }
+
+    private static string NormalizeArtifactType(string artifactType)
+        => artifactType.Trim().ToLowerInvariant() switch
+        {
+            "prompt" or "prompts" => "prompts",
+            "rubric" or "rubrics" => "rubrics",
+            "groundtruth" or "ground-truth" or "ground_truth" => "groundtruth",
+            "policy" or "policies" => "policies",
+            _ => artifactType.Trim().ToLowerInvariant()
+        };
+
+    private static string SanitizePathSegment(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var builder = new StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            builder.Append(invalid.Contains(ch) ? '_' : ch);
+        }
+
+        return builder.ToString().Replace(' ', '_');
     }
 
     private static string ResolveFunctionNameFromPromptKey(string promptKey)
