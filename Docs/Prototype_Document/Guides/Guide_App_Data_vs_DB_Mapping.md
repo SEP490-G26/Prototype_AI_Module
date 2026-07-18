@@ -13,11 +13,14 @@ Tài liệu này tổng hợp:
 ### File prototype
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
+- `src-dotnet/Ape.AiModule.Api/App_Data/ai-config-history/prompts/`
 
 ### Bản chất
 
 - đây là file wrapper list prompt
 - mỗi item đã gần giống với 1 record prompt
+- file `ai-prompts.json` là current active snapshot
+- thư mục `ai-config-history/prompts/` là lịch sử immutable append-history
 
 ### Collection DB tương ứng
 
@@ -35,6 +38,14 @@ Tài liệu này tổng hợp:
 | `IsActive` | `is_active` |
 | `UpdatedAt` | `updated_at` |
 
+### Ghi chú versioning
+
+- `ai-prompts.json` không còn là nơi duy nhất giữ prompt
+- mỗi lần `PUT /api/ai-module/prompts/{key}` sẽ:
+  - cập nhật current snapshot
+  - append thêm 1 file immutable vào `ai-config-history/prompts/{key}/`
+- khi đưa vào DB thật, nên import cả current và history
+
 ## 2. Nhóm Policy
 
 ### File prototype
@@ -43,15 +54,18 @@ Tài liệu này tổng hợp:
 - `App_Data/extracted-content-policy.json`
 - `App_Data/embedding-tagging-policy.json`
 - `App_Data/code-mentor-policy.json`
+- `App_Data/ai-config-history/policies/`
 
 ### Bản chất
 
 - đây **không phải full DB record**
 - đây là **payload runtime**
+- file `*-policy.json` là current active payload
+- thư mục `ai-config-history/policies/` là append-history snapshot
 
 ### Collection DB tương ứng
 
-- `AI_Policies`
+- `AI_Policy_Versions`
 
 ### Mapping
 
@@ -95,12 +109,14 @@ DB record:
 
 - prototype file = `content_json source`
 - DB = `wrapper record + content_json`
+- cần import cả snapshot history nếu muốn audit đầy đủ
 
 ## 3. Nhóm Rubric
 
 ### File prototype
 
 - `App_Data/ai-rubrics/*.json`
+- `App_Data/ai-config-history/rubrics/`
 
 Bao gồm:
 
@@ -113,10 +129,12 @@ Bao gồm:
 ### Bản chất
 
 - mỗi file gần như là 1 rubric payload hoàn chỉnh
+- file trong `ai-rubrics/` là current active snapshot
+- thư mục `ai-config-history/rubrics/` là append-history snapshot
 
 ### Collection DB tương ứng
 
-- `AI_Rubrics`
+- `AI_Rubric_Versions`
 
 ### Mapping
 
@@ -145,12 +163,14 @@ DB record wrapper:
 
 - file prototype = có thể xem là payload source
 - DB = wrapper record + `content_json`
+- không nên chỉ import bản current nếu cần audit benchmark
 
 ## 4. Nhóm Ground Truth
 
 ### File prototype
 
 - `App_Data/ai-groundtruth/*.json`
+- `App_Data/ai-config-history/groundtruth/`
 
 Bao gồm:
 
@@ -163,6 +183,8 @@ Bao gồm:
 ### Bản chất
 
 - mỗi file là 1 dataset payload
+- file trong `ai-groundtruth/` là current active dataset
+- thư mục `ai-config-history/groundtruth/` là append-history snapshot
 
 ### Collection DB tương ứng
 
@@ -215,6 +237,7 @@ và bổ sung thêm metadata wrapper còn thiếu.
 - ưu tiên admin/filter/query
 - ưu tiên audit
 - ưu tiên bộ 4 collection đồng nhất
+- ưu tiên trace version cho mọi run
 
 ## 6. Nhóm runtime artifacts
 
@@ -265,11 +288,12 @@ Hướng map vào BE thật:
 
 ## 7. Hướng chốt hiện tại
 
-1. `App_Data` là source of truth tạm thời cho prototype
-2. `AI_Prompt_Versions`, `AI_Policies`, `AI_Rubrics`, `AI_GroundTruth_Sets` là bộ collection DB thật
-3. policy/rubric/ground truth sẽ map theo **wrapper record**
-4. `content_json` là nơi chứa payload runtime
-5. `run-history` và `uploads` được xem là runtime artifacts, không thuộc bộ collection cấu hình
+1. `App_Data` là source of truth current cho prototype
+2. `App_Data/ai-config-history/` là append-history immutable cho prototype
+3. `AI_Prompt_Versions`, `AI_Policy_Versions`, `AI_Rubric_Versions`, `AI_GroundTruth_Sets` là bộ collection DB thật
+4. policy/rubric/ground truth sẽ map theo **wrapper record**
+5. `content_json` là nơi chứa payload runtime
+6. `run-history` và `uploads` được xem là runtime artifacts, không thuộc bộ collection cấu hình
 
 ## Kết luận
 

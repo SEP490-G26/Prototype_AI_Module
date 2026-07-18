@@ -170,6 +170,14 @@ public interface IAiRunHistoryService
         CancellationToken cancellationToken);
 }
 
+public interface IAiConfigHistoryService
+{
+    Task<IReadOnlyList<IReadOnlyDictionary<string, object>>> GetHistoryAsync(
+        string artifactType,
+        string stableId,
+        CancellationToken cancellationToken);
+}
+
 public interface IBenchmarkSessionService
 {
     Task<BenchmarkSessionRecord> SaveAsync(

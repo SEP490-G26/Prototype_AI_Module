@@ -19,6 +19,7 @@ public sealed class AIModuleController : ControllerBase
     private readonly IRubricCatalogService _rubricCatalogService;
     private readonly IGroundTruthCatalogService _groundTruthCatalogService;
     private readonly PrototypeFileIngestService _prototypeFileIngestService;
+    private readonly IAiConfigHistoryService _aiConfigHistoryService;
 
     public AIModuleController(
         IAiPipelineOrchestrator orchestrator,
@@ -30,7 +31,8 @@ public sealed class AIModuleController : ControllerBase
         ICodeMentorPolicyService codeMentorPolicyService,
         IRubricCatalogService rubricCatalogService,
         IGroundTruthCatalogService groundTruthCatalogService,
-        PrototypeFileIngestService prototypeFileIngestService)
+        PrototypeFileIngestService prototypeFileIngestService,
+        IAiConfigHistoryService aiConfigHistoryService)
     {
         _orchestrator = orchestrator;
         _runHistoryService = runHistoryService;
@@ -42,6 +44,7 @@ public sealed class AIModuleController : ControllerBase
         _rubricCatalogService = rubricCatalogService;
         _groundTruthCatalogService = groundTruthCatalogService;
         _prototypeFileIngestService = prototypeFileIngestService;
+        _aiConfigHistoryService = aiConfigHistoryService;
     }
 
     [HttpPost("uploads/ingest")]
@@ -68,13 +71,25 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetGatekeeperPolicyAsync(CancellationToken cancellationToken)
         => Ok(await _gatekeeperPolicyService.GetPolicyAsync(cancellationToken));
 
+    [HttpGet("gatekeeper/policy-history/{policyId}")]
+    public async Task<IActionResult> GetGatekeeperPolicyHistoryAsync(string policyId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("policies", policyId, cancellationToken));
+
     [HttpGet("gatekeeper/rubric")]
     public async Task<IActionResult> GetGatekeeperRubricAsync(CancellationToken cancellationToken)
         => Ok(await _rubricCatalogService.GetGatekeeperRubricAsync(cancellationToken));
 
+    [HttpGet("gatekeeper/rubric-history/{rubricId}")]
+    public async Task<IActionResult> GetGatekeeperRubricHistoryAsync(string rubricId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("rubrics", rubricId, cancellationToken));
+
     [HttpGet("gatekeeper/ground-truth")]
     public async Task<IActionResult> GetGatekeeperGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetGatekeeperGroundTruthAsync(cancellationToken));
+
+    [HttpGet("gatekeeper/ground-truth-history/{datasetId}")]
+    public async Task<IActionResult> GetGatekeeperGroundTruthHistoryAsync(string datasetId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("groundtruth", datasetId, cancellationToken));
 
     [HttpPost("extracted-content")]
     public async Task<IActionResult> RunExtractedContentAsync([FromBody] ExtractedContentRequest request, CancellationToken cancellationToken)
@@ -88,13 +103,25 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetExtractedContentPolicyAsync(CancellationToken cancellationToken)
         => Ok(await _extractedContentPolicyService.GetPolicyAsync(cancellationToken));
 
+    [HttpGet("extracted-content/policy-history/{policyId}")]
+    public async Task<IActionResult> GetExtractedContentPolicyHistoryAsync(string policyId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("policies", policyId, cancellationToken));
+
     [HttpGet("extracted-content/rubric")]
     public async Task<IActionResult> GetExtractedContentRubricAsync(CancellationToken cancellationToken)
         => Ok(await _rubricCatalogService.GetExtractedContentRubricAsync(cancellationToken));
 
+    [HttpGet("extracted-content/rubric-history/{rubricId}")]
+    public async Task<IActionResult> GetExtractedContentRubricHistoryAsync(string rubricId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("rubrics", rubricId, cancellationToken));
+
     [HttpGet("extracted-content/ground-truth")]
     public async Task<IActionResult> GetExtractedContentGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetExtractedContentGroundTruthAsync(cancellationToken));
+
+    [HttpGet("extracted-content/ground-truth-history/{datasetId}")]
+    public async Task<IActionResult> GetExtractedContentGroundTruthHistoryAsync(string datasetId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("groundtruth", datasetId, cancellationToken));
 
     [HttpGet("extraction-drafts/{draftId}")]
     public async Task<IActionResult> GetExtractionDraftAsync(string draftId, CancellationToken cancellationToken)
@@ -119,13 +146,25 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetEmbeddingTaggingPolicyAsync(CancellationToken cancellationToken)
         => Ok(await _embeddingTaggingPolicyService.GetPolicyAsync(cancellationToken));
 
+    [HttpGet("embedding-tagging/policy-history/{policyId}")]
+    public async Task<IActionResult> GetEmbeddingTaggingPolicyHistoryAsync(string policyId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("policies", policyId, cancellationToken));
+
     [HttpGet("embedding-tagging/rubric")]
     public async Task<IActionResult> GetEmbeddingTaggingRubricAsync(CancellationToken cancellationToken)
         => Ok(await _rubricCatalogService.GetEmbeddingTaggingRubricAsync(cancellationToken));
 
+    [HttpGet("embedding-tagging/rubric-history/{rubricId}")]
+    public async Task<IActionResult> GetEmbeddingTaggingRubricHistoryAsync(string rubricId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("rubrics", rubricId, cancellationToken));
+
     [HttpGet("embedding-tagging/ground-truth")]
     public async Task<IActionResult> GetEmbeddingTaggingGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetEmbeddingTaggingGroundTruthAsync(cancellationToken));
+
+    [HttpGet("embedding-tagging/ground-truth-history/{datasetId}")]
+    public async Task<IActionResult> GetEmbeddingTaggingGroundTruthHistoryAsync(string datasetId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("groundtruth", datasetId, cancellationToken));
 
     [HttpPost("embedding-tagging/from-draft")]
     public async Task<IActionResult> RunEmbeddingTaggingFromDraftAsync([FromBody] EmbeddingFromDraftRequest request, CancellationToken cancellationToken)
@@ -151,9 +190,17 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetQuestionGenerationRubricAsync([FromQuery] string subject, [FromQuery] string questionType, CancellationToken cancellationToken)
         => Ok(await _rubricCatalogService.GetQuestionReviewRubricAsync(subject, questionType, cancellationToken));
 
+    [HttpGet("question-generation/rubric-history/{rubricId}")]
+    public async Task<IActionResult> GetQuestionGenerationRubricHistoryAsync(string rubricId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("rubrics", rubricId, cancellationToken));
+
     [HttpGet("question-generation/ground-truth")]
     public async Task<IActionResult> GetQuestionGenerationGroundTruthAsync([FromQuery] string subject, [FromQuery] string questionType, CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetQuestionGenerationGroundTruthAsync(subject, questionType, cancellationToken));
+
+    [HttpGet("question-generation/ground-truth-history/{datasetId}")]
+    public async Task<IActionResult> GetQuestionGenerationGroundTruthHistoryAsync(string datasetId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("groundtruth", datasetId, cancellationToken));
 
     [HttpPost("question-generation/regression")]
     public async Task<IActionResult> RunQuestionGenerationRegressionAsync([FromBody] QuestionRegressionRunRequest request, CancellationToken cancellationToken)
@@ -187,13 +234,25 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetCodeMentorPolicyAsync(CancellationToken cancellationToken)
         => Ok(await _codeMentorPolicyService.GetPolicyAsync(cancellationToken));
 
+    [HttpGet("code-mentor/policy-history/{policyId}")]
+    public async Task<IActionResult> GetCodeMentorPolicyHistoryAsync(string policyId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("policies", policyId, cancellationToken));
+
     [HttpGet("code-mentor/rubric")]
     public async Task<IActionResult> GetCodeMentorRubricAsync(CancellationToken cancellationToken)
         => Ok(await _rubricCatalogService.GetCodeMentorRubricAsync(cancellationToken));
 
+    [HttpGet("code-mentor/rubric-history/{rubricId}")]
+    public async Task<IActionResult> GetCodeMentorRubricHistoryAsync(string rubricId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("rubrics", rubricId, cancellationToken));
+
     [HttpGet("code-mentor/ground-truth")]
     public async Task<IActionResult> GetCodeMentorGroundTruthAsync(CancellationToken cancellationToken)
         => Ok(await _groundTruthCatalogService.GetCodeMentorGroundTruthAsync(cancellationToken));
+
+    [HttpGet("code-mentor/ground-truth-history/{datasetId}")]
+    public async Task<IActionResult> GetCodeMentorGroundTruthHistoryAsync(string datasetId, CancellationToken cancellationToken)
+        => Ok(await _aiConfigHistoryService.GetHistoryAsync("groundtruth", datasetId, cancellationToken));
 
     [HttpPost("full-pipeline")]
     public async Task<IActionResult> RunFullPipelineAsync([FromBody] FullPipelineRequest request, CancellationToken cancellationToken)

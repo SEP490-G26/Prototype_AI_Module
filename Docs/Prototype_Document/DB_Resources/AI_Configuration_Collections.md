@@ -4,16 +4,17 @@
 
 Tài liệu này chốt khung collection để đưa vào DB thật cho nhóm cấu hình AI và collection nghiệp vụ hỗ trợ pipeline tài liệu:
 
-- `AI_Rubrics`
+- `AI_Rubric_Versions`
 - `AI_GroundTruth_Sets`
 - `AI_Prompt_Versions`
+- `AI_Policy_Versions`
 - `DocumentExtractionDrafts`
 - `DocumentExtractionDraftContents`
 
 Mục tiêu là:
 
 - prototype và BE tổng có cùng một hướng field
-- prompt, rubric và ground truth có version rõ ràng
+- prompt, rubric, ground truth, policy đều có snapshot version rõ ràng
 - để benchmark và production có thể trace lại đang dùng version nào
 
 ## 1. AI_Prompt_Versions
@@ -53,9 +54,9 @@ Trong prototype `.NET`, object gần tương ứng là:
 - chỉ nên có 1 version active tại 1 thời điểm cho 1 `agent_id`
 - benchmark có thể override prompt version để so sánh
 
-## 2. AI_Rubrics
+## 2. AI_Rubric_Versions
 
-Collection này dùng để lưu rubric có cấu trúc cho các tác vụ cần đánh giá theo tiêu chí học thuật hoặc nghiệp vụ.
+Collection này dùng để lưu rubric có cấu trúc theo kiểu versioned snapshot cho các tác vụ cần đánh giá theo tiêu chí học thuật hoặc nghiệp vụ.
 
 ### Tác vụ chính nên dùng
 
@@ -110,8 +111,9 @@ Trong prototype `.NET`, object gần tương ứng là:
 
 ### Ghi chú
 
-- file JSON hiện tại trong `App_Data/ai-rubrics/` là source of truth tạm thời
-- khi đưa vào production, các file này có thể import vào `AI_Rubrics`
+- file JSON hiện tại trong `App_Data/ai-rubrics/` là source of truth current tạm thời
+- lịch sử snapshot file-backed hiện nằm trong `App_Data/ai-config-history/rubrics/`
+- khi đưa vào production, các file này nên import vào `AI_Rubric_Versions`
 
 ## 3. AI_GroundTruth_Sets
 
@@ -175,7 +177,59 @@ Trong prototype `.NET`, object gần tương ứng là:
 
 - `AiGroundTruthSetRecord`
 
-## 4. Quan hệ giữa 3 collection
+### Ghi chú versioning
+
+- current file trong `App_Data/ai-groundtruth/` là active dataset
+- lịch sử snapshot file-backed hiện nằm trong `App_Data/ai-config-history/groundtruth/`
+- khi nội dung dataset thay đổi, cần giữ snapshot cũ để benchmark/report không mất căn cứ
+
+## 4. AI_Policy_Versions
+
+Collection này dùng để lưu policy runtime theo kiểu versioned snapshot.
+
+### Vai trò
+
+- giữ business rules runtime cho từng function AI
+- lưu lịch sử thay đổi policy thay vì chỉ giữ 1 file current
+- giúp trace đúng policy version nào đã được dùng cho run cụ thể
+
+### Schema đề nghị
+
+```js
+{
+  _id: ObjectId,
+  policy_id: String,           // vd: gatekeeper_policy_v1
+  policy_name: String,         // tên đọc được trên admin/UI
+  function_name: String,       // Gatekeeper | ExtractedContent | EmbeddingTagging | CodeMentor
+  subject_code: String,        // nullable
+  question_type: String,       // nullable
+  language: String,            // nullable
+  version: String,             // vd: v1, v2
+  is_active: Boolean,
+  description: String,
+  content_json: Object,
+  created_at: Date,
+  updated_at: Date
+}
+```
+
+### Mapping với prototype hiện tại
+
+- current payload nằm trong:
+  - `App_Data/gatekeeper-policy.json`
+  - `App_Data/extracted-content-policy.json`
+  - `App_Data/embedding-tagging-policy.json`
+  - `App_Data/code-mentor-policy.json`
+- history snapshot file-backed nằm trong:
+  - `App_Data/ai-config-history/policies/`
+
+### Ghi chú
+
+- file current chỉ là active payload cho runtime
+- collection DB thật phải giữ toàn bộ version history
+- nếu policy đổi nhưng `version` chưa đổi thì vẫn nên lưu snapshot mới kèm `content_hash`
+
+## 5. Quan hệ giữa 4 collection
 
 ### AI_Prompt_Versions
 
@@ -183,7 +237,7 @@ Trả lời câu hỏi:
 
 - agent này đang nói gì với AI
 
-### AI_Rubrics
+### AI_Rubric_Versions
 
 Trả lời câu hỏi:
 
@@ -195,7 +249,13 @@ Trả lời câu hỏi:
 
 - agent này được test hoặc chấm dựa trên bộ dữ liệu chuẩn nào
 
-## 4A. DocumentExtractionDrafts và DocumentExtractionDraftContents
+### AI_Policy_Versions
+
+Trả lời câu hỏi:
+
+- agent này đang chạy theo business rule runtime nào
+
+## 5A. DocumentExtractionDrafts và DocumentExtractionDraftContents
 
 Hai collection này không phải cấu hình AI, nhưng là collection nghiệp vụ cần có để pipeline tài liệu chạy đúng trong production.
 
@@ -210,31 +270,35 @@ Hai collection này không phải cấu hình AI, nhưng là collection nghiệp
 - `Docs/Prototype_Document/DB_Resources/DocumentExtractionDrafts.md`
 - `Docs/Prototype_Document/DB_Resources/DocumentExtractionDraftContents.md`
 
-## 5. Collection nào liên quan tới chức năng nào
+## 6. Collection nào liên quan tới chức năng nào
 
 ### Question Generation / Review
 
 - cần `AI_Prompt_Versions`
-- cần `AI_Rubrics`
+- cần `AI_Rubric_Versions`
 - cần `AI_GroundTruth_Sets`
+- cần `AI_Policy_Versions` nếu function có business rules runtime
 
 ### Code Mentor
 
 - cần `AI_Prompt_Versions`
-- cần `AI_Rubrics`
+- cần `AI_Rubric_Versions`
 - cần `AI_GroundTruth_Sets`
+- cần `AI_Policy_Versions`
 
 ### Gatekeeper
 
 - cần `AI_Prompt_Versions`
 - có thể có `AI_GroundTruth_Sets`
-- có thể có `AI_Rubrics` nhẹ theo policy
+- có thể có `AI_Rubric_Versions` nhẹ theo policy
+- cần `AI_Policy_Versions`
 
 ### Extracted Content
 
 - cần `AI_Prompt_Versions`
 - thường không cần rubric học thuật
 - có thể có test set quality riêng nếu cần
+- cần `AI_Policy_Versions`
 - production nên đi kèm:
   - `DocumentExtractionDrafts`
   - `DocumentExtractionDraftContents`
@@ -251,15 +315,16 @@ Hai collection này không phải cấu hình AI, nhưng là collection nghiệp
 - cần prompt nếu tagging bằng LLM
 - có thể có taxonomy hoặc tagging guideline
 - có thể có ground truth nhỏ để check tag alignment nếu sau này muốn đánh giá accuracy
+- cần `AI_Policy_Versions`
 
-## 6. Index đề nghị
+## 7. Index đề nghị
 
 ### AI_Prompt_Versions
 
 - `{ agent_id: 1, version: 1 }`
 - `{ agent_id: 1, is_active: 1 }`
 
-### AI_Rubrics
+### AI_Rubric_Versions
 
 - `{ rubric_id: 1, version: 1 }`
 - `{ function_name: 1, subject_code: 1, question_type: 1, is_active: 1 }`
@@ -269,27 +334,35 @@ Hai collection này không phải cấu hình AI, nhưng là collection nghiệp
 - `{ dataset_name: 1, version: 1 }`
 - `{ function_name: 1, subject_code: 1, question_type: 1, is_active: 1 }`
 
-## 7. Khuyến nghị chuyển từ prototype sang production
+### AI_Policy_Versions
+
+- `{ policy_id: 1, version: 1 }`
+- `{ function_name: 1, subject_code: 1, question_type: 1, is_active: 1 }`
+
+## 8. Khuyến nghị chuyển từ prototype sang production
 
 ### Giai đoạn hiện tại
 
-- prompt có thể vẫn load từ file hoặc registry tạm
-- rubric source đang nằm ở file JSON
-- ground truth đang nằm trong dataset file JSON
+- prompt current đang nằm trong `App_Data/ai-prompts.json`
+- rubric current đang nằm ở file JSON
+- ground truth current đang nằm trong dataset file JSON
+- policy current đang nằm ở `App_Data/*-policy.json`
+- lịch sử immutable append-history đang nằm trong `App_Data/ai-config-history/`
 
 ### Khi ghép BE tổng
 
 1. import prompt versions vào `AI_Prompt_Versions`
-2. import rubric files vào `AI_Rubrics`
+2. import rubric files vào `AI_Rubric_Versions`
 3. import benchmark hoặc accuracy datasets vào `AI_GroundTruth_Sets`
-4. lưu `version`, `rubric_id`, `dataset_name` vào log benchmark nếu cần
+4. import policy files vào `AI_Policy_Versions`
+5. lưu `prompt_version`, `rubric_version`, `dataset_version`, `policy_version` vào log benchmark/run history nếu cần
 
-## 8. Question Generation còn gì nữa không
+## 9. Question Generation còn gì nữa không
 
 Sau những gì đã làm, `Question Generation` vẫn còn các khoảng trống chính:
 
-1. `AI_Rubrics` chưa được nối runtime vào code review flow
-2. `AI_GroundTruth_Sets` chưa được dùng cho regression hoặc accuracy testing tự động
+1. `AI_Rubric_Versions` chưa được nối runtime bằng Mongo repository thật
+2. `AI_GroundTruth_Sets` chưa được dùng cho regression hoặc accuracy testing tự động bằng DB thật
 3. duplicate check với DB mới đang ở mức heuristic text similarity
 4. chưa có vector-based duplicate detection
 5. chưa có compile/run verification cho `PE`
@@ -299,10 +372,11 @@ Sau những gì đã làm, `Question Generation` vẫn còn các khoảng trốn
 
 ## Kết luận
 
-Ba collection này là khung hợp lý để đưa module AI vào BE tổng:
+Bốn collection versioned này là khung hợp lý để đưa module AI vào BE tổng:
 
 - `AI_Prompt_Versions` = prompt versioning
-- `AI_Rubrics` = evaluation/policy criteria
+- `AI_Rubric_Versions` = evaluation criteria
 - `AI_GroundTruth_Sets` = benchmark/accuracy source of truth
+- `AI_Policy_Versions` = runtime business rules
 
 Từ đây trở đi, các AI function khác có thể được chuyển đổi sang cùng một cách quản lý thống nhất.

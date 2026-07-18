@@ -23,6 +23,10 @@ public sealed class AIPromptsController : ControllerBase
     public async Task<IActionResult> GetAsync(string key, CancellationToken cancellationToken)
         => Ok(await _promptTemplateService.GetAsync(key, cancellationToken));
 
+    [HttpGet("{key}/history")]
+    public async Task<IActionResult> GetHistoryAsync(string key, CancellationToken cancellationToken)
+        => Ok(await _promptTemplateService.GetHistoryAsync(key, cancellationToken));
+
     [HttpPost("reload")]
     public async Task<IActionResult> ReloadAsync(CancellationToken cancellationToken)
     {

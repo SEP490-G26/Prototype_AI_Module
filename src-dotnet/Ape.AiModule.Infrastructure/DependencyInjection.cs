@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<IProviderCatalogService, ProviderCatalogService>();
         services.AddSingleton<IProviderConfigurationService, ProviderConfigurationService>();
         services.AddSingleton<IPromptTemplateService, FilePromptTemplateService>();
+        services.AddSingleton<IAiConfigHistoryService, FileAiConfigHistoryService>();
         services.AddSingleton<IAiRunHistoryService, FileAiRunHistoryService>();
         services.AddSingleton<IBenchmarkSessionService, FileBenchmarkSessionService>();
         services.AddSingleton<IExtractionDraftStore, FileExtractionDraftStore>();

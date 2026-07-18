@@ -8,11 +8,13 @@ namespace Ape.AiModule.Infrastructure.AI;
 public sealed class FileGroundTruthCatalogService : IGroundTruthCatalogService
 {
     private readonly string _datasetsFolder;
+    private readonly AiVersionHistoryStore _historyStore;
     private readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, object>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public FileGroundTruthCatalogService(IHostEnvironment environment)
     {
         _datasetsFolder = Path.Combine(environment.ContentRootPath, "App_Data", "ai-groundtruth");
+        _historyStore = new AiVersionHistoryStore(environment);
     }
 
     public async Task<IReadOnlyDictionary<string, object>> GetQuestionGenerationGroundTruthAsync(
@@ -35,6 +37,7 @@ public sealed class FileGroundTruthCatalogService : IGroundTruthCatalogService
         var payload = await File.ReadAllTextAsync(filePath, cancellationToken);
         using var document = JsonDocument.Parse(payload);
         var result = ConvertObject(document.RootElement);
+        CaptureGroundTruthSnapshot(result, filePath);
         _cache[datasetId] = result;
         return result;
     }
@@ -67,8 +70,41 @@ public sealed class FileGroundTruthCatalogService : IGroundTruthCatalogService
         var payload = await File.ReadAllTextAsync(filePath, cancellationToken);
         using var document = JsonDocument.Parse(payload);
         var result = ConvertObject(document.RootElement);
+        CaptureGroundTruthSnapshot(result, filePath);
         _cache[datasetId] = result;
         return result;
+    }
+
+    private void CaptureGroundTruthSnapshot(IReadOnlyDictionary<string, object> dataset, string filePath)
+    {
+        var datasetId = dataset.TryGetValue("dataset_id", out var datasetIdValue) ? datasetIdValue?.ToString() ?? Path.GetFileNameWithoutExtension(filePath) : Path.GetFileNameWithoutExtension(filePath);
+        var version = dataset.TryGetValue("version", out var versionValue) ? versionValue?.ToString() ?? "v1" : "v1";
+        var functionName = dataset.TryGetValue("function_name", out var functionValue) ? functionValue?.ToString() ?? ResolveFunctionName(datasetId) : ResolveFunctionName(datasetId);
+        var subjectCode = dataset.TryGetValue("subject_code", out var subjectValue) ? subjectValue?.ToString() : null;
+        var questionType = dataset.TryGetValue("question_type", out var typeValue) ? typeValue?.ToString() : null;
+        var language = dataset.TryGetValue("language", out var languageValue) ? languageValue?.ToString() : null;
+
+        _historyStore.CaptureJsonArtifactSnapshot(
+            artifactType: "groundtruth",
+            stableId: datasetId,
+            version: version,
+            functionName: functionName,
+            subjectCode: subjectCode,
+            questionType: questionType,
+            language: language,
+            description: datasetId,
+            isActive: true,
+            source: filePath,
+            content: dataset);
+    }
+
+    private static string ResolveFunctionName(string datasetId)
+    {
+        if (datasetId.Contains("GATEKEEPER", StringComparison.OrdinalIgnoreCase)) return "Gatekeeper";
+        if (datasetId.Contains("EXTRACTED_CONTENT", StringComparison.OrdinalIgnoreCase)) return "ExtractedContent";
+        if (datasetId.Contains("EMBEDDING_TAGGING", StringComparison.OrdinalIgnoreCase)) return "EmbeddingTagging";
+        if (datasetId.Contains("CODE_MENTOR", StringComparison.OrdinalIgnoreCase)) return "CodeMentor";
+        return "QuestionGenerationReview";
     }
 
     private static string ResolveDatasetId(string subject, string questionType)

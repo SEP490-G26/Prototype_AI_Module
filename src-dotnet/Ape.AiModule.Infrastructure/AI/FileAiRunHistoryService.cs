@@ -11,6 +11,7 @@ namespace Ape.AiModule.Infrastructure.AI;
 public sealed class FileAiRunHistoryService : IAiRunHistoryService
 {
     private readonly string _rootFolder;
+    private readonly string _appDataFolder;
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
@@ -20,6 +21,7 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
     public FileAiRunHistoryService(IHostEnvironment environment)
     {
         _rootFolder = Path.Combine(environment.ContentRootPath, "App_Data", "run-history");
+        _appDataFolder = Path.Combine(environment.ContentRootPath, "App_Data");
         Directory.CreateDirectory(_rootFolder);
     }
 
@@ -46,6 +48,7 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             ExtractStatus(response),
             ExtractModelSummary(request, response),
             ExtractModelFields(request, response),
+            ResolveConfigReferences(normalizedFunction, routeKey, request),
             ExtractUsageSource(response),
             ExtractError(response),
             ExtractTotals(response),
@@ -302,4 +305,244 @@ public sealed class FileAiRunHistoryService : IAiRunHistoryService
             _ => "custom"
         };
     }
+
+    private IReadOnlyList<AiConfigReference> ResolveConfigReferences(string functionName, string routeKey, object request)
+    {
+        var refs = new List<AiConfigReference>();
+        var normalizedRoute = Normalize(routeKey);
+
+        void AddPromptRef(string promptKey)
+        {
+            var prompt = ReadCurrentJsonFile(Path.Combine(_appDataFolder, "ai-prompts.json"), promptKey, "Key");
+            if (prompt is null) return;
+            refs.Add(new AiConfigReference(
+                "prompt",
+                promptKey,
+                ReadString(prompt, "Version") ?? "unknown",
+                ResolveFunctionNameFromPromptKey(promptKey),
+                null,
+                null,
+                "en",
+                null,
+                Path.Combine("App_Data", "ai-prompts.json")));
+        }
+
+        void AddRubricRef(string rubricId)
+        {
+            var path = Path.Combine(_appDataFolder, "ai-rubrics", $"{rubricId}.json");
+            var rubric = ReadCurrentJsonFile(path);
+            if (rubric is null) return;
+            refs.Add(new AiConfigReference(
+                "rubric",
+                ReadString(rubric, "rubric_id") ?? rubricId,
+                ReadString(rubric, "version") ?? "unknown",
+                ReadString(rubric, "function_name"),
+                ReadString(rubric, "subject_code"),
+                ReadString(rubric, "question_type"),
+                ReadString(rubric, "language"),
+                null,
+                path));
+        }
+
+        void AddGroundTruthRef(string datasetId)
+        {
+            var path = Path.Combine(_appDataFolder, "ai-groundtruth", $"{datasetId}.json");
+            var dataset = ReadCurrentJsonFile(path);
+            if (dataset is null) return;
+            refs.Add(new AiConfigReference(
+                "groundtruth",
+                ReadString(dataset, "dataset_id") ?? datasetId,
+                ReadString(dataset, "version") ?? "unknown",
+                ReadString(dataset, "function_name"),
+                ReadString(dataset, "subject_code"),
+                ReadString(dataset, "question_type"),
+                ReadString(dataset, "language"),
+                null,
+                path));
+        }
+
+        void AddPolicyRef(string fileName)
+        {
+            var path = Path.Combine(_appDataFolder, fileName);
+            var policy = ReadCurrentJsonFile(path);
+            if (policy is null) return;
+            refs.Add(new AiConfigReference(
+                "policy",
+                ReadString(policy, "policy_id") ?? Path.GetFileNameWithoutExtension(fileName),
+                ReadString(policy, "version") ?? "unknown",
+                ReadString(policy, "function_name"),
+                null,
+                null,
+                null,
+                null,
+                path));
+        }
+
+        if (normalizedRoute.Contains("gatekeeper", StringComparison.Ordinal))
+        {
+            AddPromptRef("gatekeeper");
+            AddPolicyRef("gatekeeper-policy.json");
+            AddRubricRef("GATEKEEPER");
+            AddGroundTruthRef("GATEKEEPER_CORE");
+        }
+
+        if (normalizedRoute.Contains("extracted-content", StringComparison.Ordinal))
+        {
+            AddPromptRef("extract_content_vision");
+            AddPolicyRef("extracted-content-policy.json");
+            AddRubricRef("EXTRACTED_CONTENT");
+            AddGroundTruthRef("EXTRACTED_CONTENT_CORE");
+        }
+
+        if (normalizedRoute.Contains("embedding-tagging", StringComparison.Ordinal))
+        {
+            AddPromptRef("auto_tagging");
+            AddPolicyRef("embedding-tagging-policy.json");
+            AddRubricRef("EMBEDDING_TAGGING");
+            AddGroundTruthRef("EMBEDDING_TAGGING_CORE");
+        }
+
+        if (normalizedRoute.Contains("question-generation", StringComparison.Ordinal)
+            || normalizedRoute.Contains("question-review", StringComparison.Ordinal)
+            || normalizedRoute.Contains("generation-review", StringComparison.Ordinal))
+        {
+            var subject = ReadStringFromRequest(request, "Subject") ?? "C";
+            var questionType = ReadStringFromRequest(request, "QuestionType") ?? "FE";
+            var rubricId = ResolveQuestionRubricId(subject, questionType);
+            var datasetId = ResolveQuestionDatasetId(subject, questionType);
+
+            if (normalizedRoute.Contains("question-review", StringComparison.Ordinal)
+                || normalizedRoute.Contains("generation-review", StringComparison.Ordinal))
+            {
+                AddPromptRef("question_review");
+            }
+
+            if (normalizedRoute.Contains("question-generation", StringComparison.Ordinal)
+                || normalizedRoute.Contains("generation-review", StringComparison.Ordinal))
+            {
+                AddPromptRef("question_generation");
+            }
+
+            AddRubricRef(rubricId);
+            AddGroundTruthRef(datasetId);
+        }
+
+        if (normalizedRoute.Contains("code-mentor", StringComparison.Ordinal))
+        {
+            AddPromptRef("code_mentor");
+            AddPolicyRef("code-mentor-policy.json");
+            AddRubricRef("CODE_MENTOR");
+            AddGroundTruthRef("CODE_MENTOR_CORE");
+        }
+
+        return refs
+            .GroupBy(static item => $"{item.ArtifactType}:{item.StableId}:{item.Version}", StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group.First())
+            .ToList();
+    }
+
+    private static IReadOnlyDictionary<string, object>? ReadCurrentJsonFile(string path, string? matchValue = null, string? matchField = null)
+    {
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        if (document.RootElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                var candidate = ConvertObject(item);
+                if (string.IsNullOrWhiteSpace(matchValue) || string.Equals(ReadString(candidate, matchField ?? "key"), matchValue, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        return ConvertObject(document.RootElement);
+    }
+
+    private static IReadOnlyDictionary<string, object> ConvertObject(JsonElement element)
+    {
+        var dictionary = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in element.EnumerateObject())
+        {
+            dictionary[property.Name] = ConvertValue(property.Value) ?? string.Empty;
+        }
+
+        return dictionary;
+    }
+
+    private static object? ConvertValue(JsonElement element)
+        => element.ValueKind switch
+        {
+            JsonValueKind.Object => ConvertObject(element),
+            JsonValueKind.Array => element.EnumerateArray().Select(ConvertValue).ToList(),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number when element.TryGetInt64(out var l) => l,
+            JsonValueKind.Number when element.TryGetDecimal(out var d) => d,
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => null,
+            _ => element.ToString()
+        };
+
+    private static string? ReadString(IReadOnlyDictionary<string, object> source, string? key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        return source.TryGetValue(key, out var value) ? value?.ToString() : null;
+    }
+
+    private static string? ReadStringFromRequest(object request, string propertyName)
+        => request.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance)?.GetValue(request)?.ToString();
+
+    private static string ResolveQuestionRubricId(string subject, string questionType)
+    {
+        var subjectKey = NormalizeSubject(subject);
+        var typeKey = string.Equals(questionType?.Trim(), "PE", StringComparison.OrdinalIgnoreCase) ? "PE" : "FE";
+        return $"{subjectKey}_{typeKey}";
+    }
+
+    private static string ResolveQuestionDatasetId(string subject, string questionType)
+    {
+        var subjectKey = NormalizeSubject(subject);
+        var typeKey = string.Equals(questionType?.Trim(), "PE", StringComparison.OrdinalIgnoreCase) ? "PE" : "FE";
+        return $"QGEN_{subjectKey}_{typeKey}";
+    }
+
+    private static string NormalizeSubject(string subject)
+    {
+        var lowered = subject.Trim().ToLowerInvariant();
+        if (lowered.Contains("java") && lowered.Contains("oop"))
+        {
+            return "JAVA_OOP";
+        }
+
+        if (lowered.Contains("dsa") || lowered.Contains("data structure") || lowered.Contains("algorithm"))
+        {
+            return "DSA_JAVA";
+        }
+
+        return "C";
+    }
+
+    private static string ResolveFunctionNameFromPromptKey(string promptKey)
+        => promptKey.Trim().ToLowerInvariant() switch
+        {
+            "gatekeeper" => "Gatekeeper",
+            "extract_content_vision" => "ExtractedContent",
+            "auto_tagging" => "EmbeddingTagging",
+            "question_generation" => "QuestionGeneration",
+            "question_review" => "QuestionReview",
+            "code_mentor" => "CodeMentor",
+            _ => "Unknown"
+        };
 }

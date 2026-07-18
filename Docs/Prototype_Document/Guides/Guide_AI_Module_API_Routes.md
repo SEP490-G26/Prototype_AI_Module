@@ -10,6 +10,7 @@ Tài liệu này gom toàn bộ route chính để nhóm FE, QA và BE tổng tr
 |---|---|---|
 | `GET` | `/api/ai-module/prompts` | Lấy danh sách prompt hiện tại |
 | `GET` | `/api/ai-module/prompts/{key}` | Lấy một prompt theo key |
+| `GET` | `/api/ai-module/prompts/{key}/history` | Lấy lịch sử snapshot version của prompt theo key |
 | `POST` | `/api/ai-module/prompts/reload` | Reload prompt từ file |
 | `PUT` | `/api/ai-module/prompts/{key}` | Cập nhật prompt |
 | `POST` | `/api/ai-module/prompts/render` | Render prompt với variables |
@@ -115,6 +116,7 @@ Tài liệu này gom toàn bộ route chính để nhóm FE, QA và BE tổng tr
 
 - `providers/reload` dùng khi vừa sửa `.env`.
 - `prompts/reload` dùng khi vừa sửa `App_Data/ai-prompts.json`.
+- `prompts/{key}/history` dùng để audit version cũ đã được snapshot trong prototype.
 - `uploads/ingest` là route hữu ích nhất để đưa `docx/pptx/pdf/image` vào UI prototype mà không cần tự viết tay `rawContent`.
 - `question-generation/debug` và `generation-review/debug` hiện là route debug placeholder; nếu cần payload debug riêng thì phải bổ sung thêm ở orchestrator/controller.
 

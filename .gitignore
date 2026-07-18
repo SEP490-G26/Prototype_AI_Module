@@ -7,8 +7,11 @@ legacy-node-benchmark/frontend/dist/
 legacy-node-benchmark/backend/data/
 **/bin/
 **/obj/
+**/.buildtmp/
 .vs/
 *.user
 *.suo
 src-dotnet/Ape.AiModule.Api/App_Data/run-history/
+src-dotnet/Ape.AiModule.Api/App_Data/ai-config-history/
+src-dotnet/Ape.AiModule.Api/App_Data/extraction-drafts/
 src-dotnet/Ape.AiModule.Api/App_Data/uploads/

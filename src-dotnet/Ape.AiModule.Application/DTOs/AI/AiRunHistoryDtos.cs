@@ -12,10 +12,22 @@ public sealed record AiRunHistorySummary(
     string? Status,
     string? ModelSummary,
     NormalizedModelFields? ModelFields,
+    IReadOnlyList<AiConfigReference>? ConfigReferences,
     string? UsageSource,
     NormalizedError? Error,
     TokenCostBreakdown? Totals,
     string FileName);
+
+public sealed record AiConfigReference(
+    string ArtifactType,
+    string StableId,
+    string Version,
+    string? FunctionName,
+    string? SubjectCode,
+    string? QuestionType,
+    string? Language,
+    string? ContentHash,
+    string? Source);
 
 public sealed record AiRunHistoryRecord(
     AiRunHistorySummary Summary,

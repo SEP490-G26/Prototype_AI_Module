@@ -391,20 +391,28 @@ Judge0 sẽ là phần nâng cấp sau khi ghép production.
 Prompt hiện tại là file-backed:
 
 - `src-dotnet/Ape.AiModule.Api/App_Data/ai-prompts.json`
+- `src-dotnet/Ape.AiModule.Api/App_Data/ai-config-history/prompts/`
 
 Route prompt đã có:
 
 - `GET /api/ai-module/prompts`
 - `GET /api/ai-module/prompts/{key}`
+- `GET /api/ai-module/prompts/{key}/history`
 - `POST /api/ai-module/prompts/reload`
 - `PUT /api/ai-module/prompts/{key}`
 - `POST /api/ai-module/prompts/render`
 
-### Các collection DB-ready đã chốt
+Nguyên tắc hiện tại của prototype:
+
+- `ai-prompts.json` = current active snapshot
+- `ai-config-history/prompts/` = immutable append-history
+- policy, rubric, ground truth cũng đi theo cùng nguyên tắc dưới `App_Data/ai-config-history/`
+
+### Các collection DB-ready đã chốt theo hướng versioned snapshot
 
 - `AI_Prompt_Versions`
-- `AI_Policies`
-- `AI_Rubrics`
+- `AI_Policy_Versions`
+- `AI_Rubric_Versions`
 - `AI_GroundTruth_Sets`
 
 Tài liệu liên quan:
@@ -501,7 +509,8 @@ Nhưng chưa nên xem là production-final vì:
 3. provider price catalog production-final
 4. vector duplicate detection thật
 5. parser/OCR production-final cho tài liệu phức tạp hơn nữa
-6. lưu prompt/rubric/ground truth từ DB thay vì file
+6. lưu prompt/policy/rubric/ground truth từ DB thay vì file
+7. gắn version refs của config vào run history / usage log production
 
 ## Kết luận
 

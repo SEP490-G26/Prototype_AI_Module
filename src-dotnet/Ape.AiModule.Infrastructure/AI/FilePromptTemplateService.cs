@@ -10,6 +10,7 @@ namespace Ape.AiModule.Infrastructure.AI;
 public sealed class FilePromptTemplateService : IPromptTemplateService
 {
     private readonly string _filePath;
+    private readonly AiVersionHistoryStore _historyStore;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ConcurrentDictionary<string, PromptTemplate> _templates = new(StringComparer.OrdinalIgnoreCase);
 
@@ -18,6 +19,7 @@ public sealed class FilePromptTemplateService : IPromptTemplateService
         var folder = Path.Combine(environment.ContentRootPath, "App_Data");
         Directory.CreateDirectory(folder);
         _filePath = Path.Combine(folder, "ai-prompts.json");
+        _historyStore = new AiVersionHistoryStore(environment);
         LoadDefaultsIfNeeded();
         LoadFromFile();
     }
@@ -35,6 +37,9 @@ public sealed class FilePromptTemplateService : IPromptTemplateService
         throw new InvalidOperationException($"Prompt template '{key}' was not found.");
     }
 
+    public Task<IReadOnlyList<IReadOnlyDictionary<string, object>>> GetHistoryAsync(string key, CancellationToken cancellationToken)
+        => Task.FromResult(_historyStore.GetPromptHistory(key));
+
     public async Task<PromptTemplate> UpsertAsync(PromptTemplateUpdateRequest request, CancellationToken cancellationToken)
     {
         var template = new PromptTemplate(
@@ -48,6 +53,7 @@ public sealed class FilePromptTemplateService : IPromptTemplateService
 
         _templates[request.Key] = template;
         await PersistAsync(cancellationToken);
+        _historyStore.CapturePromptSnapshot(template, "api_upsert");
         return template;
     }
 
@@ -96,6 +102,7 @@ public sealed class FilePromptTemplateService : IPromptTemplateService
         foreach (var item in items.Where(static item => item.IsActive))
         {
             _templates[item.Key] = item;
+            _historyStore.CapturePromptSnapshot(item, "file_reload");
         }
     }
 

@@ -8,11 +8,13 @@ namespace Ape.AiModule.Infrastructure.AI;
 public sealed class FileRubricCatalogService : IRubricCatalogService
 {
     private readonly string _rubricsFolder;
+    private readonly AiVersionHistoryStore _historyStore;
     private readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, object>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public FileRubricCatalogService(IHostEnvironment environment)
     {
         _rubricsFolder = Path.Combine(environment.ContentRootPath, "App_Data", "ai-rubrics");
+        _historyStore = new AiVersionHistoryStore(environment);
     }
 
     public async Task<IReadOnlyDictionary<string, object>> GetQuestionReviewRubricAsync(
@@ -35,6 +37,7 @@ public sealed class FileRubricCatalogService : IRubricCatalogService
         var payload = await File.ReadAllTextAsync(filePath, cancellationToken);
         using var document = JsonDocument.Parse(payload);
         var result = ConvertObject(document.RootElement);
+        CaptureRubricSnapshot(result, filePath);
         _cache[rubricId] = result;
         return result;
     }
@@ -67,8 +70,42 @@ public sealed class FileRubricCatalogService : IRubricCatalogService
         var payload = await File.ReadAllTextAsync(filePath, cancellationToken);
         using var document = JsonDocument.Parse(payload);
         var result = ConvertObject(document.RootElement);
+        CaptureRubricSnapshot(result, filePath);
         _cache[rubricId] = result;
         return result;
+    }
+
+    private void CaptureRubricSnapshot(IReadOnlyDictionary<string, object> rubric, string filePath)
+    {
+        var rubricId = rubric.TryGetValue("rubric_id", out var rubricIdValue) ? rubricIdValue?.ToString() ?? Path.GetFileNameWithoutExtension(filePath) : Path.GetFileNameWithoutExtension(filePath);
+        var version = rubric.TryGetValue("version", out var versionValue) ? versionValue?.ToString() ?? "v1" : "v1";
+        var functionName = rubric.TryGetValue("function_name", out var functionValue) ? functionValue?.ToString() ?? ResolveFunctionName(rubricId) : ResolveFunctionName(rubricId);
+        var subjectCode = rubric.TryGetValue("subject_code", out var subjectValue) ? subjectValue?.ToString() : null;
+        var questionType = rubric.TryGetValue("question_type", out var typeValue) ? typeValue?.ToString() : null;
+        var language = rubric.TryGetValue("language", out var languageValue) ? languageValue?.ToString() : null;
+        var title = rubric.TryGetValue("title", out var titleValue) ? titleValue?.ToString() : null;
+
+        _historyStore.CaptureJsonArtifactSnapshot(
+            artifactType: "rubrics",
+            stableId: rubricId,
+            version: version,
+            functionName: functionName,
+            subjectCode: subjectCode,
+            questionType: questionType,
+            language: language,
+            description: title,
+            isActive: true,
+            source: filePath,
+            content: rubric);
+    }
+
+    private static string ResolveFunctionName(string rubricId)
+    {
+        if (rubricId.Contains("GATEKEEPER", StringComparison.OrdinalIgnoreCase)) return "Gatekeeper";
+        if (rubricId.Contains("EXTRACTED_CONTENT", StringComparison.OrdinalIgnoreCase)) return "ExtractedContent";
+        if (rubricId.Contains("EMBEDDING_TAGGING", StringComparison.OrdinalIgnoreCase)) return "EmbeddingTagging";
+        if (rubricId.Contains("CODE_MENTOR", StringComparison.OrdinalIgnoreCase)) return "CodeMentor";
+        return "QuestionGenerationReview";
     }
 
     private static string ResolveRubricId(string subject, string questionType)

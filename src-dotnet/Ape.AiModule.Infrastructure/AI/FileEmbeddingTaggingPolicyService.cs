@@ -8,6 +8,7 @@ namespace Ape.AiModule.Infrastructure.AI;
 public sealed class FileEmbeddingTaggingPolicyService : IEmbeddingTaggingPolicyService
 {
     private readonly string _filePath;
+    private readonly AiVersionHistoryStore _historyStore;
     private readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, object>> _cache = new(StringComparer.OrdinalIgnoreCase);
 
     public FileEmbeddingTaggingPolicyService(IHostEnvironment environment)
@@ -15,6 +16,7 @@ public sealed class FileEmbeddingTaggingPolicyService : IEmbeddingTaggingPolicyS
         var folder = Path.Combine(environment.ContentRootPath, "App_Data");
         Directory.CreateDirectory(folder);
         _filePath = Path.Combine(folder, "embedding-tagging-policy.json");
+        _historyStore = new AiVersionHistoryStore(environment);
         LoadDefaultsIfNeeded();
     }
 
@@ -29,8 +31,27 @@ public sealed class FileEmbeddingTaggingPolicyService : IEmbeddingTaggingPolicyS
         var payload = await File.ReadAllTextAsync(_filePath, cancellationToken);
         using var document = JsonDocument.Parse(payload);
         var result = ConvertObject(document.RootElement);
+        CapturePolicySnapshot(result);
         _cache[cacheKey] = result;
         return result;
+    }
+
+    private void CapturePolicySnapshot(IReadOnlyDictionary<string, object> policy)
+    {
+        var policyId = policy.TryGetValue("policy_id", out var idValue) ? idValue?.ToString() ?? "embedding_tagging_policy" : "embedding_tagging_policy";
+        var version = policy.TryGetValue("version", out var versionValue) ? versionValue?.ToString() ?? "v1" : "v1";
+        _historyStore.CaptureJsonArtifactSnapshot(
+            artifactType: "policies",
+            stableId: policyId,
+            version: version,
+            functionName: "EmbeddingTagging",
+            subjectCode: null,
+            questionType: null,
+            language: null,
+            description: "Embedding and tagging runtime policy",
+            isActive: true,
+            source: _filePath,
+            content: policy);
     }
 
     private void LoadDefaultsIfNeeded()
