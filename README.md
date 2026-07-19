@@ -34,8 +34,9 @@ Nếu cần chạy module AI đang dùng hiện tại, đi theo hướng `.NET`:
 1. [Hướng dẫn chạy module](Docs/Prototype_Document/Guides/Guide_AI_Module_Run.md)
 2. [Tổng quan 6 chức năng AI](Docs/Prototype_Document/Specs/Spec_AI_Module_6_Functions_Summary.md)
 3. [Bảng route API](Docs/Prototype_Document/Guides/Guide_AI_Module_API_Routes.md)
-4. [Hướng dẫn UI operator](Docs/Prototype_Document/Guides/Guide_AI_Module_Operator_UI.md)
-5. [Quy ước đóng góp](CONTRIBUTING.md)
+4. [Checklist chuyển từ prototype sang BE production](Docs/Prototype_Document/Guides/Guide_Prototype_To_BE_Production_Integration.md)
+5. [Hướng dẫn UI operator](Docs/Prototype_Document/Guides/Guide_AI_Module_Operator_UI.md)
+6. [Quy ước đóng góp](CONTRIBUTING.md)
 
 ## Chạy nhanh module `.NET`
 
