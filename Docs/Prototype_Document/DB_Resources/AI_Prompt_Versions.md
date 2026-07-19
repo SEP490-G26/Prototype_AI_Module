@@ -38,6 +38,9 @@ Collection này không chỉ giữ prompt đang active, mà phải giữ đượ
   user_prompt: String,
   variables: [String],         // danh sách biến template như subject, chunks_json, rubric_json
   change_summary: String,      // nullable, ghi rõ đã chỉnh gì ở version này
+  change_reason: String,       // nullable, lý do business/quality khiến version này được tạo ra
+  source_commit: String,       // nullable, commit đã sinh ra snapshot này nếu backfill từ git
+  captured_from: String,       // nullable, file/nguồn đã capture snapshot
   content_hash: String,        // hash để audit nội dung thật
 
   created_at: Date,
@@ -60,6 +63,9 @@ Collection này không chỉ giữ prompt đang active, mà phải giữ đượ
 - `user_prompt`: phần user template
 - `variables`: bộ biến template cho prompt render
 - `change_summary`: ghi rõ thay đổi giữa version cũ và mới
+- `change_reason`: giải thích vì sao cần đổi prompt
+- `source_commit`: liên kết ngược tới commit khi cần audit report hoặc rollback
+- `captured_from`: biết snapshot này đến từ file current, DB, hay git backfill
 - `content_hash`: dùng để chống mất dấu khi ai đó sửa cùng version
 
 ## Quy tắc versioning nên áp dụng
@@ -107,6 +113,7 @@ Trong prototype hiện tại:
    - `prompt_key`
    - `prompt_version`
    - `content_hash`
+   - `source_commit` nếu snapshot đến từ lịch sử backfill hoặc release commit
 4. `run history` hoặc `AI_Usage_Logs` nên có `prompt_version_refs`.
 
 ## Kết luận

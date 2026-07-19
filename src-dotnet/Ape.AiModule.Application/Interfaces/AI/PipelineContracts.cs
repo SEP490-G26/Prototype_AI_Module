@@ -208,6 +208,13 @@ public interface IAiConfigHistoryService
         CancellationToken cancellationToken);
 }
 
+public interface IAiReportSyncService
+{
+    Task<AiReportSyncResult> SyncAsync(
+        string trigger,
+        CancellationToken cancellationToken);
+}
+
 public interface IBenchmarkSessionService
 {
     Task<BenchmarkSessionRecord> SaveAsync(

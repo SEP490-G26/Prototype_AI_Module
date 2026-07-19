@@ -40,7 +40,11 @@ internal sealed class AiVersionHistoryStore
             Description: template.Description,
             IsActive: template.IsActive,
             Source: source ?? "prompt_store",
-            Content: content));
+            Content: content,
+            SourceCommit: null,
+            CapturedFrom: $"App_Data/ai-prompts.json::{template.Key}",
+            ChangeReason: null,
+            ChangeSummary: null));
     }
 
     public void CaptureJsonArtifactSnapshot(
@@ -54,7 +58,11 @@ internal sealed class AiVersionHistoryStore
         string? description,
         bool isActive,
         string source,
-        IReadOnlyDictionary<string, object> content)
+        IReadOnlyDictionary<string, object> content,
+        string? sourceCommit = null,
+        string? capturedFrom = null,
+        string? changeReason = null,
+        string? changeSummary = null)
         => CaptureSnapshot(new AiConfigSnapshotRequest(
             artifactType,
             stableId,
@@ -66,7 +74,11 @@ internal sealed class AiVersionHistoryStore
             description,
             isActive,
             source,
-            content.ToDictionary(static pair => pair.Key, static pair => (object?)pair.Value)));
+            content.ToDictionary(static pair => pair.Key, static pair => (object?)pair.Value),
+            sourceCommit,
+            capturedFrom,
+            changeReason,
+            changeSummary));
 
     public IReadOnlyList<IReadOnlyDictionary<string, object>> GetPromptHistory(string key)
     {
@@ -116,8 +128,12 @@ internal sealed class AiVersionHistoryStore
             ["description"] = request.Description,
             ["is_active"] = request.IsActive,
             ["source"] = request.Source,
+            ["source_commit"] = request.SourceCommit,
+            ["captured_from"] = request.CapturedFrom,
             ["captured_at"] = capturedAt,
             ["content_hash"] = hash,
+            ["change_reason"] = request.ChangeReason,
+            ["change_summary"] = request.ChangeSummary,
             ["content"] = request.Content
         };
 
@@ -203,5 +219,9 @@ internal sealed class AiVersionHistoryStore
         string? Description,
         bool IsActive,
         string Source,
-        IReadOnlyDictionary<string, object?> Content);
+        IReadOnlyDictionary<string, object?> Content,
+        string? SourceCommit,
+        string? CapturedFrom,
+        string? ChangeReason,
+        string? ChangeSummary);
 }

@@ -20,6 +20,7 @@ public sealed class AIModuleController : ControllerBase
     private readonly IGroundTruthCatalogService _groundTruthCatalogService;
     private readonly PrototypeFileIngestService _prototypeFileIngestService;
     private readonly IAiConfigHistoryService _aiConfigHistoryService;
+    private readonly IAiReportSyncService _aiReportSyncService;
 
     public AIModuleController(
         IAiPipelineOrchestrator orchestrator,
@@ -32,7 +33,8 @@ public sealed class AIModuleController : ControllerBase
         IRubricCatalogService rubricCatalogService,
         IGroundTruthCatalogService groundTruthCatalogService,
         PrototypeFileIngestService prototypeFileIngestService,
-        IAiConfigHistoryService aiConfigHistoryService)
+        IAiConfigHistoryService aiConfigHistoryService,
+        IAiReportSyncService aiReportSyncService)
     {
         _orchestrator = orchestrator;
         _runHistoryService = runHistoryService;
@@ -45,6 +47,7 @@ public sealed class AIModuleController : ControllerBase
         _groundTruthCatalogService = groundTruthCatalogService;
         _prototypeFileIngestService = prototypeFileIngestService;
         _aiConfigHistoryService = aiConfigHistoryService;
+        _aiReportSyncService = aiReportSyncService;
     }
 
     [HttpPost("uploads/ingest")]
@@ -316,6 +319,10 @@ public sealed class AIModuleController : ControllerBase
     public async Task<IActionResult> GetBenchmarkSessionDetailAsync(string sessionId, CancellationToken cancellationToken = default)
         => Ok(await _benchmarkSessionService.GetAsync(sessionId, cancellationToken));
 
+    [HttpPost("report/sync")]
+    public async Task<IActionResult> SyncReportAsync(CancellationToken cancellationToken)
+        => Ok(await _aiReportSyncService.SyncAsync("manual-api", cancellationToken));
+
     private async Task<T> ExecuteWithHistoryAsync<T>(
         string functionName,
         string routeKey,
@@ -325,6 +332,7 @@ public sealed class AIModuleController : ControllerBase
     {
         var result = await action();
         await _runHistoryService.SaveAsync(functionName, routeKey, request, result!, cancellationToken);
+        await _aiReportSyncService.SyncAsync($"auto:{functionName}:{routeKey}", cancellationToken);
         return result;
     }
 }

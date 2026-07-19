@@ -37,6 +37,11 @@ Collection này là bản đổi tên và chuẩn hoá từ collection `Prompts`
   is_active: Boolean,
   system_prompt: String,
   variables: [String],         // vd: subject, question_type, chunks_json
+  change_reason: String,       // nullable, vì sao version này được tạo
+  change_summary: String,      // nullable, khác gì so với version trước
+  source_commit: String,       // nullable, commit dùng để backfill hoặc release trace
+  captured_from: String,       // nullable, file hoặc nguồn đã capture snapshot
+  content_hash: String,        // hash để audit đúng nội dung
   created_at: Date,
   updated_at: Date
 }
@@ -79,6 +84,11 @@ Có thể mở rộng sau cho:
   version: String,             // vd: v1, v2
   language: String,            // en
   is_active: Boolean,
+  change_reason: String,       // nullable
+  change_summary: String,      // nullable
+  source_commit: String,       // nullable
+  captured_from: String,       // nullable
+  content_hash: String,        // hash chống mất dấu version
   content_json: Object,        // toàn bộ rubric JSON có cấu trúc
   created_at: Date,
   updated_at: Date
@@ -141,6 +151,11 @@ Collection này dùng để lưu bộ ground truth để:
   version: String,             // vd: v1
   language: String,            // en | vi | mixed
   is_active: Boolean,
+  change_reason: String,       // nullable
+  change_summary: String,      // nullable
+  source_commit: String,       // nullable
+  captured_from: String,       // nullable
+  content_hash: String,        // hash chống mất dấu dataset
   content_json: Object,        // toàn bộ dataset / expected answers / labels
   created_at: Date,
   updated_at: Date
@@ -207,6 +222,11 @@ Collection này dùng để lưu policy runtime theo kiểu versioned snapshot.
   version: String,             // vd: v1, v2
   is_active: Boolean,
   description: String,
+  change_reason: String,       // nullable
+  change_summary: String,      // nullable
+  source_commit: String,       // nullable
+  captured_from: String,       // nullable
+  content_hash: String,        // hash để trace content thực tế
   content_json: Object,
   created_at: Date,
   updated_at: Date
@@ -228,6 +248,7 @@ Collection này dùng để lưu policy runtime theo kiểu versioned snapshot.
 - file current chỉ là active payload cho runtime
 - collection DB thật phải giữ toàn bộ version history
 - nếu policy đổi nhưng `version` chưa đổi thì vẫn nên lưu snapshot mới kèm `content_hash`
+- nên lưu cả `change_reason`, `change_summary`, `source_commit`, `captured_from` để phục vụ report và audit production
 
 ## 5. Quan hệ giữa 4 collection
 
