@@ -1130,7 +1130,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
         var stageLog = CreateStageLog("code-mentor", InferStageStatus(cost), cost, new Dictionary<string, string>
         {
             ["verdict"] = feedback.Verdict,
-            ["issues_count"] = feedback.Issues.Count.ToString(),
+            ["issues_count"] = feedback.ErrorAnalysis.Count.ToString(),
             ["source_files_count"] = (request.SourceFiles?.Count ?? 0).ToString()
         }, InferProvider(request.MentorModel), request.MentorModel);
         await _moduleRepository.SaveMentorFeedbackAsync(request.SubmissionId, feedback, cancellationToken);
@@ -1151,7 +1151,7 @@ public sealed class AiPipelineOrchestrator : IAiPipelineOrchestrator
                 payloadData: new AIUsageLogPayload(
                     "code_mentor",
                     request.Subject,
-                    null,
+                    "PE",
                     null,
                     feedback.Verdict,
                     new { request.Problem, Code = combinedCode, request.SourceFiles, request.Language },

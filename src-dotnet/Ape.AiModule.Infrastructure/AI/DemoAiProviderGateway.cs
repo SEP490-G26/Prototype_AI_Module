@@ -258,14 +258,41 @@ public sealed class DemoAiProviderGateway : IAiProviderGateway
 
         suggestions.Add("Compare the current logic against the problem statement and validate the sample cases.");
 
+        var categories = ClassifyIssueCategories(issues, combinedCode);
+        var scenarios = BuildFailingScenarios(issues, request.Problem, request.Language);
+        var confidence = issues.Count == 0 ? 0.83m : 0.71m;
+        var complexity = combinedCode.Contains("for", StringComparison.OrdinalIgnoreCase) ? "Likely O(n)" : "Not enough information";
+        var score = Math.Round(confidence * 10m, 2);
+
         return Task.FromResult(new MentorFeedback(
+            "PE",
             issues.Count == 0 ? "acceptable_with_minor_notes" : "needs_fix",
-            ClassifyIssueCategories(issues, combinedCode),
-            issues,
-            suggestions,
-            BuildFailingScenarios(issues, request.Problem, request.Language),
-            issues.Count == 0 ? 0.83m : 0.71m,
-            combinedCode.Contains("for", StringComparison.OrdinalIgnoreCase) ? "Likely O(n)" : "Not enough information",
+            new MentorQualityScore(score, score, Math.Max(4m, score - 0.8m), Math.Max(4m, score - 0.5m), Math.Max(4m, score - 1.0m), confidence),
+            new MentorPerformanceSummary(
+                issues.Count == 0
+                    ? "The submission appears broadly aligned with the problem based on static review."
+                    : "The submission shows issues that likely affect correctness or robustness based on static review.",
+                complexity,
+                null,
+                ["This demo review is based on static code reading only."]),
+            issues.Select((issue, index) => new MentorErrorAnalysisItem(
+                categories.ElementAtOrDefault(index) ?? categories.FirstOrDefault() ?? "logic",
+                "medium",
+                issue.Length > 96 ? issue[..96].TrimEnd() : issue,
+                issue,
+                scenarios)).ToList(),
+            suggestions.Select(text => new MentorImprovementSuggestion(
+                "medium",
+                text.Length > 96 ? text[..96].TrimEnd() : text,
+                text,
+                null)).ToList(),
+            categories,
+            string.Join(" ", new[]
+            {
+                issues.Count == 0 ? "Static review found no obvious major defect." : "Static review found issues that should be fixed.",
+                suggestions.FirstOrDefault()
+            }.Where(static item => !string.IsNullOrWhiteSpace(item))),
+            complexity,
             request.MentorModel));
     }
 

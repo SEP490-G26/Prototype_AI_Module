@@ -88,11 +88,22 @@ Tài liệu này gom toàn bộ route chính để nhóm FE, QA và BE tổng tr
 
 | Method | Route | Mục đích |
 |---|---|---|
-| `POST` | `/api/ai-module/code-mentor` | Chạy mentor |
-| `POST` | `/api/ai-module/code-mentor/debug` | Chạy mentor và trả thêm policy/rubric/ground truth |
+| `POST` | `/api/ai-module/code-mentor` | Chạy mentor cho bài nộp `PE` |
+| `POST` | `/api/ai-module/code-mentor/debug` | Chạy mentor cho `PE` và trả thêm policy/rubric/ground truth |
 | `GET` | `/api/ai-module/code-mentor/policy` | Lấy policy mentor |
 | `GET` | `/api/ai-module/code-mentor/rubric` | Lấy rubric mentor |
 | `GET` | `/api/ai-module/code-mentor/ground-truth` | Lấy ground truth mentor |
+
+### Ghi chú cho code mentor
+
+- `AI Code Mentor` hiện chỉ áp dụng cho `PE`, không dùng cho `FE`.
+- Kết quả hiện tại là `static AI review` dựa trên problem statement + code source.
+- Chưa có compile/run verification thật ở route này cho tới khi nối `Judge0`.
+- Output hiện đã theo structured schema mới:
+  - `quality_score`
+  - `performance_summary`
+  - `error_analysis`
+  - `improvement_suggestions`
 
 ## Provider / connection
 

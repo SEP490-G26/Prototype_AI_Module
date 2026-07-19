@@ -332,14 +332,43 @@ public sealed record ReviewDecision(
     bool NeedsRevision,
     string ReviewerModel);
 
+public sealed record MentorQualityScore(
+    decimal Overall,
+    decimal Correctness,
+    decimal Robustness,
+    decimal CodeQuality,
+    decimal Efficiency,
+    decimal Confidence);
+
+public sealed record MentorPerformanceSummary(
+    string Summary,
+    string? TimeComplexity,
+    string? SpaceComplexity,
+    IReadOnlyList<string> Notes);
+
+public sealed record MentorErrorAnalysisItem(
+    string Category,
+    string Severity,
+    string Title,
+    string Detail,
+    IReadOnlyList<string> FailingScenarios);
+
+public sealed record MentorImprovementSuggestion(
+    string Priority,
+    string Title,
+    string Detail,
+    string? ExpectedImpact);
+
 public sealed record MentorFeedback(
+    string QuestionType,
     string Verdict,
+    MentorQualityScore QualityScore,
+    MentorPerformanceSummary PerformanceSummary,
+    IReadOnlyList<MentorErrorAnalysisItem> ErrorAnalysis,
+    IReadOnlyList<MentorImprovementSuggestion> ImprovementSuggestions,
     IReadOnlyList<string> IssueCategories,
-    IReadOnlyList<string> Issues,
-    IReadOnlyList<string> Suggestions,
-    IReadOnlyList<string> FailingScenarios,
-    decimal Confidence,
-    string? Complexity,
+    string FeedbackText,
+    string? SuggestedComplexity,
     string ModelName);
 
 public sealed record NormalizedModelFields(

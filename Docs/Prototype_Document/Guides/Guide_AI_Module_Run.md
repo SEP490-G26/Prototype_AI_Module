@@ -42,7 +42,17 @@ AIProviders__Gemini__ApiVersion=v1beta
 AIProviders__Cohere__ApiKey=your_cohere_key
 AIProviders__Cohere__BaseUrl=https://api.cohere.com/
 AIProviders__Cohere__ApiVersion=v1
+
+AI_BENCHMARK_TESTER=member_name
 ```
+
+Gợi ý:
+
+- `AI_BENCHMARK_TESTER` nên đặt theo tên ngắn thống nhất của từng thành viên, ví dụ:
+  - `anhtuan`
+  - `linhpt`
+  - `hungnq`
+- giá trị này sẽ được tự động ghi vào các sheet `Benchmark` trong report để tránh phải điền tay lại người test.
 
 Sau khi sửa `.env`, có thể reload mà không cần restart app:
 
@@ -63,6 +73,26 @@ dotnet run --project .\src-dotnet\Ape.AiModule.Api
 ```
 
 UI operator được serve trực tiếp từ `wwwroot` của API.
+
+Static files của prototype hiện được serve theo chế độ `no-cache`:
+
+- `app.js`
+- các file trong `wwwroot/js/`
+- các fragment HTML trong `wwwroot/fragments/`
+
+Mục đích là tránh UI bị giữ cache cũ khi đang test và sửa prototype liên tục.
+
+Ngay khi startup, app sẽ:
+
+- tự tạo các thư mục runtime bị `gitignore` như `run-history`, `uploads`, `extraction-drafts`, `context-packs`, `benchmark-sessions`
+- kiểm tra các file source/config bắt buộc trong `App_Data`
+- dừng ngay với lỗi dễ đọc nếu thiếu `prompt`, `policy`, `rubric`, hoặc `ground truth`
+
+Điều này giúp clone mới chỉ cần:
+
+1. `git pull`
+2. tạo `.env`
+3. `dotnet run`
 
 ## Kiểm tra sau khi chạy
 
@@ -97,9 +127,37 @@ UI operator được serve trực tiếp từ `wwwroot` của API.
 - `src-dotnet/Ape.AiModule.Api/App_Data/context-packs/`
 - `src-dotnet/Ape.AiModule.Api/App_Data/uploads/`
 
+Phân loại:
+
+- `ai-prompts.json`, `*-policy.json`, `ai-rubrics/`, `ai-groundtruth/`, `ai-config-history/`: dữ liệu nguồn, phải có trong git
+- `run-history/`, `context-packs/`, `uploads/`, `extraction-drafts/`, `benchmark-sessions/`, `Test/`: dữ liệu runtime, không commit
+
+## Report sync
+
+Sau mỗi run được lưu vào `run-history`, prototype sẽ sync lại report workbook.
+
+File runtime được cập nhật tại `Test/`:
+
+- `AI_Benchmark_Report.xlsx`
+- `input_quality_benchmark.csv`
+- `question_generation_benchmark.csv`
+- `code_mentor_benchmark.csv`
+- `input_quality_evidence.csv`
+- `question_generation_evidence.csv`
+- `code_mentor_evidence.csv`
+- `report_evidence/*.md`
+
+Lưu ý:
+
+- `Benchmark` sheet: dùng để tổng hợp metadata, token, cost, config version và các cột chấm tay.
+- `Evidence` sheet: dùng để đọc nhanh input/output đã parse.
+- script hiện auto-fill các cột runtime/config chắc chắn; các cột đánh giá thủ công vẫn để nhóm nhập thêm trong Excel.
+
 ## Ghi chú vận hành
 
 - `full-pipeline` hiện chỉ gồm `ingestion + generation/review`.
+- `AI Code Mentor` hiện là `PE-only`.
+- `AI Code Mentor` hiện là `static review`, chưa có compile/run thật và chưa được xem như kết quả verified execution trước khi nối `Judge0`.
 - `question-generation/debug` và `generation-review/debug` hiện vẫn là debug placeholder.
 - PDF đã dùng parser thật qua `PdfPig`.
 - `docx/pptx` đang ở mức parser prototype bằng OpenXML text + media extraction.

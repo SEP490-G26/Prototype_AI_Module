@@ -8,15 +8,15 @@ import {
   setHtml,
   setJson,
   stringifyJson
-} from './js/shared/core.js';
-import { initOverview, loadInitialOverview } from './js/overview.js';
-import { gatekeeperFeature } from './js/gatekeeper.js';
-import { extractedFeature } from './js/extracted.js';
-import { embeddingFeature } from './js/embedding.js';
-import { generationFeature } from './js/generation.js';
-import { mentorFeature } from './js/mentor.js';
-import { initHistory, loadInitialHistory } from './js/history.js';
-import { createRendererMap, fragmentManifest } from './js/manifest.js';
+} from './js/shared/core.js?v=20260719-mentor-v2';
+import { initOverview, loadInitialOverview } from './js/overview.js?v=20260719-mentor-v2';
+import { gatekeeperFeature } from './js/gatekeeper.js?v=20260719-mentor-v2';
+import { extractedFeature } from './js/extracted.js?v=20260719-mentor-v2';
+import { embeddingFeature } from './js/embedding.js?v=20260719-mentor-v2';
+import { generationFeature } from './js/generation.js?v=20260719-mentor-v2';
+import { mentorFeature } from './js/mentor.js?v=20260719-mentor-v2';
+import { initHistory, loadInitialHistory } from './js/history.js?v=20260719-mentor-v2';
+import { createRendererMap, fragmentManifest } from './js/manifest.js?v=20260719-mentor-v2';
 
 const featureMap = {
   gatekeeper: gatekeeperFeature,

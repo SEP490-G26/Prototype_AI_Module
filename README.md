@@ -78,7 +78,29 @@ AIProviders__Gemini__BaseUrl=...
 
 AIProviders__Cohere__ApiKey=...
 AIProviders__Cohere__BaseUrl=...
+
+AI_BENCHMARK_TESTER=member_name
 ```
+
+## Lưu ý khi test report
+
+Trước khi chạy test để sinh `run-history`, `benchmark csv`, và `AI_Benchmark_Report.xlsx`, mỗi thành viên nên set:
+
+```env
+AI_BENCHMARK_TESTER=member_name
+```
+
+Ví dụ:
+
+- `AI_BENCHMARK_TESTER=anhtuan`
+- `AI_BENCHMARK_TESTER=linhpt`
+- `AI_BENCHMARK_TESTER=hungnq`
+
+Mục đích:
+
+- tự động điền cột `tester` trong các sheet `Benchmark`
+- giảm phải sửa tay trong Excel sau khi sync report
+- dễ gộp report của nhiều người mà không bị lẫn run
 
 Có thể reload config sau khi sửa `.env` bằng route:
 

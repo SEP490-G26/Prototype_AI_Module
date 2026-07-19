@@ -317,24 +317,23 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             var response = await GenerateTextAsync(mentorModel, rendered.RenderedSystemPrompt, rendered.RenderedUserPrompt, "code-mentor", cancellationToken);
             using var document = JsonDocument.Parse(ExtractJsonObject(response));
             var root = document.RootElement;
+            var qualityScore = ParseMentorQualityScore(root);
+            var performanceSummary = ParseMentorPerformanceSummary(root);
+            var errorAnalysis = ParseMentorErrorAnalysis(root);
+            var improvementSuggestions = ParseMentorImprovementSuggestions(root);
+            var issueCategories = root.TryGetProperty("issue_categories", out var categoriesElement) && categoriesElement.ValueKind == JsonValueKind.Array
+                ? categoriesElement.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
+                : errorAnalysis.Select(static item => item.Category).Where(static item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             return new MentorFeedback(
+                root.TryGetProperty("question_type", out var questionTypeElement) ? questionTypeElement.GetString() ?? "PE" : "PE",
                 root.TryGetProperty("verdict", out var verdictElement) ? verdictElement.GetString() ?? "needs_fix" : "needs_fix",
-                root.TryGetProperty("issue_categories", out var categoriesElement) && categoriesElement.ValueKind == JsonValueKind.Array
-                    ? categoriesElement.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
-                    : [],
-                root.TryGetProperty("issues", out var issuesElement) && issuesElement.ValueKind == JsonValueKind.Array
-                    ? issuesElement.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
-                    : [],
-                root.TryGetProperty("suggestions", out var suggestionsElement) && suggestionsElement.ValueKind == JsonValueKind.Array
-                    ? suggestionsElement.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
-                    : [],
-                root.TryGetProperty("failing_scenarios", out var failingScenariosElement) && failingScenariosElement.ValueKind == JsonValueKind.Array
-                    ? failingScenariosElement.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
-                    : [],
-                root.TryGetProperty("confidence", out var confidenceElement) && confidenceElement.TryGetDecimal(out var confidence)
-                    ? confidence
-                    : 0.6m,
-                root.TryGetProperty("complexity", out var complexityElement) ? complexityElement.GetString() : null,
+                qualityScore,
+                performanceSummary,
+                errorAnalysis,
+                improvementSuggestions,
+                issueCategories,
+                root.TryGetProperty("feedback_text", out var feedbackTextElement) ? feedbackTextElement.GetString() ?? string.Empty : BuildMentorFeedbackText(root, errorAnalysis, improvementSuggestions),
+                root.TryGetProperty("suggested_complexity", out var complexityElement) ? complexityElement.GetString() : performanceSummary.TimeComplexity,
                 mentorModel);
         }
         catch (Exception ex)
@@ -1335,6 +1334,146 @@ public sealed class RealAiProviderGateway : IAiProviderGateway
             _ => "custom"
         };
     }
+
+    private static MentorQualityScore ParseMentorQualityScore(JsonElement root)
+    {
+        if (root.TryGetProperty("quality_score", out var scoreElement) && scoreElement.ValueKind == JsonValueKind.Object)
+        {
+            return new MentorQualityScore(
+                ReadDecimal(scoreElement, "overall", 6.5m, 0m, 10m),
+                ReadDecimal(scoreElement, "correctness", 6.5m, 0m, 10m),
+                ReadDecimal(scoreElement, "robustness", 6.0m, 0m, 10m),
+                ReadDecimal(scoreElement, "code_quality", 6.0m, 0m, 10m),
+                ReadDecimal(scoreElement, "efficiency", 6.0m, 0m, 10m),
+                ReadDecimal(scoreElement, "confidence", 0.6m, 0m, 1m));
+        }
+
+        var legacyConfidence = ReadDecimal(root, "confidence", 0.6m, 0m, 1m);
+        var legacyBase = Math.Round(legacyConfidence * 10m, 2);
+        return new MentorQualityScore(legacyBase, legacyBase, legacyBase, legacyBase, legacyBase, legacyConfidence);
+    }
+
+    private static MentorPerformanceSummary ParseMentorPerformanceSummary(JsonElement root)
+    {
+        if (root.TryGetProperty("performance_summary", out var perfElement) && perfElement.ValueKind == JsonValueKind.Object)
+        {
+            return new MentorPerformanceSummary(
+                ReadMentorString(perfElement, "summary") ?? "No performance summary was provided.",
+                ReadMentorString(perfElement, "time_complexity"),
+                ReadMentorString(perfElement, "space_complexity"),
+                ReadMentorStringArray(perfElement, "notes"));
+        }
+
+        var legacyComplexity = ReadMentorString(root, "complexity");
+        return new MentorPerformanceSummary(
+            "Performance observations were inferred from static code reading only.",
+            legacyComplexity,
+            null,
+            []);
+    }
+
+    private static IReadOnlyList<MentorErrorAnalysisItem> ParseMentorErrorAnalysis(JsonElement root)
+    {
+        if (root.TryGetProperty("error_analysis", out var errorsElement) && errorsElement.ValueKind == JsonValueKind.Array)
+        {
+            var items = new List<MentorErrorAnalysisItem>();
+            foreach (var item in errorsElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                items.Add(new MentorErrorAnalysisItem(
+                    ReadMentorString(item, "category") ?? "logic",
+                    ReadMentorString(item, "severity") ?? "medium",
+                    ReadMentorString(item, "title") ?? "Issue detected",
+                    ReadMentorString(item, "detail") ?? string.Empty,
+                    ReadMentorStringArray(item, "failing_scenarios")));
+            }
+
+            if (items.Count > 0)
+            {
+                return items;
+            }
+        }
+
+        var legacyIssues = ReadMentorStringArray(root, "issues");
+        var legacyScenarios = ReadMentorStringArray(root, "failing_scenarios");
+        var legacyCategories = ReadMentorStringArray(root, "issue_categories");
+        return legacyIssues
+            .Select((issue, index) => new MentorErrorAnalysisItem(
+                legacyCategories.ElementAtOrDefault(index) ?? legacyCategories.FirstOrDefault() ?? "logic",
+                "medium",
+                issue.Length > 96 ? issue[..96].TrimEnd() : issue,
+                issue,
+                legacyScenarios))
+            .ToList();
+    }
+
+    private static IReadOnlyList<MentorImprovementSuggestion> ParseMentorImprovementSuggestions(JsonElement root)
+    {
+        if (root.TryGetProperty("improvement_suggestions", out var suggestionsElement) && suggestionsElement.ValueKind == JsonValueKind.Array)
+        {
+            var items = new List<MentorImprovementSuggestion>();
+            foreach (var item in suggestionsElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                items.Add(new MentorImprovementSuggestion(
+                    ReadMentorString(item, "priority") ?? "medium",
+                    ReadMentorString(item, "title") ?? "Improvement suggestion",
+                    ReadMentorString(item, "detail") ?? string.Empty,
+                    ReadMentorString(item, "expected_impact")));
+            }
+
+            if (items.Count > 0)
+            {
+                return items;
+            }
+        }
+
+        return ReadMentorStringArray(root, "suggestions")
+            .Select(text => new MentorImprovementSuggestion("medium", text.Length > 96 ? text[..96].TrimEnd() : text, text, null))
+            .ToList();
+    }
+
+    private static string BuildMentorFeedbackText(
+        JsonElement root,
+        IReadOnlyList<MentorErrorAnalysisItem> errors,
+        IReadOnlyList<MentorImprovementSuggestion> suggestions)
+    {
+        var verdict = ReadMentorString(root, "verdict") ?? "needs_fix";
+        var summary = root.TryGetProperty("performance_summary", out var perfElement) && perfElement.ValueKind == JsonValueKind.Object
+            ? ReadMentorString(perfElement, "summary")
+            : null;
+        var issuePreview = errors.FirstOrDefault()?.Detail;
+        var suggestionPreview = suggestions.FirstOrDefault()?.Detail;
+        return string.Join(" ", new[] { $"Verdict: {verdict}.", summary, issuePreview, suggestionPreview }.Where(static item => !string.IsNullOrWhiteSpace(item)));
+    }
+
+    private static decimal ReadDecimal(JsonElement element, string propertyName, decimal fallback, decimal min, decimal max)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.TryGetDecimal(out var value))
+        {
+            return Math.Max(min, Math.Min(max, value));
+        }
+
+        return fallback;
+    }
+
+    private static string? ReadMentorString(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString()
+            : null;
+
+    private static List<string> ReadMentorStringArray(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Array
+            ? property.EnumerateArray().Select(static item => item.GetString() ?? string.Empty).Where(static item => !string.IsNullOrWhiteSpace(item)).ToList()
+            : [];
 
     private static (long InputTokens, long OutputTokens, long? CacheInputTokens, long? CacheReadTokens, long? ReasoningTokens)? ExtractUsage(JsonElement root)
     {

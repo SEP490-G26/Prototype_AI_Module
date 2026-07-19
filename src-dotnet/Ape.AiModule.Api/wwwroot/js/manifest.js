@@ -1,10 +1,10 @@
 export const fragmentManifest = [
-  { mountId: 'fragment-overview', path: '/fragments/overview.html' },
-  { mountId: 'fragment-gatekeeper', path: '/fragments/gatekeeper.html' },
-  { mountId: 'fragment-extracted', path: '/fragments/extracted.html' },
-  { mountId: 'fragment-generation', path: '/fragments/generation.html' },
-  { mountId: 'fragment-mentor', path: '/fragments/mentor.html' },
-  { mountId: 'fragment-history', path: '/fragments/history.html' }
+  { mountId: 'fragment-overview', path: '/fragments/overview.html?v=20260719-mentor-v2' },
+  { mountId: 'fragment-gatekeeper', path: '/fragments/gatekeeper.html?v=20260719-mentor-v2' },
+  { mountId: 'fragment-extracted', path: '/fragments/extracted.html?v=20260719-mentor-v2' },
+  { mountId: 'fragment-generation', path: '/fragments/generation.html?v=20260719-mentor-v2' },
+  { mountId: 'fragment-mentor', path: '/fragments/mentor.html?v=20260719-mentor-v2' },
+  { mountId: 'fragment-history', path: '/fragments/history.html?v=20260719-mentor-v2' }
 ];
 
 export const tabManifest = [

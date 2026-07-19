@@ -16,9 +16,9 @@ File này giúp map nhanh giữa các file CSV template và các sheet trong wor
 
 | Workbook Sheet | CSV Template | Mục đích |
 |---|---|---|
-| `Input Quality Benchmark` | `input_quality_benchmark_template.csv` | Benchmark khối đầu vào: extracted, embedding, chunking, autotagging |
-| `Question Generation Benchmark` | `question_generation_benchmark_template.csv` | Benchmark khối core tạo câu hỏi và review |
-| `Code Mentor Benchmark` | `code_mentor_benchmark_template.csv` | Benchmark chất lượng AI mentor |
+| `Input Quality Benchmark` | `input_quality_benchmark_template.csv` | Benchmark khối đầu vào: extracted, embedding, chunking, autotagging; hiện đã được script runtime auto-fill các cột metadata/runtime/config |
+| `Question Generation Benchmark` | `question_generation_benchmark_template.csv` | Benchmark khối core tạo câu hỏi và review; hiện đã được script runtime auto-fill các cột metadata/runtime/config |
+| `Code Mentor Benchmark` | `code_mentor_benchmark_template.csv` | Benchmark chất lượng AI mentor; hiện đã được script runtime auto-fill các cột metadata/runtime/config |
 | `AI Config Version Tracking` | `ai_config_version_tracking_template.csv` | Theo dõi prompt, rubric, policy, ground truth version |
 | `AI Config Catalog` | dữ liệu tự tổng hợp từ App_Data current files | Danh mục config hiện đang active/current của prototype |
 | `AI Config Snapshots` | dữ liệu tự tổng hợp từ `ai-config-history/` | Snapshot history đầy đủ để audit và compare |
@@ -61,13 +61,32 @@ py -3 scripts/update_ai_report_workbook.py
 Script này sẽ:
 
 - tạo hoặc refresh workbook `Test/AI_Benchmark_Report.xlsx`
+- cập nhật cả 3 sheet benchmark:
+  - `Input Quality Benchmark`
+  - `Question Generation Benchmark`
+  - `Code Mentor Benchmark`
 - xuất `Test/run_history_index_export.csv`
 - xuất `Test/run_config_references.csv`
+- xuất `Test/input_quality_benchmark.csv`
+- xuất `Test/question_generation_benchmark.csv`
+- xuất `Test/code_mentor_benchmark.csv`
 - xuất `Test/input_quality_evidence.csv`
 - xuất `Test/question_generation_evidence.csv`
 - xuất `Test/code_mentor_evidence.csv`
 - sinh file `.md` parsed evidence cho từng run trong `Test/report_evidence/`
 - đồng bộ các sheet config/report từ source-of-truth trong repo
+
+## Lưu ý về benchmark sheet
+
+- script chỉ auto-fill các cột có thể lấy chắc chắn từ runtime:
+  - run id, ngày test, model, token, cost, latency, config version, status
+  - `tester` sẽ tự lấy từ biến môi trường `AI_BENCHMARK_TESTER`, nếu không có thì fallback về user của máy đang chạy
+- các cột chấm tay như:
+  - các quality score học thuật cần người chấm
+  - `expected_feedback_match`
+  - các nhận xét so sánh sâu
+  vẫn để trống để nhóm tự nhập sau khi review
+- với một số run cũ chưa có `ConfigReferences`, các cột `prompt_version`, `rubric_version`, `policy_version`, `ground_truth_set_id` có thể là `N/A`
 
 ## Gợi ý naming workbook
 

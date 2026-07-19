@@ -1,5 +1,6 @@
 import csv
 import json
+import os
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -23,7 +24,11 @@ RUN_INDEX_CSV = TEST_REPORT_DIR / "run_history_index_export.csv"
 INPUT_EVIDENCE_CSV = TEST_REPORT_DIR / "input_quality_evidence.csv"
 QUESTION_EVIDENCE_CSV = TEST_REPORT_DIR / "question_generation_evidence.csv"
 MENTOR_EVIDENCE_CSV = TEST_REPORT_DIR / "code_mentor_evidence.csv"
+INPUT_BENCHMARK_CSV = TEST_REPORT_DIR / "input_quality_benchmark.csv"
+QUESTION_BENCHMARK_CSV = TEST_REPORT_DIR / "question_generation_benchmark.csv"
+MENTOR_BENCHMARK_CSV = TEST_REPORT_DIR / "code_mentor_benchmark.csv"
 EVIDENCE_ROOT = TEST_REPORT_DIR / "report_evidence"
+DEFAULT_TESTER = os.environ.get("AI_BENCHMARK_TESTER") or os.environ.get("USERNAME") or os.environ.get("USER") or ""
 
 CURRENT_FILES = {
     "prompts": APP_DATA / "ai-prompts.json",
@@ -42,6 +47,9 @@ TAB_COLORS = {
     "Prompt Version Comparison": "8E5C2A",
     "Run History Index": "355E3B",
     "Run Config References": "5A4B81",
+    "Input Quality Benchmark": "4E7C67",
+    "Question Generation Benchmark": "8B5E34",
+    "Code Mentor Benchmark": "5D4383",
     "Input Quality Evidence": "7A9E7E",
     "Question Generation Evidence": "A56A43",
     "Code Mentor Evidence": "6A4C93",
@@ -91,6 +99,94 @@ def parse_dt(value):
         return datetime.fromisoformat(text)
     except ValueError:
         return datetime.min
+
+
+def normalize_number(value, digits=None):
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return round(float(value), digits) if digits is not None else float(value)
+    text = str(value).strip().replace(",", "")
+    if not text:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    return round(number, digits) if digits is not None else number
+
+
+def normalize_int(value):
+    number = normalize_number(value)
+    if number is None:
+        return None
+    return int(round(number))
+
+
+def yes_no(value):
+    if value in (None, ""):
+        return ""
+    return "yes" if bool(value) else "no"
+
+
+def safe_ratio(numerator, denominator, digits=4):
+    left = normalize_number(numerator)
+    right = normalize_number(denominator)
+    if left is None or right in (None, 0):
+        return None
+    return round(left / right, digits)
+
+
+def score_cost_index(score, cost_usd):
+    left = normalize_number(score)
+    right = normalize_number(cost_usd)
+    if left is None or right is None or right <= 0:
+        return None
+    return round(left / right, 6)
+
+
+def score_latency_index(score, latency_ms):
+    left = normalize_number(score)
+    right = normalize_number(latency_ms)
+    if left is None or right is None or right <= 0:
+        return None
+    return round(left / right, 6)
+
+
+def estimate_token_count(text):
+    content = normalize_text(text)
+    if not content:
+        return 0
+    # Pragmatic estimate for report autofill only.
+    return max(1, round(len(content) / 4))
+
+
+def get_config_ref_map(config_refs):
+    return {ref["artifact_type"]: ref for ref in config_refs or []}
+
+
+def get_config_version(config_refs, artifact_type, default="N/A"):
+    for ref in config_refs or []:
+        if ref.get("artifact_type") == artifact_type:
+            stable_id = normalize_text(ref.get("stable_id"))
+            version = normalize_text(ref.get("version"))
+            if stable_id or version:
+                return f"{stable_id}:{version}" if stable_id else version
+    return default
+
+
+def get_stage_cost(response, stage_name_prefix):
+    for stage in response.get("StageLogs", []) or []:
+        stage_name = normalize_text(stage.get("StageName"))
+        if stage_name.startswith(stage_name_prefix):
+            return stage.get("Cost", {}) or {}
+    return {}
+
+
+def get_stage_costs(response, stage_name_prefix):
+    return [stage.get("Cost", {}) or {} for stage in response.get("StageLogs", []) or [] if normalize_text(stage.get("StageName")).startswith(stage_name_prefix)]
 
 
 def ensure_sheet(workbook, title):
@@ -293,6 +389,18 @@ def load_current_catalog():
             )
     rows.sort(key=lambda item: (item["config_type"], item["config_key"]))
     return rows
+
+
+def load_active_prompt_versions():
+    active = {}
+    prompts = load_json(CURRENT_FILES["prompts"])
+    for item in prompts:
+        if item.get("IsActive"):
+            key = normalize_text(item.get("Key"))
+            version = normalize_text(item.get("Version"))
+            if key:
+                active[key] = version
+    return active
 
 
 def load_changelog_rows():
@@ -666,6 +774,8 @@ def build_mentor_markdown(run, evidence_rel_path):
     request = run["request"]
     response = run["response"]
     feedback = response.get("Feedback", {}) or {}
+    quality = feedback.get("QualityScore", {}) or {}
+    performance = feedback.get("PerformanceSummary", {}) or {}
     files = request.get("SourceFiles", []) or []
     md = []
     md.append(f"# Code Mentor Evidence: {summary.get('RunId', '')}")
@@ -679,9 +789,11 @@ def build_mentor_markdown(run, evidence_rel_path):
                 ("Subject", request.get("Subject")),
                 ("Language", request.get("Language")),
                 ("Mentor model", request.get("MentorModel")),
+                ("Question type", feedback.get("QuestionType")),
                 ("Verdict", feedback.get("Verdict")),
-                ("Confidence", feedback.get("Confidence")),
-                ("Complexity", feedback.get("Complexity")),
+                ("Quality score", quality.get("Overall")),
+                ("Confidence", quality.get("Confidence")),
+                ("Suggested complexity", feedback.get("SuggestedComplexity")),
                 ("Total cost USD", summary.get("Totals", {}).get("TotalCostUsd")),
                 ("Latency ms", summary.get("Totals", {}).get("LatencyMs")),
                 ("Evidence file", evidence_rel_path),
@@ -705,9 +817,30 @@ def build_mentor_markdown(run, evidence_rel_path):
         format_key_value_lines(
             [
                 ("Issue categories", join_values(feedback.get("IssueCategories", []), sep=", ")),
-                ("Issues", join_values(feedback.get("Issues", []), sep=" | ", limit=12)),
-                ("Suggestions", join_values(feedback.get("Suggestions", []), sep=" | ", limit=12)),
-                ("Failing scenarios", join_values(feedback.get("FailingScenarios", []), sep=" | ", limit=12)),
+                ("Feedback text", feedback.get("FeedbackText")),
+                ("Performance summary", performance.get("Summary")),
+                ("Time complexity", performance.get("TimeComplexity")),
+                ("Space complexity", performance.get("SpaceComplexity")),
+                ("Performance notes", join_values(performance.get("Notes", []), sep=" | ", limit=12)),
+                ("Error analysis", join_values([
+                    " | ".join(filter(None, [
+                        normalize_text(item.get("Category")),
+                        normalize_text(item.get("Severity")),
+                        normalize_text(item.get("Title")),
+                        normalize_text(item.get("Detail")),
+                        join_values(item.get("FailingScenarios", []), sep=", ", limit=6)
+                    ]))
+                    for item in feedback.get("ErrorAnalysis", [])
+                ], sep=" || ", limit=10)),
+                ("Improvement suggestions", join_values([
+                    " | ".join(filter(None, [
+                        normalize_text(item.get("Priority")),
+                        normalize_text(item.get("Title")),
+                        normalize_text(item.get("Detail")),
+                        normalize_text(item.get("ExpectedImpact"))
+                    ]))
+                    for item in feedback.get("ImprovementSuggestions", [])
+                ], sep=" || ", limit=10)),
             ]
         )
     )
@@ -847,6 +980,8 @@ def build_mentor_evidence(run):
     request = run["request"]
     response = run["response"]
     feedback = response.get("Feedback", {}) or {}
+    quality = feedback.get("QualityScore", {}) or {}
+    performance = feedback.get("PerformanceSummary", {}) or {}
     files = request.get("SourceFiles", []) or []
     row = {
         "run_id": normalize_text(summary.get("RunId")),
@@ -858,17 +993,323 @@ def build_mentor_evidence(run):
         "problem_summary": shorten(request.get("Problem"), 500),
         "source_files": join_values([item.get("Filename") or item.get("filename") for item in files], sep=", ", limit=8),
         "source_code_preview": join_values([shorten(item.get("Content") or item.get("content"), 180) for item in files[:3]], sep=" || ", limit=3),
+        "question_type": normalize_text(feedback.get("QuestionType")),
         "mentor_verdict": normalize_text(feedback.get("Verdict")),
         "issue_categories": join_values(feedback.get("IssueCategories", []), sep=", ", limit=8),
-        "issues_view": join_values(feedback.get("Issues", []), sep=" | ", limit=12),
-        "suggestions_view": join_values(feedback.get("Suggestions", []), sep=" | ", limit=12),
-        "failing_scenarios_view": join_values(feedback.get("FailingScenarios", []), sep=" | ", limit=12),
-        "complexity_view": normalize_text(feedback.get("Complexity")),
-        "confidence": normalize_text(feedback.get("Confidence")),
+        "quality_score_overall": normalize_number(quality.get("Overall"), 4),
+        "quality_score_correctness": normalize_number(quality.get("Correctness"), 4),
+        "quality_score_robustness": normalize_number(quality.get("Robustness"), 4),
+        "quality_score_code_quality": normalize_number(quality.get("CodeQuality"), 4),
+        "quality_score_efficiency": normalize_number(quality.get("Efficiency"), 4),
+        "quality_confidence": normalize_number(quality.get("Confidence"), 4),
+        "feedback_text": normalize_text(feedback.get("FeedbackText")),
+        "performance_summary_view": join_values(
+            [
+                normalize_text(performance.get("Summary")),
+                normalize_text(performance.get("TimeComplexity")),
+                normalize_text(performance.get("SpaceComplexity")),
+                join_values(performance.get("Notes", []), sep=" | ", limit=8),
+            ],
+            sep=" || ",
+            limit=4),
+        "error_analysis_view": join_values([
+            " | ".join(filter(None, [
+                normalize_text(item.get("Category")),
+                normalize_text(item.get("Severity")),
+                normalize_text(item.get("Title")),
+                normalize_text(item.get("Detail"))
+            ]))
+            for item in feedback.get("ErrorAnalysis", [])
+        ], sep=" || ", limit=10),
+        "improvement_suggestions_view": join_values([
+            " | ".join(filter(None, [
+                normalize_text(item.get("Priority")),
+                normalize_text(item.get("Title")),
+                normalize_text(item.get("Detail"))
+            ]))
+            for item in feedback.get("ImprovementSuggestions", [])
+        ], sep=" || ", limit=10),
+        "failing_scenarios_view": join_values([
+            join_values(item.get("FailingScenarios", []), sep=", ", limit=6)
+            for item in feedback.get("ErrorAnalysis", [])
+        ], sep=" || ", limit=10),
+        "suggested_complexity_view": normalize_text(feedback.get("SuggestedComplexity") or performance.get("TimeComplexity")),
         "evidence_file": "",
         "history_file": str(run["path"].relative_to(REPO)).replace("\\", "/"),
     }
     return row, build_mentor_markdown
+
+
+def build_input_benchmark_rows(run_payloads, config_refs_by_run):
+    rows = []
+    for run in run_payloads:
+        summary = run["summary"]
+        request = run["request"]
+        response = run["response"]
+        function_name = normalize_text(summary.get("FunctionName"))
+        if function_name not in {"extracted-content", "embedding-tagging"}:
+            continue
+        refs = config_refs_by_run.get(normalize_text(summary.get("RunId")), [])
+        ref_map = get_config_ref_map(refs)
+        totals = summary.get("Totals", {}) or {}
+        draft = response.get("Draft", {}) or {}
+        chunks = response.get("Chunks", []) or []
+        extracted = response.get("Extracted", {}) or {}
+        input_tokens = normalize_int(totals.get("InputTokens"))
+        output_tokens = normalize_int(totals.get("OutputTokens"))
+        total_tokens = (input_tokens or 0) + (output_tokens or 0)
+        cost_usd = normalize_number(totals.get("TotalCostUsd"), 6)
+        latency_ms = normalize_number(totals.get("LatencyMs"), 2)
+        avg_chunk_tokens = None
+        avg_chunk_words = None
+        if chunks:
+            token_values = [normalize_number(chunk.get("TokenCount")) for chunk in chunks if normalize_number(chunk.get("TokenCount")) is not None]
+            word_values = [normalize_number(chunk.get("WordCount")) for chunk in chunks if normalize_number(chunk.get("WordCount")) is not None]
+            avg_chunk_tokens = round(sum(token_values) / len(token_values), 2) if token_values else None
+            avg_chunk_words = round(sum(word_values) / len(word_values), 2) if word_values else None
+
+        rows.append(
+            {
+                "run_id": normalize_text(summary.get("RunId")),
+                "test_date": normalize_text(summary.get("RecordedAt"))[:10],
+                "tester": DEFAULT_TESTER,
+                "function_group": function_name,
+                "document_id": normalize_text(request.get("DocumentId") or draft.get("DocumentId") or response.get("DocumentId")),
+                "document_name": normalize_text(request.get("FileName") or draft.get("SourceName")),
+                "document_type": normalize_text(draft.get("SourceType") or Path(normalize_text(request.get("FileName"))).suffix.lstrip(".")),
+                "subject_code": normalize_text(request.get("Subject") or draft.get("SubjectCode")),
+                "syllabus_scope": normalize_text(draft.get("OwnershipType")),
+                "source_pages": normalize_text(draft.get("TotalPages")),
+                "source_word_count": normalize_int(extracted.get("WordCount") or draft.get("PricingBasisSnapshot", {}).get("TotalWordsEstimate")),
+                "source_image_count": normalize_int(extracted.get("EmbeddedImageCount") or draft.get("EmbeddedImageCount")),
+                "pipeline_mode": normalize_text(request.get("Mode") or extracted.get("ExtractionMode") or draft.get("ExtractionMode")),
+                "ocr_model": normalize_text(request.get("VisionModel") or extracted.get("VisionModelName") or draft.get("VisionModel")),
+                "embedding_model": normalize_text(request.get("EmbeddingModel")),
+                "tagging_model": normalize_text(request.get("TaggingModel")),
+                "chunking_strategy": normalize_text(request.get("ChunkingStrategy") or (chunks[0].get("ChunkingStrategy") if chunks else "")),
+                "human_review_used": yes_no(draft.get("ReviewedAt") or draft.get("ApprovalVersion")),
+                "prompt_version": get_config_version(refs, "prompt"),
+                "policy_version": get_config_version(refs, "policy"),
+                "rubric_version": get_config_version(refs, "rubric"),
+                "ground_truth_set_id": get_config_version(refs, "groundtruth"),
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "vision_input_tokens": input_tokens if function_name == "extracted-content" else None,
+                "vision_output_tokens": output_tokens if function_name == "extracted-content" else None,
+                "total_tokens": total_tokens if total_tokens else None,
+                "latency_ms": latency_ms,
+                "cost_usd": cost_usd,
+                "num_chunks": normalize_int(len(chunks)) if chunks else None,
+                "avg_chunk_tokens": avg_chunk_tokens,
+                "avg_chunk_words": avg_chunk_words,
+                "tag_coverage_score": "",
+                "tag_relevance_score": "",
+                "chunk_boundary_score": "",
+                "content_cleanliness_score": "",
+                "ocr_text_accuracy_score": "",
+                "image_description_quality_score": "",
+                "grounding_traceability_score": "",
+                "overall_quality_score": "",
+                "quality_cost_index": "",
+                "quality_latency_index": "",
+                "pass_fail": "PASS" if normalize_text(summary.get("Status")) not in {"failed", "error"} else "FAIL",
+                "main_issues": join_values(
+                    extracted.get("Warnings", [])
+                    or draft.get("CleanupWarnings", [])
+                    or ([normalize_text(draft.get("ReviewStatus"))] if normalize_text(draft.get("ReviewStatus")) not in {"", "approved"} else []),
+                    sep=" | ",
+                    limit=12,
+                ),
+                "notes": join_values(
+                    [
+                        normalize_text(ref_map.get("policy", {}).get("change_summary")),
+                        f"mode={normalize_text(request.get('Mode') or extracted.get('ExtractionMode') or draft.get('ExtractionMode'))}" if normalize_text(request.get("Mode") or extracted.get("ExtractionMode") or draft.get("ExtractionMode")) else "",
+                        f"parser={normalize_text(extracted.get('ParserName') or draft.get('IngestParser'))}" if normalize_text(extracted.get("ParserName") or draft.get("IngestParser")) else "",
+                        f"vision={normalize_text(request.get('VisionModel') or extracted.get('VisionModelName') or draft.get('VisionModel'))}" if normalize_text(request.get("VisionModel") or extracted.get("VisionModelName") or draft.get("VisionModel")) else "",
+                        f"embedding={normalize_text(request.get('EmbeddingModel'))}" if normalize_text(request.get("EmbeddingModel")) else "",
+                        f"tagging={normalize_text(request.get('TaggingModel'))}" if normalize_text(request.get("TaggingModel")) else "",
+                        f"chunking={normalize_text(request.get('ChunkingStrategy') or (chunks[0].get('ChunkingStrategy') if chunks else ''))}" if normalize_text(request.get("ChunkingStrategy") or (chunks[0].get("ChunkingStrategy") if chunks else "")) else "",
+                    ],
+                    sep=" | ",
+                    limit=8,
+                ),
+            }
+        )
+    rows.sort(key=lambda item: parse_dt(item["test_date"]))
+    return rows
+
+
+def build_question_benchmark_rows(run_payloads, config_refs_by_run, active_prompt_versions):
+    rows = []
+    for run in run_payloads:
+        summary = run["summary"]
+        request = run["request"]
+        response = run["response"]
+        if normalize_text(summary.get("FunctionName")) != "generation-review":
+            continue
+        refs = config_refs_by_run.get(normalize_text(summary.get("RunId")), [])
+        totals = summary.get("Totals", {}) or {}
+        review = response.get("Review", {}) or {}
+        schema = response.get("SchemaMapping", {}) or {}
+        difficulty = response.get("DifficultyAlignment", {}) or {}
+        questions = response.get("Questions", []) or []
+        chunks = request.get("Chunks", []) or []
+        generator_costs = get_stage_costs(response, "question-generation")
+        reviewer_costs = get_stage_costs(response, "question-review")
+        generator_input_tokens = sum(normalize_int(cost.get("InputTokens")) or 0 for cost in generator_costs) or None
+        generator_output_tokens = sum(normalize_int(cost.get("OutputTokens")) or 0 for cost in generator_costs) or None
+        reviewer_input_tokens = sum(normalize_int(cost.get("InputTokens")) or 0 for cost in reviewer_costs) or None
+        reviewer_output_tokens = sum(normalize_int(cost.get("OutputTokens")) or 0 for cost in reviewer_costs) or None
+        generator_cost_usd = round(sum(normalize_number(cost.get("TotalCostUsd")) or 0 for cost in generator_costs), 6) if generator_costs else None
+        reviewer_cost_usd = round(sum(normalize_number(cost.get("TotalCostUsd")) or 0 for cost in reviewer_costs), 6) if reviewer_costs else None
+        total_tokens = (normalize_int(totals.get("InputTokens")) or 0) + (normalize_int(totals.get("OutputTokens")) or 0)
+        review_score = normalize_number(review.get("Score"), 4)
+        input_chunk_token_count = (
+            sum(
+                (normalize_int(chunk.get("TokenCount")) if normalize_int(chunk.get("TokenCount")) is not None else estimate_token_count(chunk.get("ContentText")))
+                for chunk in chunks
+            ) or None
+        )
+        accepted_count = len(questions) if normalize_text(review.get("NeedsRevision")).lower() not in {"true", "1"} and normalize_text(summary.get("Status")) == "accepted" else 0
+        rejected_count = max(len(questions) - accepted_count, 0)
+        schema_valid_rate = 1.0 if schema.get("IsValid") else 0.0 if schema else None
+        grounded_rate = 1.0 if review.get("ContentGrounded") else 0.0 if review else None
+        difficulty_alignment_score = 1.0 if difficulty.get("IsAligned") else review_score if review_score is not None else 0.0
+        rule_issues = schema.get("Issues", []) or []
+        rule_based_pass_rate = 1.0 if not rule_issues else 0.0
+        final_quality_score = review_score
+        total_cost_usd = normalize_number(totals.get("TotalCostUsd"), 6)
+        latency_ms = normalize_number(totals.get("LatencyMs"), 2)
+        context_pack_id = normalize_text(request.get("ContextPackId") or response.get("ContextPackId"))
+        context_source = "context_pack" if context_pack_id else "chunks"
+        retrieval_strategy = normalize_text(request.get("RetrievalStrategy")) or ("context_pack" if context_pack_id else "direct_chunks")
+        compression_base = generator_input_tokens or normalize_int(totals.get("InputTokens"))
+        prompt_version_generator = get_config_version([ref for ref in refs if ref.get("artifact_type") == "prompt" and "question_generation" in ref.get("stable_id", "")], "prompt", default="")
+        prompt_version_reviewer = get_config_version([ref for ref in refs if ref.get("artifact_type") == "prompt" and "question_review" in ref.get("stable_id", "")], "prompt", default="")
+        if not prompt_version_generator:
+            current = active_prompt_versions.get("question_generation")
+            prompt_version_generator = f"question_generation:{current}" if current else "N/A"
+        if not prompt_version_reviewer:
+            current = active_prompt_versions.get("question_review")
+            prompt_version_reviewer = f"question_review:{current}" if current else "N/A"
+
+        rows.append(
+            {
+                "run_id": normalize_text(summary.get("RunId")),
+                "test_date": normalize_text(summary.get("RecordedAt"))[:10],
+                "tester": DEFAULT_TESTER,
+                "subject_code": normalize_text(request.get("Subject")),
+                "question_type": normalize_text(request.get("QuestionType")),
+                "difficulty_target": normalize_text(request.get("Difficulty")),
+                "generation_mode": normalize_text(request.get("Mode")),
+                "generator_model": normalize_text(request.get("GeneratorModel") or summary.get("ModelFields", {}).get("GeneratorModel")),
+                "reviewer_model": normalize_text(request.get("ReviewerModel") or summary.get("ModelFields", {}).get("ReviewerModel")),
+                "dual_agent_mode": "yes" if normalize_text(request.get("Mode")) == "DualAgent" else "no",
+                "context_source": context_source,
+                "context_pack_id": context_pack_id,
+                "knowledge_chunk_count": len(chunks),
+                "packed_token_count": input_chunk_token_count,
+                "compression_ratio": safe_ratio(input_chunk_token_count, compression_base),
+                "retrieval_strategy": retrieval_strategy,
+                "prompt_version_generator": prompt_version_generator,
+                "prompt_version_reviewer": prompt_version_reviewer,
+                "rubric_version": get_config_version(refs, "rubric"),
+                "policy_version": get_config_version(refs, "policy"),
+                "ground_truth_set_id": get_config_version(refs, "groundtruth"),
+                "requested_question_count": normalize_int(request.get("Count")),
+                "generated_question_count": len(questions),
+                "accepted_question_count": accepted_count,
+                "rejected_question_count": rejected_count,
+                "revision_rounds": normalize_int(response.get("AttemptsUsed")),
+                "generator_input_tokens": generator_input_tokens,
+                "generator_output_tokens": generator_output_tokens,
+                "reviewer_input_tokens": reviewer_input_tokens,
+                "reviewer_output_tokens": reviewer_output_tokens,
+                "total_tokens": total_tokens if total_tokens else None,
+                "generator_cost_usd": generator_cost_usd,
+                "reviewer_cost_usd": reviewer_cost_usd,
+                "total_cost_usd": total_cost_usd,
+                "latency_ms": latency_ms,
+                "schema_valid_rate": schema_valid_rate,
+                "grounded_rate": grounded_rate,
+                "difficulty_alignment_score": difficulty_alignment_score,
+                "topic_relevance_score": "",
+                "question_clarity_score": "",
+                "question_usefulness_score": "",
+                "distractor_quality_score": "" if normalize_text(request.get("QuestionType")) != "FE" else "",
+                "testcase_quality_score": "" if normalize_text(request.get("QuestionType")) != "PE" else "",
+                "rule_based_pass_rate": rule_based_pass_rate,
+                "final_quality_score": final_quality_score,
+                "quality_cost_index": score_cost_index(final_quality_score, total_cost_usd),
+                "quality_latency_index": score_latency_index(final_quality_score, latency_ms),
+                "pass_fail": "PASS" if normalize_text(summary.get("Status")) in {"accepted", "completed"} else "FAIL",
+                "failure_reason": join_values(review.get("Issues", []), sep=" | ", limit=10),
+                "notes": join_values(review.get("Suggestions", []), sep=" | ", limit=10),
+            }
+        )
+    rows.sort(key=lambda item: parse_dt(item["test_date"]))
+    return rows
+
+
+def build_mentor_benchmark_rows(run_payloads, config_refs_by_run):
+    rows = []
+    for run in run_payloads:
+        summary = run["summary"]
+        request = run["request"]
+        response = run["response"]
+        if normalize_text(summary.get("FunctionName")) != "code-mentor":
+            continue
+        refs = config_refs_by_run.get(normalize_text(summary.get("RunId")), [])
+        totals = summary.get("Totals", {}) or {}
+        feedback = response.get("Feedback", {}) or {}
+        quality = feedback.get("QualityScore", {}) or {}
+        files = request.get("SourceFiles", []) or []
+        input_tokens = normalize_int(totals.get("InputTokens"))
+        output_tokens = normalize_int(totals.get("OutputTokens"))
+        total_tokens = (input_tokens or 0) + (output_tokens or 0)
+        overall_quality = normalize_number(quality.get("Overall"), 4)
+        cost_usd = normalize_number(totals.get("TotalCostUsd"), 6)
+        latency_ms = normalize_number(totals.get("LatencyMs"), 2)
+        rows.append(
+            {
+                "run_id": normalize_text(summary.get("RunId")),
+                "test_date": normalize_text(summary.get("RecordedAt"))[:10],
+                "tester": DEFAULT_TESTER,
+                "subject_code": normalize_text(request.get("Subject")),
+                "language": normalize_text(request.get("Language")),
+                "exercise_type": normalize_text(feedback.get("QuestionType") or "PE"),
+                "submission_id": normalize_text(request.get("SubmissionId")),
+                "submission_size": len(normalize_text(request.get("Code"))) if request.get("Code") else sum(len(normalize_text(item.get("Content") or item.get("content"))) for item in files),
+                "file_count": len(files) if files else (1 if request.get("Code") else 0),
+                "model": normalize_text(request.get("MentorModel") or summary.get("ModelFields", {}).get("MentorModel")),
+                "prompt_version": get_config_version(refs, "prompt"),
+                "rubric_version": get_config_version(refs, "rubric"),
+                "policy_version": get_config_version(refs, "policy"),
+                "ground_truth_set_id": get_config_version(refs, "groundtruth"),
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens if total_tokens else None,
+                "latency_ms": latency_ms,
+                "cost_usd": cost_usd,
+                "bug_detection_score": normalize_number(quality.get("Correctness"), 4),
+                "correctness_feedback_score": normalize_number(quality.get("Correctness"), 4),
+                "code_quality_feedback_score": normalize_number(quality.get("CodeQuality"), 4),
+                "actionability_score": "",
+                "specificity_score": "",
+                "hallucination_penalty": "",
+                "grounded_to_code_score": normalize_number(quality.get("Robustness"), 4),
+                "pedagogical_value_score": normalize_number(quality.get("Overall"), 4),
+                "overall_quality_score": overall_quality,
+                "quality_cost_index": score_cost_index(overall_quality, cost_usd),
+                "quality_latency_index": score_latency_index(overall_quality, latency_ms),
+                "expected_feedback_match": "",
+                "pass_fail": "PASS" if normalize_text(feedback.get("Verdict")) not in {"failed", "error"} else "FAIL",
+                "main_issues": join_values([item.get("Title") for item in feedback.get("ErrorAnalysis", [])], sep=" | ", limit=10),
+                "notes": normalize_text(feedback.get("FeedbackText")),
+            }
+        )
+    rows.sort(key=lambda item: parse_dt(item["test_date"]))
+    return rows
 
 
 def generate_evidence(run_payloads, config_refs_by_run):
@@ -918,18 +1359,28 @@ def main():
 
     snapshot_rows, snapshot_index = load_snapshot_index()
     catalog_rows = load_current_catalog()
+    active_prompt_versions = load_active_prompt_versions()
     changelog_rows = load_changelog_rows()
     version_tracking_rows = build_version_tracking_rows(changelog_rows)
     prompt_compare_rows = build_prompt_comparison_rows(snapshot_rows)
     run_index_rows, config_ref_rows, config_refs_by_run, run_payloads = collect_runs(snapshot_index)
     input_evidence_rows, question_evidence_rows, mentor_evidence_rows = generate_evidence(run_payloads, config_refs_by_run)
+    input_benchmark_rows = build_input_benchmark_rows(run_payloads, config_refs_by_run)
+    question_benchmark_rows = build_question_benchmark_rows(run_payloads, config_refs_by_run, active_prompt_versions)
+    mentor_benchmark_rows = build_mentor_benchmark_rows(run_payloads, config_refs_by_run)
 
+    input_benchmark_headers = ["run_id", "test_date", "tester", "function_group", "document_id", "document_name", "document_type", "subject_code", "syllabus_scope", "source_pages", "source_word_count", "source_image_count", "pipeline_mode", "ocr_model", "embedding_model", "tagging_model", "chunking_strategy", "human_review_used", "prompt_version", "policy_version", "rubric_version", "ground_truth_set_id", "input_tokens", "output_tokens", "vision_input_tokens", "vision_output_tokens", "total_tokens", "latency_ms", "cost_usd", "num_chunks", "avg_chunk_tokens", "avg_chunk_words", "tag_coverage_score", "tag_relevance_score", "chunk_boundary_score", "content_cleanliness_score", "ocr_text_accuracy_score", "image_description_quality_score", "grounding_traceability_score", "overall_quality_score", "quality_cost_index", "quality_latency_index", "pass_fail", "main_issues", "notes"]
+    question_benchmark_headers = ["run_id", "test_date", "tester", "subject_code", "question_type", "difficulty_target", "generation_mode", "generator_model", "reviewer_model", "dual_agent_mode", "context_source", "context_pack_id", "knowledge_chunk_count", "packed_token_count", "compression_ratio", "retrieval_strategy", "prompt_version_generator", "prompt_version_reviewer", "rubric_version", "policy_version", "ground_truth_set_id", "requested_question_count", "generated_question_count", "accepted_question_count", "rejected_question_count", "revision_rounds", "generator_input_tokens", "generator_output_tokens", "reviewer_input_tokens", "reviewer_output_tokens", "total_tokens", "generator_cost_usd", "reviewer_cost_usd", "total_cost_usd", "latency_ms", "schema_valid_rate", "grounded_rate", "difficulty_alignment_score", "topic_relevance_score", "question_clarity_score", "question_usefulness_score", "distractor_quality_score", "testcase_quality_score", "rule_based_pass_rate", "final_quality_score", "quality_cost_index", "quality_latency_index", "pass_fail", "failure_reason", "notes"]
+    mentor_benchmark_headers = ["run_id", "test_date", "tester", "subject_code", "language", "exercise_type", "submission_id", "submission_size", "file_count", "model", "prompt_version", "rubric_version", "policy_version", "ground_truth_set_id", "input_tokens", "output_tokens", "total_tokens", "latency_ms", "cost_usd", "bug_detection_score", "correctness_feedback_score", "code_quality_feedback_score", "actionability_score", "specificity_score", "hallucination_penalty", "grounded_to_code_score", "pedagogical_value_score", "overall_quality_score", "quality_cost_index", "quality_latency_index", "expected_feedback_match", "pass_fail", "main_issues", "notes"]
     run_config_headers = ["run_id", "function_name", "route_key", "recorded_at", "artifact_type", "stable_id", "version", "subject_code", "question_type", "language", "content_hash", "source", "source_commit", "change_reason", "change_summary", "snapshot_file", "history_file"]
     run_index_headers = ["run_id", "function_name", "route_key", "recorded_at", "status", "model_summary", "subject", "question_type", "difficulty", "input_tokens", "output_tokens", "total_cost_usd", "latency_ms", "prompt_key_guess", "prompt_version_ref", "config_link_mode", "history_file", "usage_source", "error"]
     input_evidence_headers = ["run_id", "function_name", "recorded_at", "subject", "source_file", "mode", "primary_model", "status", "input_tokens", "output_tokens", "total_cost_usd", "latency_ms", "parsed_summary", "content_preview", "structure_preview", "tags_or_topics", "human_readable_result", "evidence_file", "history_file"]
     question_evidence_headers = ["run_id", "recorded_at", "subject", "question_type", "difficulty", "generator_model", "reviewer_model", "status", "question_count", "input_chunk_count", "input_chunk_refs", "source_topic_tags", "input_context_preview", "generated_titles", "generated_body_view", "review_score", "review_status", "review_issues", "review_suggestions", "rule_based_summary", "prompt_versions", "evidence_file", "history_file"]
-    mentor_evidence_headers = ["run_id", "recorded_at", "subject", "language", "mentor_model", "status", "problem_summary", "source_files", "source_code_preview", "mentor_verdict", "issue_categories", "issues_view", "suggestions_view", "failing_scenarios_view", "complexity_view", "confidence", "evidence_file", "history_file"]
+    mentor_evidence_headers = ["run_id", "recorded_at", "subject", "language", "mentor_model", "status", "problem_summary", "source_files", "source_code_preview", "question_type", "mentor_verdict", "issue_categories", "quality_score_overall", "quality_score_correctness", "quality_score_robustness", "quality_score_code_quality", "quality_score_efficiency", "quality_confidence", "feedback_text", "performance_summary_view", "error_analysis_view", "improvement_suggestions_view", "failing_scenarios_view", "suggested_complexity_view", "evidence_file", "history_file"]
 
+    write_csv(INPUT_BENCHMARK_CSV, input_benchmark_headers, input_benchmark_rows)
+    write_csv(QUESTION_BENCHMARK_CSV, question_benchmark_headers, question_benchmark_rows)
+    write_csv(MENTOR_BENCHMARK_CSV, mentor_benchmark_headers, mentor_benchmark_rows)
     write_csv(RUN_CONFIG_CSV, run_config_headers, config_ref_rows)
     write_csv(RUN_INDEX_CSV, run_index_headers, run_index_rows)
     write_csv(INPUT_EVIDENCE_CSV, input_evidence_headers, input_evidence_rows)
@@ -938,6 +1389,9 @@ def main():
 
     workbook = load_workbook(WORKBOOK_PATH)
     sheet_specs = {
+        "Input Quality Benchmark": (input_benchmark_headers, input_benchmark_rows),
+        "Question Generation Benchmark": (question_benchmark_headers, question_benchmark_rows),
+        "Code Mentor Benchmark": (mentor_benchmark_headers, mentor_benchmark_rows),
         "AI Config Version Tracking": (["config_type", "function_name", "component_name", "version_id", "parent_version_id", "status", "applied_to_models", "subject_code", "question_type", "effective_from", "effective_to", "change_reason", "change_summary", "expected_impact", "dataset_used", "benchmark_run_range", "quality_before", "quality_after", "cost_before", "cost_after", "stability_before", "stability_after", "owner_note", "source_commit", "snapshot_path"], version_tracking_rows),
         "AI Config Catalog": (["config_type", "config_key", "version", "name_or_description", "subject_code", "question_type", "status", "system_prompt_len", "user_prompt_len", "updated_at", "source_file"], catalog_rows),
         "AI Config Snapshots": (["artifact_type", "stable_id", "version", "function_name", "subject_code", "question_type", "captured_at", "source", "source_commit", "captured_from", "change_reason", "change_summary", "is_active", "content_hash", "snapshot_file"], snapshot_rows),
@@ -955,6 +1409,9 @@ def main():
     workbook.save(WORKBOOK_PATH)
 
     print(f"Updated workbook: {WORKBOOK_PATH}")
+    print(f"Wrote CSV: {INPUT_BENCHMARK_CSV}")
+    print(f"Wrote CSV: {QUESTION_BENCHMARK_CSV}")
+    print(f"Wrote CSV: {MENTOR_BENCHMARK_CSV}")
     print(f"Wrote CSV: {RUN_CONFIG_CSV}")
     print(f"Wrote CSV: {RUN_INDEX_CSV}")
     print(f"Wrote CSV: {INPUT_EVIDENCE_CSV}")
