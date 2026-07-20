@@ -17,7 +17,7 @@ public sealed class ScriptedAiReportSyncService : IAiReportSyncService
 
     public ScriptedAiReportSyncService(IHostEnvironment environment, ILogger<ScriptedAiReportSyncService> logger)
     {
-        _repoRoot = environment.ContentRootPath;
+        _repoRoot = ResolveRepoRoot(environment.ContentRootPath);
         _reportRoot = Path.Combine(_repoRoot, "Test");
         _workbookPath = Path.Combine(_reportRoot, "AI_Benchmark_Report.xlsx");
         _scriptPath = Path.Combine(_repoRoot, "scripts", "update_ai_report_workbook.py");
@@ -116,5 +116,32 @@ public sealed class ScriptedAiReportSyncService : IAiReportSyncService
     private static string ResolvePythonLauncher()
     {
         return OperatingSystem.IsWindows() ? "py" : "python3";
+    }
+
+    private static string ResolveRepoRoot(string contentRootPath)
+    {
+        var current = new DirectoryInfo(contentRootPath);
+        while (current is not null)
+        {
+            var scriptPath = Path.Combine(current.FullName, "scripts", "update_ai_report_workbook.py");
+            var templatePath = Path.Combine(
+                current.FullName,
+                "Docs",
+                "Prototype_Document",
+                "Guides",
+                "Templates",
+                "AI_Report",
+                "AI_Benchmark_Report_Template.xlsx");
+
+            if (File.Exists(scriptPath) && File.Exists(templatePath))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException(
+            $"Could not resolve repository root from content root '{contentRootPath}'.");
     }
 }

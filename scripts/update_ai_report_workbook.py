@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-REPO = Path(r"D:/1_Tailieuhoctap REAL Reborn/Ky9  - Final/Prototype_AI_Module_repo")
+REPO = Path(__file__).resolve().parent.parent
 APP_DATA = REPO / "src-dotnet" / "Ape.AiModule.Api" / "App_Data"
 HISTORY_ROOT = APP_DATA / "ai-config-history"
 RUN_HISTORY_ROOT = APP_DATA / "run-history"
@@ -54,6 +54,30 @@ TAB_COLORS = {
     "Question Generation Evidence": "A56A43",
     "Code Mentor Evidence": "6A4C93",
 }
+
+
+def bootstrap_output_structure():
+    TEST_REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    EVIDENCE_ROOT.mkdir(parents=True, exist_ok=True)
+    for child in ("input-quality", "question-generation", "code-mentor"):
+        (EVIDENCE_ROOT / child).mkdir(parents=True, exist_ok=True)
+
+
+def ensure_required_paths():
+    required_dirs = {
+        "repo": REPO,
+        "app data": APP_DATA,
+        "report template dir": REPORT_DIR,
+        "run history": RUN_HISTORY_ROOT,
+    }
+    missing_dirs = [f"{label}: {path}" for label, path in required_dirs.items() if not path.exists()]
+    if missing_dirs:
+        raise FileNotFoundError("Missing required directories:\n" + "\n".join(missing_dirs))
+
+    required_files = [WORKBOOK_TEMPLATE_PATH, CURRENT_FILES["prompts"]]
+    missing_files = [str(path) for path in required_files if not path.exists()]
+    if missing_files:
+        raise FileNotFoundError("Missing required files:\n" + "\n".join(missing_files))
 
 
 def load_json(path: Path):
@@ -1350,7 +1374,9 @@ def generate_evidence(run_payloads, config_refs_by_run):
 
 
 def main():
-    TEST_REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_required_paths()
+    bootstrap_output_structure()
+
     if not WORKBOOK_PATH.exists():
         shutil.copy2(WORKBOOK_TEMPLATE_PATH, WORKBOOK_PATH)
     changelog_seed = REPORT_DIR / "ai_config_version_changelog.csv"
