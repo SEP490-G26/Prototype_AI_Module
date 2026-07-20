@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Ape.AiModule.Api.Models;
+using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig;
 
 namespace Ape.AiModule.Api.Services;
@@ -92,18 +93,36 @@ public sealed class PrototypeFileIngestService
                 break;
 
             case "pdf":
-                parserName = "pdfpig-text-parser";
-                extractedText = await ExtractPdfTextAsync(savedPath, cancellationToken);
+                parserName = "pdfpig-text-image-parser";
+                var pdfExtracted = await ExtractPdfContentAsync(savedPath, folder, storedFileName, cancellationToken);
+                extractedText = pdfExtracted.Text;
+                extractedImagePaths.AddRange(pdfExtracted.ImagePaths);
+                extractedText = AppendImageMarkers(extractedText, extractedImagePaths);
                 if (!string.IsNullOrWhiteSpace(extractedText))
                 {
                     suggestedRawContent = extractedText;
                     canUseAsText = true;
+                    canUseAsVisionInput = extractedImagePaths.Count > 0;
                     warnings.Add("PDF text was extracted using a lightweight prototype parser. Complex layouts may still be noisy.");
+                    if (extractedImagePaths.Count > 0)
+                    {
+                        warnings.Add("Embedded PDF images were extracted and appended as vision markers for multimodal expansion.");
+                    }
                 }
                 else
                 {
-                    suggestedRawContent = $"[pdf-uploaded:{savedPath}]";
-                    warnings.Add("PDF upload is stored successfully, but no readable text was extracted by the lightweight prototype parser.");
+                    if (extractedImagePaths.Count > 0)
+                    {
+                        suggestedMode = "FullMultimodalPage";
+                        suggestedRawContent = AppendImageMarkers(string.Empty, extractedImagePaths);
+                        canUseAsVisionInput = true;
+                        warnings.Add("PDF text extraction returned no readable text, but embedded images were extracted for vision-based expansion.");
+                    }
+                    else
+                    {
+                        suggestedRawContent = $"[pdf-uploaded:{savedPath}]";
+                        warnings.Add("PDF upload is stored successfully, but no readable text or extractable images were found by the prototype parser.");
+                    }
                 }
                 break;
 
@@ -287,25 +306,89 @@ public sealed class PrototypeFileIngestService
         return result;
     }
 
-    private static async Task<string> ExtractPdfTextAsync(string path, CancellationToken cancellationToken)
+    private static async Task<PdfExtractedContent> ExtractPdfContentAsync(string path, string folder, string storedFileName, CancellationToken cancellationToken)
     {
         await Task.Yield();
         using var document = PdfDocument.Open(path);
         var pages = new List<string>();
+        var imagePaths = new List<string>();
+        var pdfMediaFolder = Path.Combine(folder, $"{Path.GetFileNameWithoutExtension(storedFileName)}-pdf-media");
+        Directory.CreateDirectory(pdfMediaFolder);
+
         foreach (var page in document.GetPages())
         {
             cancellationToken.ThrowIfCancellationRequested();
             var pageText = CollapseWhitespace(page.Text);
             if (string.IsNullOrWhiteSpace(pageText))
             {
+                if (page.Number == 0)
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                pages.Add($"# page-{page.Number}\n{pageText}");
+            }
+
+            imagePaths.AddRange(ExtractPdfPageImages(page, pdfMediaFolder));
+        }
+
+        return new PdfExtractedContent(
+            pages.Count == 0 ? string.Empty : string.Join("\n\n", pages),
+            imagePaths);
+    }
+
+    private static IReadOnlyList<string> ExtractPdfPageImages(Page page, string outputFolder)
+    {
+        var result = new List<string>();
+        var imageIndex = 0;
+
+        foreach (var image in page.GetImages())
+        {
+            imageIndex++;
+            if (!TryGetPdfImageBytes(image, out var pngBytes))
+            {
                 continue;
             }
 
-            pages.Add($"# page-{page.Number}\n{pageText}");
+            var outputPath = Path.Combine(outputFolder, $"page-{page.Number:D4}-image-{imageIndex:D2}.png");
+            File.WriteAllBytes(outputPath, pngBytes);
+            result.Add(outputPath);
         }
 
-        return pages.Count == 0
-            ? string.Empty
-            : string.Join("\n\n", pages);
+        return result;
     }
+
+    private static bool TryGetPdfImageBytes(IPdfImage image, out byte[] pngBytes)
+    {
+        pngBytes = Array.Empty<byte>();
+        try
+        {
+            if (image.TryGetPng(out var directPng) && directPng is { Length: > 0 })
+            {
+                pngBytes = directPng;
+                return true;
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            if (image.RawBytes is { Length: > 0 } rawBytes)
+            {
+                pngBytes = rawBytes.ToArray();
+                return true;
+            }
+        }
+        catch
+        {
+        }
+
+        return false;
+    }
+
+    private sealed record PdfExtractedContent(string Text, IReadOnlyList<string> ImagePaths);
 }

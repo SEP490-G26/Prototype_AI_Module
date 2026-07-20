@@ -44,9 +44,9 @@ public sealed class DemoDocumentParser : IDocumentParser
             if (!string.IsNullOrWhiteSpace(request.VisionModel))
             {
                 var description = await _aiProviderGateway.DescribeImageAsync(imageRef, request.VisionModel, cancellationToken);
-                content = content.Replace($"[image:{imageRef}]", $"\n\n### Vision Extracted From Image `{imageRef}`\n{description}\n", StringComparison.OrdinalIgnoreCase);
-                content = content.Replace($"[img:{imageRef}]", $"\n\n### Vision Extracted From Image `{imageRef}`\n{description}\n", StringComparison.OrdinalIgnoreCase);
-                content = content.Replace($"[figure:{imageRef}]", $"\n\n### Vision Extracted From Image `{imageRef}`\n{description}\n", StringComparison.OrdinalIgnoreCase);
+                content = content.Replace($"[image:{imageRef}]", BuildVisionExpansionBlock("image", imageRef, description), StringComparison.OrdinalIgnoreCase);
+                content = content.Replace($"[img:{imageRef}]", BuildVisionExpansionBlock("img", imageRef, description), StringComparison.OrdinalIgnoreCase);
+                content = content.Replace($"[figure:{imageRef}]", BuildVisionExpansionBlock("figure", imageRef, description), StringComparison.OrdinalIgnoreCase);
             }
         }
 
@@ -87,6 +87,9 @@ public sealed class DemoDocumentParser : IDocumentParser
         var modeLine = $"Mode: {(mode == PipelineMode.FullMultimodalPage ? "full-multimodal-page" : "text-only")}\n\n";
         return header + modeLine + normalized;
     }
+
+    private static string BuildVisionExpansionBlock(string markerType, string imageRef, string description)
+        => $"\n\n[{markerType}:{imageRef}]\n### Vision Extracted From Image `{imageRef}`\n{description}\n";
 
     private static bool? TryReadBool(IReadOnlyDictionary<string, object> root, string objectKey, string valueKey)
     {

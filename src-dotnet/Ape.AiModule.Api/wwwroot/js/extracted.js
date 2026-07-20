@@ -222,11 +222,16 @@ function renderTextBlocks(extracted) {
   const markdown = extracted.normalizedMarkdown ?? extracted.NormalizedMarkdown ?? '';
   const warnings = extracted.warnings ?? extracted.Warnings ?? [];
   const imageRefs = extracted.detectedImageReferences ?? extracted.DetectedImageReferences ?? [];
+  const visionBlockCount = countVisionBlocks(markdown);
 
   return `
     <details class="details-block" open>
-      <summary>Normalized markdown</summary>
-      <pre class="json-view">${escapeHtml(markdown)}</pre>
+      <summary>Normalized markdown${visionBlockCount > 0 ? ` | OCR image blocks: ${escapeHtml(String(visionBlockCount))}` : ''}</summary>
+      <div class="markdown-preview">${renderMarkdownPreview(markdown)}</div>
+      <details class="details-block">
+        <summary>Normalized markdown source</summary>
+        <pre class="json-view">${escapeHtml(markdown)}</pre>
+      </details>
     </details>
     <details class="details-block">
       <summary>Raw text</summary>
@@ -237,6 +242,39 @@ function renderTextBlocks(extracted) {
       <p><strong>Warnings:</strong> ${escapeHtml(warnings.join(' | ') || '(none)')}</p>
     </div>
   `;
+}
+
+function countVisionBlocks(markdown) {
+  return String(markdown ?? '').match(/^### Vision Extracted From Image\b/gm)?.length ?? 0;
+}
+
+function renderMarkdownPreview(markdown) {
+  const normalized = String(markdown ?? '').replace(/\r\n/g, '\n').trim();
+  if (!normalized) {
+    return '<p class="markdown-empty">(empty)</p>';
+  }
+
+  const blocks = normalized
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return blocks.map(renderMarkdownBlock).join('');
+}
+
+function renderMarkdownBlock(block) {
+  if (/^\[(image|img|figure):.+\]$/i.test(block)) {
+    return `<div class="markdown-image-ref">${escapeHtml(block)}</div>`;
+  }
+
+  const heading = block.match(/^(#{1,6})\s+(.+)$/);
+  if (heading) {
+    const level = Math.min(heading[1].length, 6);
+    const text = escapeHtml(heading[2]);
+    return `<h${level} class="markdown-h${level}">${text}</h${level}>`;
+  }
+
+  return `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`;
 }
 
 function renderDraftSummary(draft) {

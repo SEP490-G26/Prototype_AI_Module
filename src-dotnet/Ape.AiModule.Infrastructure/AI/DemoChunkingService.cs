@@ -9,10 +9,10 @@ public sealed class DemoChunkingService : IChunkingService
     public IReadOnlyList<string> BuildChunks(string normalizedMarkdown, PipelineMode mode)
     {
         var cleaned = Regex.Replace(normalizedMarkdown, @"\r\n|\r", "\n");
-        var sections = cleaned
+        var rawSections = cleaned
             .Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(static part => part.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length >= 20)
             .ToList();
+        var sections = BuildLogicalSections(rawSections);
 
         if (sections.Count == 0)
         {
@@ -45,4 +45,53 @@ public sealed class DemoChunkingService : IChunkingService
 
         return chunks;
     }
+
+    private static List<string> BuildLogicalSections(IReadOnlyList<string> rawSections)
+    {
+        var sections = new List<string>();
+
+        for (var index = 0; index < rawSections.Count; index++)
+        {
+            var current = rawSections[index];
+            if (IsImageMarkerBlock(current) && index + 1 < rawSections.Count && IsVisionDescriptionBlock(rawSections[index + 1]))
+            {
+                current = $"{current}\n\n{rawSections[index + 1]}";
+                index++;
+            }
+
+            if (ShouldKeepSection(current))
+            {
+                sections.Add(current);
+            }
+        }
+
+        return sections;
+    }
+
+    private static bool ShouldKeepSection(string section)
+    {
+        if (ContainsVisionContent(section))
+        {
+            return true;
+        }
+
+        return CountWords(section) >= 20;
+    }
+
+    private static bool ContainsVisionContent(string section)
+        => IsImageMarkerBlock(section)
+           || IsVisionDescriptionBlock(section)
+           || section.Contains("[image:", StringComparison.OrdinalIgnoreCase)
+           || section.Contains("[img:", StringComparison.OrdinalIgnoreCase)
+           || section.Contains("[figure:", StringComparison.OrdinalIgnoreCase)
+           || section.Contains("Vision Extracted From Image", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsImageMarkerBlock(string section)
+        => Regex.IsMatch(section, @"^\[(image|img|figure):[^\]]+\]$", RegexOptions.IgnoreCase);
+
+    private static bool IsVisionDescriptionBlock(string section)
+        => section.StartsWith("### Vision Extracted From Image", StringComparison.OrdinalIgnoreCase);
+
+    private static int CountWords(string section)
+        => section.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
 }
